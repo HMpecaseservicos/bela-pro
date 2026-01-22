@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { getImageUrl } from '@/lib/utils';
 
 interface ImageUploadProps {
   label: string;
@@ -59,10 +60,8 @@ export default function ImageUpload({
       }
 
       const data = await res.json();
-      // Converter URL relativa para absoluta
-      const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1').replace('/api/v1', '');
-      const fullUrl = data.url.startsWith('/') ? `${apiBase}${data.url}` : data.url;
-      onChange(fullUrl);
+      // Salvar URL relativa - será convertida na exibição
+      onChange(data.url);
     } catch (err: any) {
       setError(err.message || 'Erro no upload');
     }
@@ -119,7 +118,7 @@ export default function ImageUpload({
             }}
           >
             <img
-              src={value}
+              src={getImageUrl(value)}
               alt={label}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               onError={e => (e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120"><rect fill="%23f3f4f6" width="120" height="120"/><text x="50%" y="50%" fill="%239ca3af" text-anchor="middle" dy=".3em" font-size="12">Erro</text></svg>')}

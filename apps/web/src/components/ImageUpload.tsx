@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { getImageUrl } from '@/lib/utils';
 
 interface ImageUploadProps {
   value: string;
@@ -65,12 +66,8 @@ export function ImageUpload({
       }
 
       const data = await res.json();
-      // Converte URL relativa para absoluta
-      const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1').replace('/api/v1', '');
-      const fullUrl = data.url.startsWith('http') 
-        ? data.url 
-        : `${apiBase}${data.url}`;
-      onChange(fullUrl);
+      // Salvar URL relativa - será convertida na exibição
+      onChange(data.url);
     } catch (err: any) {
       setError(err.message || 'Erro ao fazer upload');
     }
@@ -140,7 +137,7 @@ export function ImageUpload({
       {value ? (
         <div style={previewStyle}>
           <img
-            src={value}
+            src={getImageUrl(value)}
             alt="Preview"
             style={{
               width: '100%',

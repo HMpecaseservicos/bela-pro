@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { getImageUrl } from '@/lib/utils';
 
 const THEME_PRESETS = [
   { id: 'rose_gold', name: 'Rose Gold', primary: '#B76E79', accent: '#D4A574', bg: '#FDF8F5' },
@@ -129,8 +130,8 @@ export default function AparenciaPage() {
       }
 
       const data = await res.json();
-      const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1').replace('/api/v1', '');
-      return data.url.startsWith('http') ? data.url : `${apiBase}${data.url}`;
+      // Salvar URL relativa no banco - será convertida na exibição
+      return data.url;
     } catch (err: any) {
       setError(err.message || 'Erro ao fazer upload');
       return null;
@@ -366,7 +367,7 @@ export default function AparenciaPage() {
             >
               {config.logoUrl ? (
                 <>
-                  <img src={config.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={getImageUrl(config.logoUrl)} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   <div style={{
                     position: 'absolute',
                     inset: 0,
@@ -429,7 +430,7 @@ export default function AparenciaPage() {
             >
               {config.coverImageUrl ? (
                 <>
-                  <img src={config.coverImageUrl} alt="Capa" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={getImageUrl(config.coverImageUrl)} alt="Capa" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   <div style={{
                     position: 'absolute',
                     inset: 0,
@@ -487,7 +488,7 @@ export default function AparenciaPage() {
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             {config.galleryUrls.map((url, index) => (
               <div key={index} style={{ position: 'relative', width: 100, height: 100, borderRadius: 10, overflow: 'hidden', border: '2px solid #e5e7eb' }}>
-                <img src={url} alt={`Galeria ${index + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <img src={getImageUrl(url)} alt={`Galeria ${index + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 <button
                   onClick={() => removeGalleryImage(index)}
                   style={{
@@ -671,7 +672,7 @@ export default function AparenciaPage() {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                 {config.logoUrl && (
-                  <img src={config.logoUrl} alt="Logo" style={{ width: 60, height: 60, borderRadius: 12, objectFit: 'cover', border: '3px solid white' }} />
+                  <img src={getImageUrl(config.logoUrl)} alt="Logo" style={{ width: 60, height: 60, borderRadius: 12, objectFit: 'cover', border: '3px solid white' }} />
                 )}
                 <div>
                   <h2 style={{ margin: 0, color: 'white', fontSize: 20, fontWeight: 700 }}>{config.brandName || 'Seu Negócio'}</h2>
@@ -687,7 +688,7 @@ export default function AparenciaPage() {
               color: 'white',
             }}>
               {config.logoUrl ? (
-                <img src={config.logoUrl} alt="Logo" style={{ width: 60, height: 60, borderRadius: 16, objectFit: 'cover', margin: '0 auto 16px', display: 'block' }} />
+                <img src={getImageUrl(config.logoUrl)} alt="Logo" style={{ width: 60, height: 60, borderRadius: 16, objectFit: 'cover', margin: '0 auto 16px', display: 'block' }} />
               ) : (
                 <div style={{
                   width: 60,

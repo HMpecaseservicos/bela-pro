@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { getImageUrl } from '@/lib/utils';
 
 interface Service {
   id: string;
@@ -325,7 +326,7 @@ export default function ServicosPage() {
                   {form.imageUrl ? (
                     <div style={{ position: 'relative' }}>
                       <img
-                        src={form.imageUrl}
+                        src={getImageUrl(form.imageUrl)}
                         alt="Preview"
                         style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 12, border: '2px solid #e5e7eb' }}
                       />
