@@ -18,7 +18,11 @@
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f api web",
     "docker:db:generate": "docker compose run --rm api npm run db:generate",
-    "docker:db:migrate": "docker compose run --rm api npm run db:migrate"
+    "docker:db:migrate": "docker compose run --rm api npm run db:migrate",
+    "build": "npm run build -w @bela-pro/api",
+    "build:api": "npm run build -w @bela-pro/api",
+    "build:web": "npm run build -w @bela-pro/web",
+    "start:api": "node apps/api/dist/main.js"
   },
   "engines": {
     "node": ">=20"
