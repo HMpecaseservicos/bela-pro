@@ -1,23 +1,25 @@
 import './globals.css';
 
 import type { ReactNode } from 'react';
+import type { Metadata, Viewport } from 'next';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Agenda Digital - BELA PRO',
   description: 'Sistema de agendamento online para salões e profissionais de beleza',
   manifest: '/manifest.json',
-  themeColor: '#667eea',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'Agenda Digital',
   },
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: '#667eea',
 };
 
 export default function RootLayout({
