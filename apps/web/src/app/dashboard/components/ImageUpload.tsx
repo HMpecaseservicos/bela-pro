@@ -24,7 +24,7 @@ export default function ImageUpload({
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const API_URL = 'http://localhost:3001/api/v1';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
   async function handleUpload(file: File) {
     setError('');
@@ -60,7 +60,8 @@ export default function ImageUpload({
 
       const data = await res.json();
       // Converter URL relativa para absoluta
-      const fullUrl = data.url.startsWith('/') ? `http://localhost:3001${data.url}` : data.url;
+      const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1').replace('/api/v1', '');
+      const fullUrl = data.url.startsWith('/') ? `${apiBase}${data.url}` : data.url;
       onChange(fullUrl);
     } catch (err: any) {
       setError(err.message || 'Erro no upload');

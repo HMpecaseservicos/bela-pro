@@ -37,7 +37,7 @@ export default function AgendaPage() {
   const [workspaceName, setWorkspaceName] = useState('');
   const [sendingMessage, setSendingMessage] = useState<string | null>(null);
 
-  const API_URL = 'http://localhost:3001/api/v1';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);

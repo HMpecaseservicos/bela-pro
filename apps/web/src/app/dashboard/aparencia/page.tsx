@@ -52,7 +52,7 @@ export default function AparenciaPage() {
   const coverInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  const API_URL = 'http://localhost:3001/api/v1';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -129,7 +129,8 @@ export default function AparenciaPage() {
       }
 
       const data = await res.json();
-      return data.url.startsWith('http') ? data.url : `http://localhost:3001${data.url}`;
+      const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1').replace('/api/v1', '');
+      return data.url.startsWith('http') ? data.url : `${apiBase}${data.url}`;
     } catch (err: any) {
       setError(err.message || 'Erro ao fazer upload');
       return null;

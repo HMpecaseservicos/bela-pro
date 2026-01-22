@@ -34,7 +34,7 @@ export default function ServicosPage() {
   const [isMobile, setIsMobile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const API_URL = 'http://localhost:3001/api/v1';
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
