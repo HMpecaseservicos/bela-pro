@@ -1,0 +1,470 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OWNER
+  STAFF
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum ClientStatus {
+  NORMAL
+  PONTUAL
+  ATRASOU
+  FALTOU
+}
+
+enum CancelledBy {
+  CLIENT
+  PROFESSIONAL
+  SYSTEM
+}
+
+enum ChatChannel {
+  WHATSAPP
+}
+
+enum ChatConversationState {
+  START
+  CHOOSE_SERVICE
+  CHOOSE_DATE
+  CHOOSE_TIME
+  CONFIRM
+  DONE
+  HUMAN_HANDOFF
+}
+
+enum NotificationType {
+  APPOINTMENT_CONFIRMATION
+  REMINDER_24H
+  REMINDER_2H
+}
+
+// Eventos de mensagem configuráveis (sistema de templates manuais)
+enum MessageEventType {
+  APPOINTMENT_CREATED       // Agendamento criado (aguardando confirmação)
+  APPOINTMENT_CONFIRMED     // Agendamento confirmado
+  APPOINTMENT_REMINDER_24H  // Lembrete 24h antes
+  APPOINTMENT_REMINDER_2H   // Lembrete 2h antes
+  APPOINTMENT_CANCELLED     // Agendamento cancelado
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name      String
+  slug      String   @unique
+  timezone  String   @default("America/Sao_Paulo")
+
+  // Identidade visual básica
+  brandName String?  // ex.: "Studio da Ana"
+  primaryColorHex String? // ex.: #A855F7
+  accentColorHex String?  // Cor secundária/destaque
+  logoUrl String?  // URL do logo
+  coverImageUrl String?  // Imagem de capa (hero)
+  galleryUrls String[]  // Array de URLs do portfólio
+  themePreset String?  // Preset: rose_gold, burgundy, olive_green, classic_dark, ocean_blue, custom
+
+  // Textos customizáveis da página pública
+  welcomeText String?  // "Agende seu horário conosco!"
+  description String?  // Descrição do negócio
+
+  // Regras globais (MVP)
+  minLeadTimeMinutes  Int @default(120)
+  bufferMinutes       Int @default(10)
+  maxBookingDaysAhead Int @default(60)
+  cancelMinMinutes    Int @default(120)
+  slotIntervalMinutes Int @default(15)  // Intervalo entre slots: 15, 30, 60
+
+  memberships  Membership[]
+  inviteTokens InviteToken[]
+  profile      ProfessionalProfile?
+  services     Service[]
+  bundles      ServiceBundle[]
+  clients      Client[]
+  appointments Appointment[]
+  scheduleRules ScheduleRule[]
+  timeOffs     TimeOff[]
+  manualBlocks ManualBlock[]
+  chatTemplates ChatbotTemplate[]
+  conversations ChatbotConversation[]
+  notificationJobs NotificationJob[]
+  auditLogs    AuditLog[]
+  messageTemplates MessageTemplate[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name      String
+  email     String
+  passwordHash String
+
+  isActive  Boolean @default(true)
+
+  memberships Membership[]
+  auditLogs   AuditLog[]
+
+  @@unique([email])
+}
+
+model Membership {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  role     UserRole @default(OWNER)
+  isActive Boolean  @default(true)
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
+}
+
+model ProfessionalProfile {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String @unique
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  displayName String
+  phoneE164   String?
+  addressLine String?
+  notes       String?
+}
+
+// Token de convite para membros da equipe
+model InviteToken {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  token     String   @unique  // Token único para URL
+  email     String             // Email do convidado
+  name      String             // Nome do convidado
+  role      UserRole @default(STAFF)
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  invitedById String            // Quem enviou o convite
+  
+  expiresAt DateTime            // Expira em 7 dias
+  usedAt    DateTime?           // Quando foi aceito (null = pendente)
+
+  @@index([token])
+  @@index([workspaceId])
+  @@index([email, workspaceId])
+}
+
+model Service {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  durationMinutes Int
+  priceCents  Int
+
+  isActive      Boolean @default(true)
+  showInBooking Boolean @default(true)  // Exibir na página pública?
+  sortOrder     Int     @default(0)     // Ordem de exibição
+  
+  // Campos premium para exibição
+  imageUrl    String?  // Foto real do serviço
+  badgeText   String?  // Badge ("Mais pedido", "Novidade")
+  categoryTag String?  // Categoria ("sobrancelha", "unhas")
+
+  appointmentServices AppointmentService[]
+  bundleItems ServiceBundleItem[]
+
+  @@index([workspaceId, isActive])
+  @@index([workspaceId, showInBooking, sortOrder])
+  @@unique([workspaceId, name])
+}
+
+model ServiceBundle {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  isActive    Boolean @default(true)
+
+  items       ServiceBundleItem[]
+
+  @@unique([workspaceId, name])
+}
+
+model ServiceBundleItem {
+  id        String   @id @default(cuid())
+
+  bundleId  String
+  bundle    ServiceBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  sortOrder Int @default(0)
+
+  @@unique([bundleId, serviceId])
+}
+
+model Client {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name        String
+  phoneE164   String
+  notesInternal String?
+  status      ClientStatus @default(NORMAL)
+
+  appointments Appointment[]
+
+  @@unique([workspaceId, phoneE164])
+  @@index([workspaceId])
+}
+
+model Appointment {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  clientId   String
+  client     Client @relation(fields: [clientId], references: [id], onDelete: Restrict)
+
+  startAt    DateTime
+  endAt      DateTime
+
+  status     AppointmentStatus @default(PENDING)
+
+  // origem do agendamento
+  bookedVia  String @default("admin") // admin | public | whatsapp
+
+  cancelledAt DateTime?
+  cancelledBy CancelledBy?
+  cancelReason String?
+
+  // Financeiro MVP: snapshot
+  totalPriceCents Int @default(0)
+
+  services   AppointmentService[]
+  notifications NotificationJob[]
+
+  @@index([workspaceId, startAt])
+  @@index([workspaceId, status])
+}
+
+model AppointmentService {
+  id            String @id @default(cuid())
+
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  serviceId     String
+  service       Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  durationMinutes Int
+  priceCents      Int
+
+  @@index([appointmentId])
+  @@index([serviceId])
+}
+
+model ScheduleRule {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  // 0=Domingo..6=Sábado
+  dayOfWeek Int
+
+  startTimeMinutes Int // ex.: 9*60
+  endTimeMinutes   Int // ex.: 18*60
+
+  isActive Boolean @default(true)
+
+  @@index([workspaceId, dayOfWeek, isActive])
+}
+
+model TimeOff {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  startAt DateTime
+  endAt   DateTime
+  reason  String?
+
+  @@index([workspaceId, startAt])
+}
+
+model ManualBlock {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  startAt DateTime
+  endAt   DateTime
+  reason  String?
+
+  @@index([workspaceId, startAt])
+}
+
+model ChatbotTemplate {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  key     String // ex.: CONFIRMATION, REMINDER_24H
+  content String
+  isActive Boolean @default(true)
+
+  @@unique([workspaceId, key])
+}
+
+model ChatbotConversation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  channel  ChatChannel @default(WHATSAPP)
+  phoneE164 String
+
+  state    ChatConversationState @default(START)
+  contextJson Json?
+
+  isHumanHandoff Boolean @default(false)
+
+  messages ChatbotMessage[]
+
+  @@unique([workspaceId, channel, phoneE164])
+  @@index([workspaceId])
+}
+
+model ChatbotMessage {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  conversationId String
+  conversation   ChatbotConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  direction String // in | out
+  text      String
+  rawJson   Json?
+
+  @@index([conversationId, createdAt])
+}
+
+model NotificationJob {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  appointmentId String?
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  type      NotificationType
+  runAt     DateTime
+
+  status    String @default("SCHEDULED") // scheduled|processing|sent|failed|cancelled
+  attempts  Int @default(0)
+  lastError String?
+
+  @@index([workspaceId, runAt])
+  @@index([appointmentId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  actorUserId String?
+  actorUser   User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  action   String
+  entity   String
+  entityId String
+  metadata Json?
+
+  @@index([workspaceId, createdAt])
+}
+
+// Templates de mensagem configuráveis por workspace (envio manual)
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  eventType   MessageEventType  // Tipo do evento (APPOINTMENT_CREATED, etc.)
+  enabled     Boolean @default(true)  // Ativo/Inativo
+  message     String  // Texto do template com variáveis {{clientName}}, etc.
+  
+  allowClientReply Boolean @default(false)  // Espera resposta do cliente?
+
+  @@unique([workspaceId, eventType])
+  @@index([workspaceId])
+}

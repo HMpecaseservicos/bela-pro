@@ -1,0 +1,26 @@
+{
+  "name": "bela-pro",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run -w @bela-pro/api dev",
+    "dev:web": "npm run -w @bela-pro/web dev",
+    "dev:api": "npm run -w @bela-pro/api dev",
+    "db:generate": "npm run -w @bela-pro/api db:generate",
+    "db:migrate": "npm run -w @bela-pro/api db:migrate",
+    "lint": "npm run -ws lint",
+    "test": "npm run -ws test",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f api web",
+    "docker:db:generate": "docker compose run --rm api npm run db:generate",
+    "docker:db:migrate": "docker compose run --rm api npm run db:migrate"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

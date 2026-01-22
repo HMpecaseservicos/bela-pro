@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: bela
+      POSTGRES_PASSWORD: senha
+      POSTGRES_DB: bela_pro
+    ports:
+      - "5432:5432"
+    volumes:
+      - bela_pro_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bela -d bela_pro"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      API_PORT: 3001
+      DATABASE_URL: "postgresql://bela:senha@postgres:5432/bela_pro?schema=public"
+      REDIS_URL: "redis://redis:6379"
+      JWT_ACCESS_SECRET: "troque-este-segredo"
+      JWT_REFRESH_SECRET: "troque-este-segredo"
+      JWT_ACCESS_TTL_SECONDS: 900
+      JWT_REFRESH_TTL_SECONDS: 2592000
+      PUBLIC_BASE_URL: "http://localhost:3000"
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    environment:
+      NEXT_PUBLIC_API_URL: "http://192.168.3.134:3001/api/v1"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  bela_pro_pg:
