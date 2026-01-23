@@ -14,6 +14,7 @@ import { UploadModule } from './upload/upload.module';
 import { ClientsModule } from './clients/clients.module';
 import { TeamModule } from './team/team.module';
 import { MessageTemplatesModule } from './message-templates/message-templates.module';
+import { ChatUsageModule } from './chat-usage/chat-usage.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { MessageTemplatesModule } from './message-templates/message-templates.mo
     ClientsModule,
     TeamModule,
     MessageTemplatesModule,
+    ChatUsageModule,
   ],
   controllers: [HealthController],
 })

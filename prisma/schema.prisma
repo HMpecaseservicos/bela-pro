@@ -92,6 +92,10 @@ model Workspace {
   cancelMinMinutes    Int @default(120)
   slotIntervalMinutes Int @default(15)  // Intervalo entre slots: 15, 30, 60
 
+  // Plano e billing
+  plan WorkspacePlan @default(BASIC)  // Plano do workspace
+  chatbotEnabled Boolean @default(true)  // Chatbot ativo/inativo
+
   memberships  Membership[]
   inviteTokens InviteToken[]
   profile      ProfessionalProfile?
@@ -107,6 +111,7 @@ model Workspace {
   notificationJobs NotificationJob[]
   auditLogs    AuditLog[]
   messageTemplates MessageTemplate[]
+  chatUsages   ChatUsage[]  // Histórico de uso mensal
 }
 
 model User {
@@ -468,4 +473,64 @@ model MessageTemplate {
 
   @@unique([workspaceId, eventType])
   @@index([workspaceId])
+}
+
+// ============================================================================
+// BILLING: Controle de uso de conversas por workspace
+// Segue o modelo Meta: 1 conversa = janela de 24h
+// ============================================================================
+
+enum WorkspacePlan {
+  FREE        // Teste gratuito
+  BASIC       // Plano básico
+  PRO         // Plano profissional
+  ENTERPRISE  // Plano enterprise
+}
+
+model ChatUsage {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  // Período de faturamento (YYYY-MM)
+  yearMonth String  // ex: "2026-01"
+
+  // Contadores de conversas
+  conversationsUsed   Int @default(0)  // Conversas dentro do limite
+  conversationsLimit  Int              // Limite do mês (vem do plano)
+  excessConversations Int @default(0)  // Conversas excedentes (para cobrança)
+
+  // Metadados para auditoria
+  lastConversationAt DateTime?  // Última conversa registrada
+  
+  @@unique([workspaceId, yearMonth])
+  @@index([workspaceId])
+  @@index([yearMonth])
+}
+
+// Histórico detalhado de cada conversa para billing (auditoria)
+model ConversationBillingEvent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  workspaceId String
+  
+  // Referência à conversa
+  conversationId String
+  phoneE164      String
+  
+  // Janela de 24h
+  windowStartAt DateTime  // Início da janela de 24h
+  windowEndAt   DateTime  // Fim da janela de 24h
+  
+  // Status do billing
+  isExcess      Boolean @default(false)  // Se foi contabilizado como excedente
+  yearMonth     String  // Mês de referência
+
+  @@index([workspaceId, yearMonth])
+  @@index([conversationId])
+  @@index([windowEndAt])  // Para queries de janelas ativas
 }
