@@ -8,7 +8,15 @@ async function bootstrap() {
   
   // Habilita CORS para permitir requisições do frontend
   app.enableCors({
-    origin: true, // Permite qualquer origem em produção (Railway, Vercel, etc.)
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://agenda-bela-pro.up.railway.app',
+      'https://bela-pro-production.up.railway.app',
+      /\.railway\.app$/,  // Qualquer subdomínio do Railway
+    ],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     credentials: true,
   });
   
