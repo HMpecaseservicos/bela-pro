@@ -15,13 +15,15 @@ import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ChatbotService } from './chatbot.service';
 import { WhatsAppService } from './whatsapp.service';
+import { EvolutionApiService, EvolutionWebhookPayload } from './evolution-api.service';
 import { WhatsAppWebhookPayload, ChatConversationState } from './chatbot.types';
 
 /**
  * ChatbotController
  * 
  * Endpoints para:
- * - Webhook do WhatsApp (público)
+ * - Webhook do WhatsApp Cloud API (público)
+ * - Webhook da Evolution API (público)
  * - Gerenciamento de conversas (autenticado)
  */
 @Controller('chatbot')
@@ -31,6 +33,7 @@ export class ChatbotController {
   constructor(
     private readonly chatbotService: ChatbotService,
     private readonly whatsappService: WhatsAppService,
+    private readonly evolutionApiService: EvolutionApiService,
   ) {}
 
   // ==========================================================================
@@ -81,6 +84,87 @@ export class ChatbotController {
 
     // Responder imediatamente
     return { status: 'received' };
+  }
+
+  // ==========================================================================
+  // EVOLUTION API WEBHOOK (Público)
+  // ==========================================================================
+
+  /**
+   * POST /chatbot/evolution/webhook
+   * 
+   * Recebe mensagens da Evolution API.
+   */
+  @Post('evolution/webhook')
+  @HttpCode(HttpStatus.OK)
+  async handleEvolutionWebhook(@Body() payload: EvolutionWebhookPayload) {
+    this.logger.log(`[Evolution Webhook] Evento: ${payload.event}, Instance: ${payload.instance}`);
+
+    // Processar de forma assíncrona
+    setImmediate(() => {
+      this.chatbotService.processEvolutionWebhook(payload).catch(err => {
+        this.logger.error(`[Evolution Webhook] Erro: ${err.message}`);
+      });
+    });
+
+    return { status: 'received' };
+  }
+
+  /**
+   * GET /chatbot/evolution/status
+   * 
+   * Verifica status da conexão Evolution API.
+   */
+  @Get('evolution/status')
+  @UseGuards(JwtAuthGuard)
+  async getEvolutionStatus() {
+    try {
+      const status = await this.evolutionApiService.getInstanceStatus();
+      return { success: true, data: status };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Erro desconhecido' 
+      };
+    }
+  }
+
+  /**
+   * GET /chatbot/evolution/qrcode
+   * 
+   * Obtém QR Code para conectar WhatsApp.
+   */
+  @Get('evolution/qrcode')
+  @UseGuards(JwtAuthGuard)
+  async getEvolutionQRCode() {
+    try {
+      const qrcode = await this.evolutionApiService.getQRCode();
+      return { success: true, data: qrcode };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Erro desconhecido' 
+      };
+    }
+  }
+
+  /**
+   * POST /chatbot/evolution/configure-webhook
+   * 
+   * Configura o webhook na Evolution API.
+   */
+  @Post('evolution/configure-webhook')
+  @UseGuards(JwtAuthGuard)
+  async configureEvolutionWebhook(@Body() body: { webhookUrl: string }) {
+    try {
+      const result = await this.evolutionApiService.configureWebhook(body.webhookUrl);
+      return { success: true, data: result };
+    } catch (error) {
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Erro desconhecido' 
+      };
+    }
   }
 
   // ==========================================================================

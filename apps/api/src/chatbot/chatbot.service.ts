@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ChatUsageService } from '../chat-usage/chat-usage.service';
 import { WhatsAppService } from './whatsapp.service';
 import { StateMachineService } from './state-machine.service';
+import { EvolutionApiService, EvolutionWebhookPayload, EvolutionMessage } from './evolution-api.service';
 import {
   ChatConversationState,
   ChatChannel,
@@ -32,13 +33,14 @@ export class ChatbotService {
     private readonly chatUsage: ChatUsageService,
     private readonly whatsapp: WhatsAppService,
     private readonly stateMachine: StateMachineService,
+    private readonly evolutionApi: EvolutionApiService,
   ) {}
 
   /**
-   * Processa webhook do WhatsApp
+   * Processa webhook do WhatsApp Cloud API
    */
   async processWebhook(payload: WhatsAppWebhookPayload): Promise<void> {
-    this.logger.log('[Chatbot] Webhook recebido');
+    this.logger.log('[Chatbot] Webhook Cloud API recebido');
 
     for (const entry of payload.entry) {
       for (const change of entry.changes) {
@@ -72,9 +74,50 @@ export class ChatbotService {
   }
 
   /**
+   * Processa webhook da Evolution API
+   */
+  async processEvolutionWebhook(payload: EvolutionWebhookPayload): Promise<void> {
+    this.logger.log(`[Chatbot] Webhook Evolution API: ${payload.event}`);
+
+    // Processar apenas eventos de mensagem
+    if (payload.event !== 'MESSAGES_UPSERT') {
+      this.logger.debug(`[Chatbot] Evento ignorado: ${payload.event}`);
+      return;
+    }
+
+    const message = payload.data as EvolutionMessage;
+
+    // Ignorar mensagens enviadas por nós
+    if (message.key.fromMe) {
+      return;
+    }
+
+    const phoneE164 = this.evolutionApi.extractPhoneNumber(message.key.remoteJid);
+    const messageText = this.evolutionApi.extractMessageText(message);
+
+    if (!messageText) {
+      this.logger.debug('[Chatbot] Mensagem sem texto, ignorando');
+      return;
+    }
+
+    const messageData: IncomingMessageData = {
+      workspaceId: '', // Será resolvido abaixo
+      phoneE164,
+      contactName: message.pushName || '',
+      messageId: message.key.id,
+      messageText,
+      messageType: 'text',
+      rawPayload: message,
+      phoneNumberId: payload.instance,
+    };
+
+    await this.handleIncomingMessage(messageData, true); // true = usar Evolution API
+  }
+
+  /**
    * Processa uma mensagem recebida
    */
-  async handleIncomingMessage(data: IncomingMessageData): Promise<void> {
+  async handleIncomingMessage(data: IncomingMessageData, useEvolutionApi = false): Promise<void> {
     const { phoneE164, contactName, messageText, phoneNumberId } = data;
 
     this.logger.log(`[Chatbot] Mensagem de ${phoneE164}: "${messageText}"`);
@@ -151,17 +194,61 @@ export class ChatbotService {
 
       // 8. Enviar resposta (se houver)
       if (transition.response) {
-        const result = await this.whatsapp.sendMessage(transition.response);
+        let success = false;
+        let responseText = '';
+
+        if (useEvolutionApi) {
+          // Usar Evolution API
+          try {
+            if (transition.response.type === 'text') {
+              responseText = (transition.response as any).text.body;
+              await this.evolutionApi.sendText({
+                number: phoneE164,
+                text: responseText,
+              });
+              success = true;
+            } else if (transition.response.type === 'interactive') {
+              // Converter para lista ou botões
+              const interactive = (transition.response as any).interactive;
+              if (interactive.type === 'list') {
+                await this.evolutionApi.sendList({
+                  number: phoneE164,
+                  title: interactive.header?.text || 'Escolha uma opção',
+                  description: interactive.body.text,
+                  buttonText: interactive.action.button,
+                  sections: interactive.action.sections,
+                });
+                responseText = interactive.body.text;
+                success = true;
+              } else if (interactive.type === 'button') {
+                await this.evolutionApi.sendButtons({
+                  number: phoneE164,
+                  title: interactive.header?.text || 'BELA PRO',
+                  description: interactive.body.text,
+                  buttons: interactive.action.buttons.map((btn: any) => ({
+                    buttonId: btn.reply.id,
+                    buttonText: btn.reply.title,
+                  })),
+                });
+                responseText = interactive.body.text;
+                success = true;
+              }
+            }
+          } catch (error) {
+            this.logger.error(`[Chatbot] Erro ao enviar via Evolution: ${error}`);
+          }
+        } else {
+          // Usar WhatsApp Cloud API
+          const result = await this.whatsapp.sendMessage(transition.response);
+          success = result.success;
+          responseText = transition.response.type === 'text' 
+            ? (transition.response as any).text.body 
+            : JSON.stringify(transition.response);
+        }
         
-        if (result.success) {
+        if (success) {
           // Salvar mensagem enviada
-          await this.saveMessage(
-            conversation.id,
-            'out',
-            transition.response.type === 'text' 
-              ? (transition.response as any).text.body 
-              : JSON.stringify(transition.response),
-          );
+          await this.saveMessage(conversation.id, 'out', responseText);
         }
       }
 
