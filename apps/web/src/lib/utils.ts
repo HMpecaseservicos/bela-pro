@@ -6,24 +6,7 @@
 export function getImageUrl(url: string | null | undefined): string {
   if (!url) return '';
   
-  // Determina a base da API
-  const getApiBase = (): string => {
-    // Primeiro tenta a variável de ambiente
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL.replace('/api/v1', '');
-    }
-    // Em produção (Railway), usa a URL relativa ou detecta pelo window.location
-    if (typeof window !== 'undefined') {
-      // Se estamos no Railway, usa a API do Railway
-      if (window.location.hostname.includes('railway.app')) {
-        return 'https://bela-pro-production.up.railway.app';
-      }
-    }
-    // Fallback para localhost em desenvolvimento
-    return 'http://localhost:3001';
-  };
-  
-  const apiBase = getApiBase();
+  const apiBase = getApiBaseUrl();
   
   // Se já é uma URL absoluta
   if (url.startsWith('http://') || url.startsWith('https://')) {
@@ -31,11 +14,48 @@ export function getImageUrl(url: string | null | undefined): string {
     if (url.includes('localhost:3001')) {
       return url.replace(/http:\/\/localhost:3001/g, apiBase);
     }
+    // Se é URL antiga do Railway, também converte
+    if (url.includes('bela-pro-production.up.railway.app')) {
+      return url.replace(/https:\/\/bela-pro-production\.up\.railway\.app/g, apiBase);
+    }
     return url;
   }
   
   // Se é URL relativa, adiciona a base da API
   return `${apiBase}${url}`;
+}
+
+/**
+ * Retorna a URL base da API
+ */
+export function getApiBaseUrl(): string {
+  // Primeiro tenta a variável de ambiente
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL.replace('/api/v1', '');
+  }
+  // Em produção (Railway), usa a mesma origem
+  // Isso funciona porque a API e Web estão no mesmo domínio com proxy reverso
+  // OU podemos usar variável de ambiente configurada no Railway
+  if (typeof window !== 'undefined' && window.location.hostname.includes('railway.app')) {
+    // Assume que API está acessível via /api/v1 no mesmo domínio
+    // Ou configura a URL da API via variável de ambiente
+    return window.location.origin;
+  }
+  // Fallback para localhost em desenvolvimento
+  return 'http://localhost:3001';
+}
+
+/**
+ * Retorna a URL base do app (para links de booking, etc)
+ */
+export function getAppUrl(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  }
+  if (typeof window !== 'undefined') {
+    return `${window.location.protocol}//${window.location.host}`;
+  }
+  return 'http://localhost:3000';
 }
 
 /**

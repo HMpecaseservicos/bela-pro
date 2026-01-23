@@ -232,7 +232,14 @@ export default function AparenciaPage() {
     }
   }
 
-  const bookingUrl = `http://localhost:3000/${config.slug || 'seu-salao'}/booking`;
+  // URL dinâmica baseada no ambiente atual
+  const getBookingUrl = () => {
+    if (typeof window !== 'undefined') {
+      return `${window.location.protocol}//${window.location.host}/${config.slug || 'seu-salao'}/booking`;
+    }
+    return `/${config.slug || 'seu-salao'}/booking`;
+  };
+  const bookingUrl = getBookingUrl();
 
   if (loading) {
     return (
