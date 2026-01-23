@@ -1,5 +1,6 @@
 import { Workspace, ThemeConfig } from '../types';
 import { SPACING, RADIUS } from '../constants';
+import { getImageUrl } from '@/lib/utils';
 
 interface HeroSectionProps {
   workspace: Workspace;
@@ -22,7 +23,7 @@ export function HeroSection({ workspace, theme }: HeroSectionProps) {
         width: '100%',
         minHeight: hasCover ? 280 : 200,
         background: hasCover 
-          ? `url(${workspace.coverImageUrl}) center/cover no-repeat`
+          ? `url(${getImageUrl(workspace.coverImageUrl)}) center/cover no-repeat`
           : colors.gradient,
         display: 'flex',
         flexDirection: 'column',
@@ -74,7 +75,7 @@ export function HeroSection({ workspace, theme }: HeroSectionProps) {
             }}
           >
             <img
-              src={workspace.logoUrl!}
+              src={getImageUrl(workspace.logoUrl)}
               alt={brandName}
               style={{
                 width: '100%',

@@ -1,5 +1,6 @@
 import { Service, ThemeConfig } from '../types';
 import { SPACING, RADIUS } from '../constants';
+import { getImageUrl } from '@/lib/utils';
 
 interface ServiceCardPremiumProps {
   service: Service;
@@ -109,7 +110,7 @@ export function ServiceCardPremium({ service, theme, selected, onSelect }: Servi
           }}
         >
           <img
-            src={service.imageUrl!}
+            src={getImageUrl(service.imageUrl)}
             alt={service.name}
             style={{
               width: '100%',

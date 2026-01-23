@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Service } from '../types';
 import { COLORS, RADIUS } from '../constants';
 import { formatPrice, formatDuration } from '../utils';
+import { getImageUrl } from '@/lib/utils';
 
 interface ServiceCardProps {
   service: Service;
@@ -95,7 +96,7 @@ export function ServiceCard({
                 }}
               >
                 <img
-                  src={service.imageUrl!}
+                  src={getImageUrl(service.imageUrl)}
                   alt={service.name}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
