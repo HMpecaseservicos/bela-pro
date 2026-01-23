@@ -6,18 +6,35 @@
 export function getImageUrl(url: string | null | undefined): string {
   if (!url) return '';
   
-  // Se já é uma URL absoluta, retorna como está
+  // Determina a base da API
+  const getApiBase = (): string => {
+    // Primeiro tenta a variável de ambiente
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      return process.env.NEXT_PUBLIC_API_URL.replace('/api/v1', '');
+    }
+    // Em produção (Railway), usa a URL relativa ou detecta pelo window.location
+    if (typeof window !== 'undefined') {
+      // Se estamos no Railway, usa a API do Railway
+      if (window.location.hostname.includes('railway.app')) {
+        return 'https://bela-pro-production.up.railway.app';
+      }
+    }
+    // Fallback para localhost em desenvolvimento
+    return 'http://localhost:3001';
+  };
+  
+  const apiBase = getApiBase();
+  
+  // Se já é uma URL absoluta
   if (url.startsWith('http://') || url.startsWith('https://')) {
     // Se é localhost em produção, converte para a URL da API
-    if (typeof window !== 'undefined' && url.includes('localhost:3001')) {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || '';
+    if (url.includes('localhost:3001')) {
       return url.replace(/http:\/\/localhost:3001/g, apiBase);
     }
     return url;
   }
   
   // Se é URL relativa, adiciona a base da API
-  const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || '';
   return `${apiBase}${url}`;
 }
 
