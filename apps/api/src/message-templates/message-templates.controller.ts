@@ -120,23 +120,31 @@ export class MessageTemplatesController {
   async generateLink(
     @Req() req: any,
     @Body() body: {
-      eventType: MessageEventType;
+      eventType: string;
       phone: string;
       context: Record<string, string>;
     },
   ) {
-    // Busca template
-    const template = await this.service.findByEventType(req.user.workspaceId, body.eventType);
-    
-    // Renderiza mensagem
-    const rendered = renderTemplate(template.message, body.context);
-    
-    // Gera link
-    const whatsappLink = generateWhatsAppLink(body.phone, rendered);
+    try {
+      // Busca template
+      const template = await this.service.findByEventType(
+        req.user.workspaceId, 
+        body.eventType as MessageEventType
+      );
+      
+      // Renderiza mensagem
+      const rendered = renderTemplate(template.message, body.context);
+      
+      // Gera link
+      const whatsappLink = generateWhatsAppLink(body.phone, rendered);
 
-    return {
-      message: rendered,
-      whatsappLink,
-    };
+      return {
+        message: rendered,
+        whatsappLink,
+      };
+    } catch (error) {
+      console.error('Erro ao gerar link:', error);
+      throw error;
+    }
   }
 }

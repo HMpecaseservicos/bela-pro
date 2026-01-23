@@ -74,22 +74,30 @@ export class MessageTemplatesService {
   /**
    * Busca um template específico por tipo de evento
    */
-  async findByEventType(workspaceId: string, eventType: MessageEventType) {
-    // TENANT ISOLATION: findFirst com workspaceId no WHERE
-    const template = await this.prisma.messageTemplate.findFirst({
-      where: { workspaceId, eventType },
-    });
+  async findByEventType(workspaceId: string, eventType: MessageEventType | string) {
+    // Primeiro verifica se o evento existe nos metadados locais
+    const eventMeta = MESSAGE_EVENTS.find(e => e.type === eventType);
+    
+    // Se o evento não está definido localmente, retorna erro
+    if (!eventMeta) {
+      throw new NotFoundException(`Tipo de evento não encontrado: ${eventType}`);
+    }
 
-    if (template) {
-      return template;
+    try {
+      // TENANT ISOLATION: findFirst com workspaceId no WHERE
+      const template = await this.prisma.messageTemplate.findFirst({
+        where: { workspaceId, eventType: eventType as any },
+      });
+
+      if (template) {
+        return template;
+      }
+    } catch (error) {
+      // Se o enum não existe no banco ainda, ignora o erro
+      console.log(`Template não encontrado no banco para ${eventType}, usando padrão`);
     }
 
     // Retorna template padrão se não existir personalizado
-    const eventMeta = MESSAGE_EVENTS.find(e => e.type === eventType);
-    if (!eventMeta) {
-      throw new NotFoundException('Tipo de evento não encontrado');
-    }
-
     return {
       id: null,
       workspaceId,
