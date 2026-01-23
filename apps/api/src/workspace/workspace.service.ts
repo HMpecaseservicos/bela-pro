@@ -14,9 +14,9 @@ const updateWorkspaceSchema = z.object({
   brandName: z.string().max(100).optional().nullable(),
   primaryColorHex: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional().nullable(),
   accentColorHex: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional().nullable(),
-  logoUrl: z.string().url().optional().nullable(),
-  coverImageUrl: z.string().url().optional().nullable(),
-  galleryUrls: z.array(z.string().url()).max(10).optional(),
+  logoUrl: z.string().max(500).optional().nullable(), // Aceita URLs relativas ou absolutas
+  coverImageUrl: z.string().max(500).optional().nullable(), // Aceita URLs relativas ou absolutas
+  galleryUrls: z.array(z.string().max(500)).max(10).optional(),
   themePreset: z.enum(['rose_gold', 'burgundy', 'olive_green', 'classic_dark', 'ocean_blue', 'custom']).optional().nullable(),
   welcomeText: z.string().max(200).optional().nullable(),
   description: z.string().max(1000).optional().nullable(),
