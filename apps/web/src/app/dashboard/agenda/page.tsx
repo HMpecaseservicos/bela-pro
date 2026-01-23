@@ -23,6 +23,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }>
 const STATUS_TO_EVENT: Record<string, string> = {
   PENDING: 'APPOINTMENT_CREATED',
   CONFIRMED: 'APPOINTMENT_CONFIRMED',
+  COMPLETED: 'APPOINTMENT_COMPLETED',
   CANCELLED: 'APPOINTMENT_CANCELLED',
 };
 

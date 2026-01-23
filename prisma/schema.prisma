@@ -57,6 +57,7 @@ enum NotificationType {
 enum MessageEventType {
   APPOINTMENT_CREATED       // Agendamento criado (aguardando confirmação)
   APPOINTMENT_CONFIRMED     // Agendamento confirmado
+  APPOINTMENT_COMPLETED     // Serviço concluído
   APPOINTMENT_REMINDER_24H  // Lembrete 24h antes
   APPOINTMENT_REMINDER_2H   // Lembrete 2h antes
   APPOINTMENT_CANCELLED     // Agendamento cancelado

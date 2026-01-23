@@ -15,6 +15,7 @@
 export enum MessageEventType {
   APPOINTMENT_CREATED = 'APPOINTMENT_CREATED',
   APPOINTMENT_CONFIRMED = 'APPOINTMENT_CONFIRMED',
+  APPOINTMENT_COMPLETED = 'APPOINTMENT_COMPLETED',
   APPOINTMENT_REMINDER_24H = 'APPOINTMENT_REMINDER_24H',
   APPOINTMENT_REMINDER_2H = 'APPOINTMENT_REMINDER_2H',
   APPOINTMENT_CANCELLED = 'APPOINTMENT_CANCELLED',
@@ -45,6 +46,12 @@ export const MESSAGE_EVENTS: MessageEventMeta[] = [
     label: 'Agendamento Confirmado',
     description: 'Enviado quando o agendamento é confirmado pelo profissional',
     defaultMessage: 'Olá {{clientName}}! ✅\n\nSeu agendamento está confirmado:\n📅 {{date}} às {{time}}\n💇 {{serviceName}}\n📍 {{workspaceName}}\n\nTe esperamos!',
+  },
+  {
+    type: MessageEventType.APPOINTMENT_COMPLETED,
+    label: 'Serviço Concluído',
+    description: 'Enviado quando o atendimento é finalizado',
+    defaultMessage: 'Olá {{clientName}}! 💜\n\nObrigado pela visita!\n💇 {{serviceName}}\n\nEsperamos que tenha gostado! Volte sempre! ⭐',
   },
   {
     type: MessageEventType.APPOINTMENT_REMINDER_24H,
