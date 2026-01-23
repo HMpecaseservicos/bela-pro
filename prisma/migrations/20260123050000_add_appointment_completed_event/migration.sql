@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "MessageEventType" ADD VALUE 'APPOINTMENT_COMPLETED';
