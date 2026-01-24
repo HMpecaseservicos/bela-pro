@@ -166,7 +166,7 @@ export class ChatbotService {
       }
 
       // 6. Processar FSM
-      const context = (conversation.contextJson as ConversationContext) || {
+      const context = (conversation.contextJson as unknown as ConversationContext) || {
         clientPhone: phoneE164,
         clientName: contactName,
         attemptCount: 0,

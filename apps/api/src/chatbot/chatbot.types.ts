@@ -255,7 +255,7 @@ export interface IncomingMessageData {
   messageId: string;
   messageText: string;
   messageType: string;
-  rawPayload: WhatsAppIncomingMessage;
+  rawPayload: unknown; // WhatsAppIncomingMessage ou EvolutionMessage
   phoneNumberId: string;
 }
 
