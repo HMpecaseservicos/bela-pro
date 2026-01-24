@@ -7,6 +7,7 @@ export class HealthController {
     return {
       status: 'ok',
       service: 'bela-pro-api',
+      version: '1.0.3-chatbot', // versão para verificar deploy
       timestamp: new Date().toISOString(),
     };
   }
