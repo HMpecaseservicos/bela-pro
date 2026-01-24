@@ -25,6 +25,9 @@ import { WhatsAppWebhookPayload, ChatConversationState } from './chatbot.types';
  * - Webhook do WhatsApp Cloud API (público)
  * - Webhook da Evolution API (público)
  * - Gerenciamento de conversas (autenticado)
+ * 
+ * @version 1.0.1
+ * @updated 2026-01-24
  */
 @Controller('chatbot')
 export class ChatbotController {
