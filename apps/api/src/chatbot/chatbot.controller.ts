@@ -40,6 +40,19 @@ export class ChatbotController {
   ) {}
 
   // ==========================================================================
+  // HEALTH CHECK (Público)
+  // ==========================================================================
+
+  /**
+   * GET /chatbot/health
+   * Endpoint para verificar se o módulo chatbot está carregado
+   */
+  @Get('health')
+  healthCheck() {
+    return { status: 'ok', module: 'chatbot', timestamp: new Date().toISOString() };
+  }
+
+  // ==========================================================================
   // WEBHOOK ENDPOINTS (Públicos)
   // ==========================================================================
 
