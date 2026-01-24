@@ -16,6 +16,7 @@ import { TeamModule } from './team/team.module';
 import { MessageTemplatesModule } from './message-templates/message-templates.module';
 import { ChatUsageModule } from './chat-usage/chat-usage.module';
 import { ChatbotModule } from './chatbot/chatbot.module';
+import { ChatbotTestModule } from './chatbot-test/chatbot-test.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { ChatbotModule } from './chatbot/chatbot.module';
     MessageTemplatesModule,
     ChatUsageModule,
     ChatbotModule,
+    ChatbotTestModule,
   ],
   controllers: [HealthController],
 })
