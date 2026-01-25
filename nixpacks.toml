@@ -2,7 +2,7 @@
 nixPkgs = ["nodejs_22", "npm-9_x"]
 
 [phases.install]
-cmds = ["npm ci --include=dev"]
+cmds = ["rm -rf node_modules/.cache 2>/dev/null || true", "npm install --include=dev"]
 
 [phases.build]
 cmds = ["npx prisma generate --schema=prisma/schema.prisma", "npm run build"]
@@ -11,4 +11,5 @@ cmds = ["npx prisma generate --schema=prisma/schema.prisma", "npm run build"]
 cmd = "node apps/api/dist/main.js"
 
 [caches]
-enabled = false
+npm = false
+node_modules = false
