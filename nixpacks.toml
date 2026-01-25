@@ -1,4 +1,4 @@
-# Configuração simplificada para Railway
+# Configuracao simplificada para Railway
 [phases.setup]
 nixPkgs = ["nodejs_22"]
 
@@ -6,7 +6,7 @@ nixPkgs = ["nodejs_22"]
 cmds = ["npm install"]
 
 [phases.build]
-cmds = ["npx prisma generate --schema=prisma/schema.prisma", "cd apps/api && npx tsc -p tsconfig.build.json"]
+cmds = ["npx prisma generate --schema=prisma/schema.prisma", "cd apps/api && tsc -p tsconfig.build.json"]
 
 [start]
 cmd = "node apps/api/dist/main.js"

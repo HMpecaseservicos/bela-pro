@@ -166,11 +166,14 @@ export class ChatbotService {
       }
 
       // 6. Processar FSM
-      const context = (conversation.contextJson as unknown as ConversationContext) || {
-        clientPhone: phoneE164,
-        clientName: contactName,
-        attemptCount: 0,
-      };
+      const context =
+        conversation.contextJson && typeof conversation.contextJson === 'object'
+          ? (conversation.contextJson as ConversationContext)
+          : {
+              clientPhone: phoneE164,
+              clientName: contactName,
+              attemptCount: 0,
+            };
 
       const transition = await this.stateMachine.process(
         workspaceId,
