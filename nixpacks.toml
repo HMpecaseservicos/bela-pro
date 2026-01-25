@@ -1,15 +1,12 @@
+# Configuração simplificada para Railway
 [phases.setup]
-nixPkgs = ["nodejs_22", "npm-9_x"]
+nixPkgs = ["nodejs_22"]
 
 [phases.install]
-cmds = ["rm -rf node_modules/.cache 2>/dev/null || true", "npm install --include=dev"]
+cmds = ["npm install"]
 
 [phases.build]
-cmds = ["npx prisma generate --schema=prisma/schema.prisma", "npm run build"]
+cmds = ["npx prisma generate --schema=prisma/schema.prisma", "cd apps/api && npx tsc -p tsconfig.build.json"]
 
 [start]
 cmd = "node apps/api/dist/main.js"
-
-[caches]
-npm = false
-node_modules = false
