@@ -349,8 +349,9 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
   }
 
   /**
-   * Responde diretamente a uma mensagem (evita bug do markedUnread)
-   * Usa pupPage.evaluate para contornar bugs internos do whatsapp-web.js
+   * Responde diretamente a uma mensagem
+   * Usa window.WWebJS.sendMessage diretamente via pupPage.evaluate
+   * para contornar o bug do markedUnread no whatsapp-web.js
    */
   async replyToMessage(workspaceId: string, rawMessage: unknown, text: string): Promise<boolean> {
     const session = this.sessions.get(workspaceId);
@@ -364,36 +365,43 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
       const msg = rawMessage as Message;
       const chatId = msg.from;
       
-      // Usa pupPage.evaluate para enviar mensagem diretamente
-      // Isso contorna o bug do markedUnread
-      const client = session.client as { pupPage?: { evaluate: (fn: (chatId: string, text: string) => Promise<boolean>, chatId: string, text: string) => Promise<boolean> } };
+      // Acessa pupPage do cliente
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pupPage = (session.client as any).pupPage;
       
-      if (client.pupPage) {
-        const result = await client.pupPage.evaluate(async (chatId: string, text: string) => {
-          try {
-            const chat = await (window as unknown as { WWebJS: { getChat: (id: string, opts: { getAsModel: boolean }) => Promise<{ sendMessage: (text: string) => Promise<unknown> }> } }).WWebJS.getChat(chatId, { getAsModel: false });
-            if (chat) {
-              await chat.sendMessage(text);
-              return true;
-            }
-            return false;
-          } catch {
-            return false;
-          }
-        }, chatId, text);
-        
-        if (result) {
-          this.logger.log(`[${workspaceId}] Resposta enviada para ${chatId}`);
-          return true;
-        }
+      if (!pupPage) {
+        this.logger.error(`[${workspaceId}] pupPage não disponível`);
+        return false;
       }
       
-      // Fallback: tenta o método normal
-      this.logger.warn(`[${workspaceId}] pupPage.evaluate falhou, tentando sendMessage`);
-      const chat = await session.client.getChatById(chatId);
-      await chat.sendMessage(text);
-      this.logger.log(`[${workspaceId}] Resposta enviada via fallback`);
-      return true;
+      // Usa window.WWebJS.sendMessage diretamente
+      // Esta é a função interna que contorna o bug do markedUnread
+      const result = await pupPage.evaluate(async (chatId: string, content: string) => {
+        try {
+          // Busca o chat sem serialização (getAsModel: false)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const win = window as any;
+          const chat = await win.WWebJS.getChat(chatId, { getAsModel: false });
+          
+          if (!chat) {
+            return { success: false, error: 'Chat não encontrado' };
+          }
+          
+          // Usa sendMessage interno do WWebJS
+          const msg = await win.WWebJS.sendMessage(chat, content, {});
+          return { success: !!msg, error: null };
+        } catch (err: unknown) {
+          return { success: false, error: String(err) };
+        }
+      }, chatId, text);
+      
+      if (result.success) {
+        this.logger.log(`[${workspaceId}] Resposta enviada para ${chatId}`);
+        return true;
+      }
+      
+      this.logger.warn(`[${workspaceId}] Falha ao enviar: ${result.error}`);
+      return false;
     } catch (err) {
       this.logger.error(`[${workspaceId}] Erro ao responder mensagem: ${err}`);
       return false;
@@ -401,7 +409,7 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
   }
 
   /**
-   * Envia mensagem de texto
+   * Envia mensagem de texto (usa mesma técnica do replyToMessage)
    */
   async sendMessage(workspaceId: string, to: string, text: string): Promise<boolean> {
     const session = this.sessions.get(workspaceId);
@@ -414,9 +422,41 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
     try {
       // Formatar número para WhatsApp (adiciona @c.us)
       const chatId = this.formatPhoneForWhatsApp(to);
-      await session.client.sendMessage(chatId, text);
-      this.logger.log(`[${workspaceId}] Mensagem enviada para ${to}`);
-      return true;
+      
+      // Acessa pupPage do cliente
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pupPage = (session.client as any).pupPage;
+      
+      if (!pupPage) {
+        this.logger.error(`[${workspaceId}] pupPage não disponível`);
+        return false;
+      }
+      
+      // Usa window.WWebJS.sendMessage diretamente
+      const result = await pupPage.evaluate(async (chatId: string, content: string) => {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const win = window as any;
+          const chat = await win.WWebJS.getChat(chatId, { getAsModel: false });
+          
+          if (!chat) {
+            return { success: false, error: 'Chat não encontrado' };
+          }
+          
+          const msg = await win.WWebJS.sendMessage(chat, content, {});
+          return { success: !!msg, error: null };
+        } catch (err: unknown) {
+          return { success: false, error: String(err) };
+        }
+      }, chatId, text);
+      
+      if (result.success) {
+        this.logger.log(`[${workspaceId}] Mensagem enviada para ${to}`);
+        return true;
+      }
+      
+      this.logger.warn(`[${workspaceId}] Falha ao enviar para ${to}: ${result.error}`);
+      return false;
     } catch (err) {
       this.logger.error(`[${workspaceId}] Erro ao enviar mensagem: ${err}`);
       return false;
