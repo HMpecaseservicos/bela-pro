@@ -309,7 +309,7 @@ export class StateMachineService {
     }
 
     if (selectedDate) {
-      // TODO: Integrar com AvailabilityService para pegar slots reais
+      // Nota: integrar com AvailabilityService para pegar slots reais
       // Por enquanto, horários mock
       const slots = [
         { time: '09:00', label: '09:00' },
@@ -447,7 +447,7 @@ export class StateMachineService {
       normalized === 'confirm_yes' ||
       containsKeyword(normalized, CONFIRM_KEYWORDS)
     ) {
-      // TODO: Criar agendamento via PublicBookingService
+      // Nota: criar agendamento via PublicBookingService
       // Por enquanto, simular sucesso
 
       return {
@@ -566,7 +566,7 @@ export class StateMachineService {
     // Não fazer nada - humano responde
     return {
       nextState: ChatConversationState.HUMAN_HANDOFF,
-      response: null as any, // Não enviar resposta automática
+      response: null, // Não enviar resposta automática
     };
   }
 

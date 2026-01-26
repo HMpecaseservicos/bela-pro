@@ -2,7 +2,7 @@ import { Controller, Get, Patch, Param, Body, UseGuards, Req, ForbiddenException
 import { WorkspaceService } from './workspace.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@Controller('workspace')
+@Controller('api/v1/workspace')
 export class WorkspaceController {
   constructor(private readonly workspaceService: WorkspaceService) {}
 

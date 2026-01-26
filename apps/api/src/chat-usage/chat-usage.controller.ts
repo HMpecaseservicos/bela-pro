@@ -16,7 +16,7 @@ import { getCurrentYearMonth } from './chat-usage.types';
  * Não há endpoints de escrita aqui pois o registro de uso
  * é feito automaticamente pelo webhook do chatbot.
  */
-@Controller('chat-usage')
+@Controller('api/v1/chat-usage')
 @UseGuards(JwtAuthGuard)
 export class ChatUsageController {
   constructor(private readonly chatUsageService: ChatUsageService) {}

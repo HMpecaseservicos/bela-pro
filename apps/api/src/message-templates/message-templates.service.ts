@@ -11,7 +11,7 @@
  * @module message-templates
  */
 
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MessageEventType, MESSAGE_EVENTS } from './message-events';
 import { z } from 'zod';
@@ -24,6 +24,8 @@ const updateTemplateSchema = z.object({
 
 @Injectable()
 export class MessageTemplatesService {
+  private readonly logger = new Logger(MessageTemplatesService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
@@ -83,10 +85,12 @@ export class MessageTemplatesService {
       throw new NotFoundException(`Tipo de evento não encontrado: ${eventType}`);
     }
 
+    const normalizedEventType: MessageEventType = eventMeta.type;
+
     try {
       // TENANT ISOLATION: findFirst com workspaceId no WHERE
       const template = await this.prisma.messageTemplate.findFirst({
-        where: { workspaceId, eventType: eventType as any },
+        where: { workspaceId, eventType: normalizedEventType },
       });
 
       if (template) {
@@ -94,14 +98,14 @@ export class MessageTemplatesService {
       }
     } catch (error) {
       // Se o enum não existe no banco ainda, ignora o erro
-      console.log(`Template não encontrado no banco para ${eventType}, usando padrão`);
+      this.logger.debug(`Template não encontrado no banco para ${eventType}, usando padrão`);
     }
 
     // Retorna template padrão se não existir personalizado
     return {
       id: null,
       workspaceId,
-      eventType,
+      eventType: normalizedEventType,
       message: eventMeta.defaultMessage,
       enabled: true,
       allowClientReply: false,

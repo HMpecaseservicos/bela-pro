@@ -13,7 +13,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ScheduleRulesService } from './schedule-rules.service';
 
-@Controller('schedule-rules')
+@Controller('api/v1/schedule-rules')
 @UseGuards(JwtAuthGuard)
 export class ScheduleRulesController {
   constructor(private readonly scheduleRulesService: ScheduleRulesService) {}

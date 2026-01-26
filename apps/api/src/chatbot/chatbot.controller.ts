@@ -29,7 +29,7 @@ import { WhatsAppWebhookPayload, ChatConversationState } from './chatbot.types';
  * @version 1.0.1
  * @updated 2026-01-24
  */
-@Controller('chatbot')
+@Controller('api/v1/chatbot')
 export class ChatbotController {
   private readonly logger = new Logger(ChatbotController.name);
 

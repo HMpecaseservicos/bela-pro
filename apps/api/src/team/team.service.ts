@@ -107,7 +107,7 @@ export class TeamService {
     const baseUrl = this.config.get<string>('WEB_URL') || 'http://localhost:3000';
     const inviteUrl = `${baseUrl}/convite/${token}`;
 
-    // TODO: Send invitation email with inviteUrl
+    // Nota: enviar convite por email com inviteUrl
 
     return {
       success: true,

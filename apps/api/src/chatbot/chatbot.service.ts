@@ -11,7 +11,10 @@ import {
   IncomingMessageData,
   WhatsAppWebhookPayload,
   extractMessageText,
+  isWhatsAppIncomingMessage,
   normalizePhoneE164,
+  parseConversationContext,
+  serializeConversationContext,
 } from './chatbot.types';
 
 /**
@@ -124,7 +127,7 @@ export class ChatbotService {
 
     try {
       // 1. Identificar workspace pelo phoneNumberId
-      // TODO: Implementar mapeamento phoneNumberId -> workspaceId
+      // Nota: o mapeamento phoneNumberId -> workspaceId ainda é heurístico
       // Por enquanto, buscar workspace que tenha conversas com este telefone
       // ou usar um workspace padrão
       const workspaceId = await this.resolveWorkspaceId(phoneNumberId, phoneE164);
@@ -166,18 +169,24 @@ export class ChatbotService {
       }
 
       // 6. Processar FSM
-      const context = (conversation.contextJson as ConversationContext) || {
+      const fallbackContext: ConversationContext = {
         clientPhone: phoneE164,
         clientName: contactName,
         attemptCount: 0,
       };
+
+      const context = parseConversationContext(conversation.contextJson) ?? fallbackContext;
+
+      const rawMessageForFsm = isWhatsAppIncomingMessage(data.rawPayload)
+        ? data.rawPayload
+        : undefined;
 
       const transition = await this.stateMachine.process(
         workspaceId,
         conversation.state as ChatConversationState,
         context,
         messageText,
-        data.rawPayload,
+        rawMessageForFsm,
       );
 
       // 7. Atualizar conversa
@@ -187,7 +196,7 @@ export class ChatbotService {
         where: { id: conversation.id },
         data: {
           state: transition.nextState,
-          contextJson: newContext as any,
+          contextJson: serializeConversationContext(newContext),
           isHumanHandoff: transition.nextState === ChatConversationState.HUMAN_HANDOFF,
         },
       });
@@ -201,7 +210,7 @@ export class ChatbotService {
           // Usar Evolution API
           try {
             if (transition.response.type === 'text') {
-              responseText = (transition.response as any).text.body;
+              responseText = transition.response.text.body;
               await this.evolutionApi.sendText({
                 number: phoneE164,
                 text: responseText,
@@ -209,14 +218,21 @@ export class ChatbotService {
               success = true;
             } else if (transition.response.type === 'interactive') {
               // Converter para lista ou botões
-              const interactive = (transition.response as any).interactive;
+              const { interactive } = transition.response;
               if (interactive.type === 'list') {
                 await this.evolutionApi.sendList({
                   number: phoneE164,
                   title: interactive.header?.text || 'Escolha uma opção',
                   description: interactive.body.text,
                   buttonText: interactive.action.button,
-                  sections: interactive.action.sections,
+                  sections: interactive.action.sections.map((section) => ({
+                    title: section.title,
+                    rows: section.rows.map((row) => ({
+                      rowId: row.id,
+                      title: row.title,
+                      description: row.description,
+                    })),
+                  })),
                 });
                 responseText = interactive.body.text;
                 success = true;
@@ -225,7 +241,7 @@ export class ChatbotService {
                   number: phoneE164,
                   title: interactive.header?.text || 'BELA PRO',
                   description: interactive.body.text,
-                  buttons: interactive.action.buttons.map((btn: any) => ({
+                  buttons: interactive.action.buttons.map((btn) => ({
                     buttonId: btn.reply.id,
                     buttonText: btn.reply.title,
                   })),
@@ -241,9 +257,10 @@ export class ChatbotService {
           // Usar WhatsApp Cloud API
           const result = await this.whatsapp.sendMessage(transition.response);
           success = result.success;
-          responseText = transition.response.type === 'text' 
-            ? (transition.response as any).text.body 
-            : JSON.stringify(transition.response);
+          responseText =
+            transition.response.type === 'text'
+              ? transition.response.text.body
+              : JSON.stringify(transition.response);
         }
         
         if (success) {
@@ -280,7 +297,7 @@ export class ChatbotService {
     phoneNumberId: string,
     clientPhone: string,
   ): Promise<string | null> {
-    // TODO: Implementar tabela de mapeamento phoneNumberId -> workspaceId
+    // Nota: idealmente usar uma tabela de mapeamento phoneNumberId -> workspaceId
     // Por enquanto, buscar workspace que tenha conversas com este cliente
     
     const existingConversation = await this.prisma.chatbotConversation.findFirst({
@@ -335,7 +352,7 @@ export class ChatbotService {
           channel: ChatChannel.WHATSAPP,
           phoneE164,
           state: ChatConversationState.START,
-          contextJson: initialContext as any,
+          contextJson: serializeConversationContext(initialContext),
           isHumanHandoff: false,
         },
       });

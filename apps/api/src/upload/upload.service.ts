@@ -5,7 +5,7 @@ import { randomUUID } from 'crypto';
 
 @Injectable()
 export class UploadService {
-  private readonly uploadDir = '/workspace/uploads';
+  private readonly uploadDir: string;
   private readonly maxFileSize = 5 * 1024 * 1024; // 5MB
   private readonly allowedMimeTypes = [
     'image/jpeg',
@@ -15,6 +15,8 @@ export class UploadService {
   ];
 
   constructor() {
+    this.uploadDir = process.env.UPLOAD_DIR || path.join(process.cwd(), 'tmp', 'uploads');
+
     // Cria diretório de uploads se não existir
     if (!fs.existsSync(this.uploadDir)) {
       fs.mkdirSync(this.uploadDir, { recursive: true });

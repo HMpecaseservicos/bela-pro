@@ -13,7 +13,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MessageEventType, MESSAGE_EVENTS, TEMPLATE_VARIABLES } from './message-events';
 import { renderTemplate, generateWhatsAppLink } from './template-renderer';
 
-@Controller('message-templates')
+@Controller('api/v1/message-templates')
 @UseGuards(JwtAuthGuard)
 export class MessageTemplatesController {
   constructor(private readonly service: MessageTemplatesService) {}

@@ -13,7 +13,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { TimeOffService } from './time-off.service';
 
-@Controller('time-off')
+@Controller('api/v1/time-off')
 @UseGuards(JwtAuthGuard)
 export class TimeOffController {
   constructor(private readonly timeOffService: TimeOffService) {}

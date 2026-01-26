@@ -17,7 +17,7 @@ import * as fs from 'fs';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UploadService } from './upload.service';
 
-@Controller('upload')
+@Controller('api/v1/upload')
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 

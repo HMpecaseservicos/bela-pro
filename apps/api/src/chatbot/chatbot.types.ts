@@ -4,6 +4,9 @@
  * Tipos e interfaces para o chatbot WhatsApp BELA PRO
  */
 
+import type { Prisma } from '@prisma/client';
+import type { EvolutionMessage } from './evolution-api.service';
+
 // ============================================================================
 // ENUMS (espelhando Prisma)
 // ============================================================================
@@ -85,6 +88,16 @@ export interface WhatsAppIncomingMessage {
     };
   };
 }
+
+// ============================================================================
+// PROVIDER-AGNOSTIC INCOMING TYPES
+// ============================================================================
+
+/**
+ * Payload bruto de mensagem recebida.
+ * Pode vir do WhatsApp Cloud API (Webhook) ou da Evolution API.
+ */
+export type IncomingRawPayload = WhatsAppIncomingMessage | EvolutionMessage;
 
 export interface WhatsAppMessageStatus {
   id: string;
@@ -211,7 +224,7 @@ export interface ConversationContext {
  */
 export interface StateTransition {
   nextState: ChatConversationState;
-  response: WhatsAppOutgoingMessage;
+  response: WhatsAppOutgoingMessage | null;
   context?: Partial<ConversationContext>;
   shouldSave?: boolean;
 }
@@ -255,7 +268,7 @@ export interface IncomingMessageData {
   messageId: string;
   messageText: string;
   messageType: string;
-  rawPayload: WhatsAppIncomingMessage;
+  rawPayload: IncomingRawPayload;
   phoneNumberId: string;
 }
 
@@ -356,6 +369,79 @@ export function extractMessageText(message: WhatsAppIncomingMessage): string {
   }
   
   return '';
+}
+
+// ============================================================================
+// TYPE GUARDS / SERIALIZERS
+// ============================================================================
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+/**
+ * Type guard mínimo para identificar payload do WhatsApp Cloud API.
+ */
+export function isWhatsAppIncomingMessage(value: IncomingRawPayload): value is WhatsAppIncomingMessage {
+  if (!isRecord(value)) return false;
+  return (
+    typeof value.from === 'string' &&
+    typeof value.id === 'string' &&
+    typeof value.timestamp === 'string' &&
+    typeof value.type === 'string'
+  );
+}
+
+/**
+ * Faz parse seguro do JSON persistido no banco para `ConversationContext`.
+ * Retorna `null` se estiver ausente ou inválido.
+ */
+export function parseConversationContext(value: unknown): ConversationContext | null {
+  if (!isRecord(value)) return null;
+
+  const clientPhone = typeof value.clientPhone === 'string' ? value.clientPhone : null;
+  const attemptCount = typeof value.attemptCount === 'number' ? value.attemptCount : null;
+
+  if (!clientPhone || attemptCount === null) return null;
+
+  const context: ConversationContext = {
+    clientPhone,
+    attemptCount,
+  };
+
+  if (typeof value.clientName === 'string') context.clientName = value.clientName;
+  if (typeof value.selectedServiceId === 'string') context.selectedServiceId = value.selectedServiceId;
+  if (typeof value.selectedServiceName === 'string') context.selectedServiceName = value.selectedServiceName;
+  if (typeof value.selectedDate === 'string') context.selectedDate = value.selectedDate;
+  if (typeof value.selectedTime === 'string') context.selectedTime = value.selectedTime;
+  if (typeof value.selectedSlotStart === 'string') context.selectedSlotStart = value.selectedSlotStart;
+  if (typeof value.lastAction === 'string') context.lastAction = value.lastAction;
+  if (typeof value.appointmentId === 'string') context.appointmentId = value.appointmentId;
+  if (typeof value.pendingConfirmation === 'boolean') context.pendingConfirmation = value.pendingConfirmation;
+
+  return context;
+}
+
+/**
+ * Serializa `ConversationContext` para um objeto JSON aceito pelo Prisma.
+ * Evita casts inseguros e garante compatibilidade com `Prisma.InputJsonObject`.
+ */
+export function serializeConversationContext(context: ConversationContext): Prisma.InputJsonObject {
+  const json = {
+    clientPhone: context.clientPhone,
+    attemptCount: context.attemptCount,
+    ...(context.clientName !== undefined ? { clientName: context.clientName } : {}),
+    ...(context.selectedServiceId !== undefined ? { selectedServiceId: context.selectedServiceId } : {}),
+    ...(context.selectedServiceName !== undefined ? { selectedServiceName: context.selectedServiceName } : {}),
+    ...(context.selectedDate !== undefined ? { selectedDate: context.selectedDate } : {}),
+    ...(context.selectedTime !== undefined ? { selectedTime: context.selectedTime } : {}),
+    ...(context.selectedSlotStart !== undefined ? { selectedSlotStart: context.selectedSlotStart } : {}),
+    ...(context.lastAction !== undefined ? { lastAction: context.lastAction } : {}),
+    ...(context.appointmentId !== undefined ? { appointmentId: context.appointmentId } : {}),
+    ...(context.pendingConfirmation !== undefined ? { pendingConfirmation: context.pendingConfirmation } : {}),
+  } satisfies Prisma.InputJsonObject;
+
+  return json;
 }
 
 /**

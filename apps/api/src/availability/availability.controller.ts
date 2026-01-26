@@ -1,7 +1,7 @@
 import { Controller, Get, Query, Param } from '@nestjs/common';
 import { AvailabilityService } from './availability.service';
 
-@Controller('availability')
+@Controller('api/v1/availability')
 export class AvailabilityController {
   constructor(private readonly availabilityService: AvailabilityService) {}
 

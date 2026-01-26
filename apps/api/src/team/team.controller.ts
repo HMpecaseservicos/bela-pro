@@ -6,7 +6,7 @@ import type { JwtSubject } from '../auth/auth.types';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 
-@Controller('team')
+@Controller('api/v1/team')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
 export class TeamController {
   constructor(private readonly teamService: TeamService) {}

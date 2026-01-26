@@ -203,12 +203,16 @@ export class AppointmentsService {
     await this.findOne(workspaceId, id);
 
     const validStatuses = ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'] as const;
-    if (!validStatuses.includes(status as any)) {
+
+    type AppointmentStatus = typeof validStatuses[number];
+    const isAppointmentStatus = (value: string): value is AppointmentStatus =>
+      validStatuses.some(s => s === value);
+
+    if (!isAppointmentStatus(status)) {
       throw new BadRequestException('Status inválido.');
     }
 
-    type AppointmentStatus = typeof validStatuses[number];
-    const typedStatus = status as AppointmentStatus;
+    const typedStatus = status;
 
     // TENANT ISOLATION: updateMany com workspaceId no where
     const updateData: Record<string, unknown> = { status: typedStatus };
