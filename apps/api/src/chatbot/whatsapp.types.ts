@@ -79,6 +79,7 @@ export interface IncomingWhatsAppMessage {
   body: string;        // Texto da mensagem
   timestamp: Date;
   messageId: string;
+  rawMessage?: unknown; // Mensagem original (para reply direto)
 }
 
 // ==========================================================================

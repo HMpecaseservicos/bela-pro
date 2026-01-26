@@ -301,9 +301,20 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
 
     // Mensagem recebida
     client.on('message', async (msg: Message) => {
-      // Ignorar mensagens de grupo ou próprias
-      if (msg.from.includes('@g.us') || msg.fromMe) {
+      // Ignorar mensagens de grupo, próprias, de broadcast ou LID
+      if (
+        msg.from.includes('@g.us') ||       // Grupos
+        msg.from.includes('@broadcast') ||  // Broadcast
+        msg.from.includes('@lid') ||        // LID (identificador interno)
+        msg.fromMe                          // Mensagens próprias
+      ) {
         return;
+      }
+
+      // Ignorar mensagens vazias ou muito antigas (sync inicial)
+      const messageAge = Date.now() - (msg.timestamp * 1000);
+      if (!msg.body || msg.body.trim() === '' || messageAge > 60000) {
+        return; // Ignora mensagens vazias ou com mais de 1 minuto
       }
 
       // Obter nome do contato
@@ -323,6 +334,7 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
         body: msg.body || '',
         timestamp: new Date(msg.timestamp * 1000),
         messageId: msg.id._serialized,
+        rawMessage: msg, // Passar mensagem original para reply
       };
 
       // Chamar callback se registrado
@@ -334,6 +346,35 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
         }
       }
     });
+  }
+
+  /**
+   * Responde diretamente a uma mensagem (evita bug do markedUnread)
+   */
+  async replyToMessage(workspaceId: string, rawMessage: unknown, text: string): Promise<boolean> {
+    const session = this.sessions.get(workspaceId);
+    
+    if (!session || session.state !== WhatsAppSessionState.CONNECTED) {
+      this.logger.warn(`[${workspaceId}] Tentativa de responder sem sessão conectada`);
+      return false;
+    }
+
+    try {
+      // Cast para Message do whatsapp-web.js
+      const msg = rawMessage as Message;
+      if (msg && typeof msg.reply === 'function') {
+        await msg.reply(text);
+        this.logger.log(`[${workspaceId}] Resposta enviada`);
+        return true;
+      }
+      
+      // Fallback: tenta sendMessage
+      this.logger.warn(`[${workspaceId}] rawMessage não tem reply, usando sendMessage`);
+      return await this.sendMessage(workspaceId, (rawMessage as { from?: string })?.from?.replace('@c.us', '') || '', text);
+    } catch (err) {
+      this.logger.error(`[${workspaceId}] Erro ao responder mensagem: ${err}`);
+      return false;
+    }
   }
 
   /**

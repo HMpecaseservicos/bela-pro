@@ -69,7 +69,7 @@ export class WhatsAppBotService implements OnModuleInit {
    * Processa mensagem recebida
    */
   async handleIncomingMessage(message: IncomingWhatsAppMessage): Promise<void> {
-    const { workspaceId, from, fromName, body } = message;
+    const { workspaceId, from, fromName, body, rawMessage } = message;
 
     this.logger.log(`[${workspaceId}] Mensagem de ${from}: "${body}"`);
 
@@ -101,7 +101,12 @@ export class WhatsAppBotService implements OnModuleInit {
     const response = await this.processCommand(context, variables);
 
     if (response) {
-      await this.sessionManager.sendMessage(workspaceId, from, response);
+      // Usa reply direto se tiver rawMessage, senão usa sendMessage
+      if (rawMessage) {
+        await this.sessionManager.replyToMessage(workspaceId, rawMessage, response);
+      } else {
+        await this.sessionManager.sendMessage(workspaceId, from, response);
+      }
     }
   }
 
