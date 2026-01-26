@@ -350,6 +350,7 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
 
   /**
    * Responde diretamente a uma mensagem (evita bug do markedUnread)
+   * Usa pupPage.evaluate para contornar bugs internos do whatsapp-web.js
    */
   async replyToMessage(workspaceId: string, rawMessage: unknown, text: string): Promise<boolean> {
     const session = this.sessions.get(workspaceId);
@@ -360,27 +361,42 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
     }
 
     try {
-      // Cast para Message do whatsapp-web.js
       const msg = rawMessage as Message;
       const chatId = msg.from;
       
-      // Usa getChatById para evitar o bug do markedUnread
+      // Usa pupPage.evaluate para enviar mensagem diretamente
+      // Isso contorna o bug do markedUnread
+      const client = session.client as { pupPage?: { evaluate: (fn: (chatId: string, text: string) => Promise<boolean>, chatId: string, text: string) => Promise<boolean> } };
+      
+      if (client.pupPage) {
+        const result = await client.pupPage.evaluate(async (chatId: string, text: string) => {
+          try {
+            const chat = await (window as unknown as { WWebJS: { getChat: (id: string, opts: { getAsModel: boolean }) => Promise<{ sendMessage: (text: string) => Promise<unknown> }> } }).WWebJS.getChat(chatId, { getAsModel: false });
+            if (chat) {
+              await chat.sendMessage(text);
+              return true;
+            }
+            return false;
+          } catch {
+            return false;
+          }
+        }, chatId, text);
+        
+        if (result) {
+          this.logger.log(`[${workspaceId}] Resposta enviada para ${chatId}`);
+          return true;
+        }
+      }
+      
+      // Fallback: tenta o método normal
+      this.logger.warn(`[${workspaceId}] pupPage.evaluate falhou, tentando sendMessage`);
       const chat = await session.client.getChatById(chatId);
       await chat.sendMessage(text);
-      
-      this.logger.log(`[${workspaceId}] Resposta enviada para ${chatId}`);
+      this.logger.log(`[${workspaceId}] Resposta enviada via fallback`);
       return true;
     } catch (err) {
       this.logger.error(`[${workspaceId}] Erro ao responder mensagem: ${err}`);
-      
-      // Fallback: tenta sendMessage direto
-      try {
-        const msg = rawMessage as Message;
-        const phone = msg.from.replace('@c.us', '');
-        return await this.sendMessage(workspaceId, phone, text);
-      } catch {
-        return false;
-      }
+      return false;
     }
   }
 
