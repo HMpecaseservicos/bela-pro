@@ -362,18 +362,25 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
     try {
       // Cast para Message do whatsapp-web.js
       const msg = rawMessage as Message;
-      if (msg && typeof msg.reply === 'function') {
-        await msg.reply(text);
-        this.logger.log(`[${workspaceId}] Resposta enviada`);
-        return true;
-      }
+      const chatId = msg.from;
       
-      // Fallback: tenta sendMessage
-      this.logger.warn(`[${workspaceId}] rawMessage não tem reply, usando sendMessage`);
-      return await this.sendMessage(workspaceId, (rawMessage as { from?: string })?.from?.replace('@c.us', '') || '', text);
+      // Usa getChatById para evitar o bug do markedUnread
+      const chat = await session.client.getChatById(chatId);
+      await chat.sendMessage(text);
+      
+      this.logger.log(`[${workspaceId}] Resposta enviada para ${chatId}`);
+      return true;
     } catch (err) {
       this.logger.error(`[${workspaceId}] Erro ao responder mensagem: ${err}`);
-      return false;
+      
+      // Fallback: tenta sendMessage direto
+      try {
+        const msg = rawMessage as Message;
+        const phone = msg.from.replace('@c.us', '');
+        return await this.sendMessage(workspaceId, phone, text);
+      } catch {
+        return false;
+      }
     }
   }
 
