@@ -4,11 +4,14 @@
  * Endpoints REST para gerenciar bot WhatsApp.
  * 
  * Endpoints:
- * - GET  /chatbot/health           - Health check
- * - GET  /chatbot/whatsapp/status  - Status da conexão
- * - POST /chatbot/whatsapp/connect - Iniciar conexão
- * - GET  /chatbot/whatsapp/qrcode  - Obter QR Code
- * - POST /chatbot/whatsapp/disconnect - Desconectar
+ * - GET    /chatbot/health              - Health check
+ * - GET    /chatbot/whatsapp/status     - Status da conexão
+ * - POST   /chatbot/whatsapp/connect    - Iniciar conexão
+ * - GET    /chatbot/whatsapp/qrcode     - Obter QR Code
+ * - POST   /chatbot/whatsapp/disconnect - Desconectar
+ * - GET    /chatbot/templates           - Listar templates do bot
+ * - PUT    /chatbot/templates/:key      - Atualizar template
+ * - DELETE /chatbot/templates/:key      - Resetar template (volta ao padrão)
  * 
  * @module chatbot
  */
@@ -17,6 +20,10 @@ import {
   Controller,
   Get,
   Post,
+  Put,
+  Delete,
+  Body,
+  Param,
   UseGuards,
   Req,
   Logger,
@@ -25,6 +32,8 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { WhatsAppSessionManager } from './whatsapp-session.manager';
+import { PrismaService } from '../prisma/prisma.service';
+import { BotTemplateKey } from './whatsapp-bot.service';
 import { 
   WhatsAppStatusResponse, 
   WhatsAppQrCodeResponse,
@@ -41,12 +50,52 @@ interface AuthenticatedRequest {
   };
 }
 
+// Metadados dos templates para UI
+const BOT_TEMPLATE_META: Record<string, { label: string; description: string; defaultContent: string }> = {
+  [BotTemplateKey.WELCOME]: {
+    label: 'Boas-vindas',
+    description: 'Primeira mensagem quando cliente entra em contato',
+    defaultContent: 'Olá {{clientName}}! 👋\n\nBem-vindo(a) à {{workspaceName}}!\n\nDigite:\n1️⃣ Agendar\n2️⃣ Meus agendamentos\n3️⃣ Falar com atendente',
+  },
+  [BotTemplateKey.MENU]: {
+    label: 'Menu Principal',
+    description: 'Menu de opções exibido quando cliente pede',
+    defaultContent: 'Como posso ajudar?\n\n1️⃣ Agendar\n2️⃣ Meus agendamentos\n3️⃣ Falar com atendente',
+  },
+  [BotTemplateKey.HELP]: {
+    label: 'Ajuda',
+    description: 'Mensagem de ajuda',
+    defaultContent: 'Precisa de ajuda? 🤔\n\nDigite o número da opção:\n1 - Agendar um serviço\n2 - Ver seus agendamentos\n3 - Falar com um atendente',
+  },
+  [BotTemplateKey.UNKNOWN_COMMAND]: {
+    label: 'Comando não reconhecido',
+    description: 'Quando o bot não entende a mensagem',
+    defaultContent: 'Desculpe, não entendi. 😅\n\nDigite:\n1️⃣ Agendar\n2️⃣ Meus agendamentos\n3️⃣ Falar com atendente',
+  },
+  [BotTemplateKey.HUMAN_HANDOFF]: {
+    label: 'Transferência para atendente',
+    description: 'Quando cliente pede para falar com humano',
+    defaultContent: 'Certo! Um atendente vai falar com você em breve. ⏳\n\nAguarde, por favor!',
+  },
+  [BotTemplateKey.BOOKING_LINK]: {
+    label: 'Link de Agendamento',
+    description: 'Mensagem com link para agendar',
+    defaultContent: '📅 Para agendar, acesse o link:\n\n{{bookingLink}}\n\nÉ rápido e fácil! ✨',
+  },
+  [BotTemplateKey.NO_APPOINTMENTS]: {
+    label: 'Sem Agendamentos',
+    description: 'Quando cliente não tem agendamentos',
+    defaultContent: 'Você não tem agendamentos futuros. 📅\n\nDigite 1 para agendar!',
+  },
+};
+
 @Controller('api/v1/chatbot')
 export class ChatbotController {
   private readonly logger = new Logger(ChatbotController.name);
 
   constructor(
     private readonly sessionManager: WhatsAppSessionManager,
+    private readonly prisma: PrismaService,
   ) {}
 
   // ==========================================================================
@@ -208,6 +257,125 @@ export class ChatbotController {
         message: err instanceof Error ? err.message : 'Erro ao desconectar',
       };
     }
+  }
+
+  // ==========================================================================
+  // BOT TEMPLATES (Admin configura mensagens do bot)
+  // ==========================================================================
+
+  /**
+   * Lista todas as templates disponíveis com valores atuais
+   */
+  @Get('templates')
+  @UseGuards(JwtAuthGuard)
+  async listTemplates(@Req() req: AuthenticatedRequest) {
+    const { workspaceId } = req.user;
+
+    // Busca templates customizados no banco
+    const customTemplates = await this.prisma.chatbotTemplate.findMany({
+      where: { workspaceId, isActive: true },
+      select: { key: true, content: true },
+    });
+
+    const customMap = new Map(customTemplates.map((t) => [t.key, t.content]));
+
+    // Monta lista com todas as templates + valores atuais
+    const templates = Object.entries(BOT_TEMPLATE_META).map(([key, meta]) => ({
+      key,
+      label: meta.label,
+      description: meta.description,
+      defaultContent: meta.defaultContent,
+      currentContent: customMap.get(key) || meta.defaultContent,
+      isCustomized: customMap.has(key),
+    }));
+
+    return {
+      success: true,
+      data: templates,
+    };
+  }
+
+  /**
+   * Atualiza uma template específica
+   */
+  @Put('templates/:key')
+  @UseGuards(JwtAuthGuard)
+  async updateTemplate(
+    @Req() req: AuthenticatedRequest,
+    @Param('key') key: string,
+    @Body() body: { content: string },
+  ) {
+    const { workspaceId } = req.user;
+
+    // Valida se a key existe
+    if (!Object.values(BotTemplateKey).includes(key as BotTemplateKey)) {
+      return {
+        success: false,
+        message: `Template key inválida: ${key}`,
+      };
+    }
+
+    // Upsert: atualiza se existe, cria se não
+    const template = await this.prisma.chatbotTemplate.upsert({
+      where: {
+        workspaceId_key: {
+          workspaceId,
+          key,
+        },
+      },
+      update: {
+        content: body.content,
+        isActive: true,
+      },
+      create: {
+        workspaceId,
+        key,
+        content: body.content,
+        isActive: true,
+      },
+    });
+
+    this.logger.log(`[${workspaceId}] Template ${key} atualizada`);
+
+    return {
+      success: true,
+      data: {
+        key: template.key,
+        content: template.content,
+      },
+    };
+  }
+
+  /**
+   * Reseta uma template para o valor padrão (remove customização)
+   */
+  @Delete('templates/:key')
+  @UseGuards(JwtAuthGuard)
+  async resetTemplate(
+    @Req() req: AuthenticatedRequest,
+    @Param('key') key: string,
+  ) {
+    const { workspaceId } = req.user;
+
+    // Valida se a key existe
+    if (!Object.values(BotTemplateKey).includes(key as BotTemplateKey)) {
+      return {
+        success: false,
+        message: `Template key inválida: ${key}`,
+      };
+    }
+
+    // Deleta a customização (volta para default)
+    await this.prisma.chatbotTemplate.deleteMany({
+      where: { workspaceId, key },
+    });
+
+    this.logger.log(`[${workspaceId}] Template ${key} resetada para padrão`);
+
+    return {
+      success: true,
+      message: `Template ${key} resetada para valor padrão`,
+    };
   }
 
   // ==========================================================================

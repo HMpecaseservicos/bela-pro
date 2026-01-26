@@ -32,6 +32,57 @@ chatbot/
 | POST | /chatbot/whatsapp/connect | Iniciar conexão (gera QR) |
 | GET | /chatbot/whatsapp/qrcode | Obter QR Code atual |
 | POST | /chatbot/whatsapp/disconnect | Desconectar sessão |
+| GET | /chatbot/templates | Listar todas as templates do bot |
+| PUT | /chatbot/templates/:key | Atualizar conteúdo de uma template |
+| DELETE | /chatbot/templates/:key | Resetar template para valor padrão |
+
+## Templates do Bot
+
+Templates configuráveis via tabela `ChatbotTemplate`:
+
+| Key | Descrição |
+|-----|-----------|
+| `WELCOME` | Mensagem de boas-vindas |
+| `MENU` | Menu principal com opções |
+| `HELP` | Ajuda e instruções |
+| `UNKNOWN_COMMAND` | Comando não reconhecido |
+| `HUMAN_HANDOFF` | Transferência para atendente |
+| `BOOKING_LINK` | Link para agendamento |
+| `NO_APPOINTMENTS` | Sem agendamentos encontrados |
+
+### Exemplo: Listar templates
+
+```bash
+GET /api/v1/chatbot/templates
+Authorization: Bearer <token>
+
+# Response
+{
+  "success": true,
+  "data": [
+    {
+      "key": "WELCOME",
+      "label": "Boas-vindas",
+      "description": "Primeira mensagem ao iniciar conversa",
+      "defaultContent": "Olá! 👋 Bem-vindo...",
+      "currentContent": "Olá! 👋 Bem-vindo...",
+      "isCustomized": false
+    }
+  ]
+}
+```
+
+### Exemplo: Atualizar template
+
+```bash
+PUT /api/v1/chatbot/templates/WELCOME
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "content": "Oi! 🎉 Que bom ver você por aqui!"
+}
+```
 
 ## Fluxo de Conexão
 
@@ -49,10 +100,12 @@ chatbot/
 - `connected` - Conectado e operacional
 - `connecting` - Em processo de conexão
 
-## Templates
+## Arquitetura de Templates
 
-Todas as mensagens são carregadas do `MessageTemplatesModule`.
-Nenhuma mensagem é hardcoded no bot.
+1. **Tabela `ChatbotTemplate`**: Admin customiza mensagens via API
+2. **Fallback**: Se não existir customização, usa valor padrão do código
+3. **Cache**: WhatsAppBotService carrega templates sob demanda
+4. **Multi-tenant**: Cada workspace tem suas próprias customizações
 
 ## Futuro
 
