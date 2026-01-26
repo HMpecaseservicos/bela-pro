@@ -1,0 +1,16 @@
+# Nixpacks config (Railway)
+# Objetivo: build determinístico do monorepo e start da API.
+
+[phases.install]
+cmds = [
+  "npm ci --no-audit --no-fund"
+]
+
+[phases.build]
+cmds = [
+  "npm run db:generate",
+  "npm run build -w @bela-pro/api"
+]
+
+[start]
+cmd = "node apps/api/dist/main.js"

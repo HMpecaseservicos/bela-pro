@@ -12,6 +12,7 @@
     "dev:api": "npm run -w @bela-pro/api dev",
     "db:generate": "npm run -w @bela-pro/api db:generate",
     "db:migrate": "npm run -w @bela-pro/api db:migrate",
+    "db:migrate:deploy": "npm run -w @bela-pro/api db:migrate:deploy",
     "lint": "npm run -ws lint",
     "test": "npm run -ws test",
     "docker:up": "docker compose up -d --build",
@@ -22,7 +23,9 @@
     "build": "npm run build -w @bela-pro/api",
     "build:api": "npm run build -w @bela-pro/api",
     "build:web": "npm run build -w @bela-pro/web",
-    "start:api": "node apps/api/dist/main.js"
+    "start:api": "node apps/api/dist/main.js",
+    "railway:build": "npm run db:generate && npm run build -w @bela-pro/api",
+    "railway:start": "node apps/api/dist/main.js"
   },
   "engines": {
     "node": ">=20"
