@@ -1,16 +1,38 @@
 # Nixpacks config (Railway)
 # Objetivo: build determinístico do monorepo e start da API.
 
+# =============================================================================
+# SETUP: Instala pacotes do sistema (Chromium para WhatsApp Bot)
+# =============================================================================
+[phases.setup]
+nixPkgs = ["chromium"]
+
+# =============================================================================
+# INSTALL: Dependências Node.js
+# =============================================================================
 [phases.install]
 cmds = [
   "npm ci --no-audit --no-fund"
 ]
 
+# =============================================================================
+# BUILD: Gera Prisma Client e compila API
+# =============================================================================
 [phases.build]
 cmds = [
   "npm run db:generate",
   "npm run build -w @bela-pro/api"
 ]
 
+# =============================================================================
+# START: Executa migrações e inicia API
+# =============================================================================
 [start]
 cmd = "npm run db:migrate:deploy && node apps/api/dist/main.js"
+
+# =============================================================================
+# VARIÁVEIS DE AMBIENTE (Puppeteer/WhatsApp)
+# =============================================================================
+[variables]
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
+PUPPETEER_EXECUTABLE_PATH = "/nix/store/chromium/bin/chromium"

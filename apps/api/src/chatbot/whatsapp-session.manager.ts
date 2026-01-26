@@ -10,6 +10,11 @@
  * - Manter estado de conexão
  * - Isolar sessões completamente entre workspaces
  * 
+ * Compatível com Railway (Node.js gerenciado):
+ * - Puppeteer configurado para ambientes sem GUI
+ * - Usa PUPPETEER_EXECUTABLE_PATH se disponível
+ * - Flags de segurança para containers/VMs
+ * 
  * @module chatbot
  */
 
@@ -25,6 +30,32 @@ import {
 
 // Callback para mensagens recebidas
 export type MessageCallback = (message: IncomingWhatsAppMessage) => Promise<void>;
+
+/**
+ * Configuração do Puppeteer para ambientes gerenciados (Railway, Heroku, etc.)
+ * - headless: true (sem GUI)
+ * - executablePath: usa PUPPETEER_EXECUTABLE_PATH se definido
+ * - args: flags obrigatórias para ambientes sem privilégios root
+ */
+function getPuppeteerConfig() {
+  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  
+  return {
+    headless: true,
+    executablePath: executablePath || undefined,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--disable-gpu',
+      '--single-process', // Importante para Railway
+      '--disable-extensions',
+    ],
+  };
+}
 
 interface SessionData {
   client: Client;
@@ -131,18 +162,7 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
         clientId: workspaceId,
         dataPath: this.sessionsDir,
       }),
-      puppeteer: {
-        headless: true,
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--no-first-run',
-          '--no-zygote',
-          '--disable-gpu',
-        ],
-      },
+      puppeteer: getPuppeteerConfig(),
     });
 
     // Criar registro da sessão

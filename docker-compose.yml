@@ -1,4 +1,25 @@
+# =============================================================================
+# Docker Compose - DESENVOLVIMENTO LOCAL APENAS
+# =============================================================================
+#
+# IMPORTANTE: Este arquivo é APENAS para desenvolvimento local.
+# 
+# Em PRODUÇÃO (Railway), o deploy é feito via Node.js direto (sem Docker).
+# Veja: nixpacks.toml para configuração de produção.
+#
+# USO LOCAL:
+#   docker-compose up postgres redis   # Apenas banco e cache
+#   npm run dev:api                     # API em modo dev
+#   npm run dev:web                     # Web em modo dev
+#
+# Os serviços 'api' e 'web' estão comentados pois os Dockerfiles
+# ainda não foram criados (evolução futura, não faz parte do MVP).
+# =============================================================================
+
 services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL - Banco de dados
+  # ---------------------------------------------------------------------------
   postgres:
     image: postgres:16
     environment:
@@ -15,6 +36,9 @@ services:
       timeout: 5s
       retries: 20
 
+  # ---------------------------------------------------------------------------
+  # Redis - Cache e sessões
+  # ---------------------------------------------------------------------------
   redis:
     image: redis:7
     ports:
@@ -25,37 +49,39 @@ services:
       timeout: 5s
       retries: 20
 
-  api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-    environment:
-      API_PORT: 3001
-      DATABASE_URL: "postgresql://bela:senha@postgres:5432/bela_pro?schema=public"
-      REDIS_URL: "redis://redis:6379"
-      JWT_ACCESS_SECRET: "troque-este-segredo"
-      JWT_REFRESH_SECRET: "troque-este-segredo"
-      JWT_ACCESS_TTL_SECONDS: 900
-      JWT_REFRESH_TTL_SECONDS: 2592000
-      PUBLIC_BASE_URL: "http://localhost:3000"
-    ports:
-      - "3001:3001"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+  # ---------------------------------------------------------------------------
+  # API (FUTURO - Dockerfiles não implementados ainda)
+  # ---------------------------------------------------------------------------
+  # api:
+  #   build:
+  #     context: .
+  #     dockerfile: apps/api/Dockerfile
+  #   environment:
+  #     API_PORT: 3001
+  #     DATABASE_URL: "postgresql://bela:senha@postgres:5432/bela_pro?schema=public"
+  #     REDIS_URL: "redis://redis:6379"
+  #     JWT_ACCESS_SECRET: "troque-este-segredo"
+  #   ports:
+  #     - "3001:3001"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
 
-  web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
-    environment:
-      NEXT_PUBLIC_API_URL: "http://192.168.3.134:3001/api/v1"
-    ports:
-      - "3000:3000"
-    depends_on:
-      - api
+  # ---------------------------------------------------------------------------
+  # WEB (FUTURO - Dockerfiles não implementados ainda)
+  # ---------------------------------------------------------------------------
+  # web:
+  #   build:
+  #     context: .
+  #     dockerfile: apps/web/Dockerfile
+  #   environment:
+  #     NEXT_PUBLIC_API_URL: "http://localhost:3001/api/v1"
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - api
 
 volumes:
   bela_pro_pg:
