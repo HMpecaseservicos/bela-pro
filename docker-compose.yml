@@ -25,62 +25,6 @@ services:
       timeout: 5s
       retries: 20
 
-  # Evolution API - WhatsApp sem Cloud API
-  evolution:
-    image: atendai/evolution-api:latest
-    ports:
-      - "8080:8080"
-    environment:
-      SERVER_URL: http://localhost:8080
-      AUTHENTICATION_API_KEY: bela-pro-evolution-key
-      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "true"
-      DATABASE_ENABLED: "true"
-      DATABASE_PROVIDER: postgresql
-      DATABASE_CONNECTION_URI: postgresql://bela:senha@postgres:5432/bela_pro?schema=evolution
-      DATABASE_CONNECTION_CLIENT_NAME: evolution
-      DATABASE_SAVE_DATA_INSTANCE: "true"
-      DATABASE_SAVE_DATA_NEW_MESSAGE: "true"
-      DATABASE_SAVE_MESSAGE_UPDATE: "true"
-      DATABASE_SAVE_DATA_CONTACTS: "true"
-      DATABASE_SAVE_DATA_CHATS: "true"
-      REDIS_ENABLED: "true"
-      REDIS_URI: redis://redis:6379
-      REDIS_PREFIX_KEY: evolution
-      WEBHOOK_GLOBAL_URL: http://api:3001/api/v1/chatbot/evolution/webhook
-      WEBHOOK_GLOBAL_ENABLED: "true"
-      WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS: "true"
-      WEBHOOK_EVENTS_APPLICATION_STARTUP: "false"
-      WEBHOOK_EVENTS_QRCODE_UPDATED: "true"
-      WEBHOOK_EVENTS_MESSAGES_SET: "true"
-      WEBHOOK_EVENTS_MESSAGES_UPSERT: "true"
-      WEBHOOK_EVENTS_MESSAGES_UPDATE: "true"
-      WEBHOOK_EVENTS_MESSAGES_DELETE: "false"
-      WEBHOOK_EVENTS_SEND_MESSAGE: "true"
-      WEBHOOK_EVENTS_CONTACTS_SET: "true"
-      WEBHOOK_EVENTS_CONTACTS_UPDATE: "true"
-      WEBHOOK_EVENTS_PRESENCE_UPDATE: "false"
-      WEBHOOK_EVENTS_CHATS_SET: "true"
-      WEBHOOK_EVENTS_CHATS_UPDATE: "true"
-      WEBHOOK_EVENTS_CHATS_DELETE: "false"
-      WEBHOOK_EVENTS_GROUPS_UPSERT: "false"
-      WEBHOOK_EVENTS_GROUPS_UPDATE: "false"
-      WEBHOOK_EVENTS_GROUP_PARTICIPANTS_UPDATE: "false"
-      WEBHOOK_EVENTS_CONNECTION_UPDATE: "true"
-      WEBHOOK_EVENTS_CALL: "false"
-      WEBHOOK_EVENTS_TYPEBOT_START: "false"
-      WEBHOOK_EVENTS_TYPEBOT_CHANGE_STATUS: "false"
-      CONFIG_SESSION_PHONE_CLIENT: "BELA PRO"
-      CONFIG_SESSION_PHONE_NAME: Chrome
-      QRCODE_LIMIT: 30
-      QRCODE_COLOR: "#8B5CF6"
-    volumes:
-      - evolution_instances:/evolution/instances
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
   api:
     build:
       context: .
@@ -94,10 +38,6 @@ services:
       JWT_ACCESS_TTL_SECONDS: 900
       JWT_REFRESH_TTL_SECONDS: 2592000
       PUBLIC_BASE_URL: "http://localhost:3000"
-      # Evolution API
-      EVOLUTION_API_URL: "http://evolution:8080"
-      EVOLUTION_API_KEY: "bela-pro-evolution-key"
-      EVOLUTION_INSTANCE_NAME: "bela-pro"
     ports:
       - "3001:3001"
     depends_on:
@@ -105,8 +45,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      evolution:
-        condition: service_started
 
   web:
     build:
@@ -121,4 +59,3 @@ services:
 
 volumes:
   bela_pro_pg:
-  evolution_instances:
