@@ -1,9 +1,13 @@
 /**
- * Chatbot Module
+ * Chatbot Module Exports
  * 
- * WhatsApp Cloud API integration coming soon.
- * Evolution API was removed.
+ * Bot WhatsApp via QR Code (whatsapp-web.js).
+ * 
+ * @module chatbot
  */
+
 export * from './chatbot.module';
 export * from './chatbot.controller';
-export * from './whatsapp.service';
+export * from './whatsapp-session.manager';
+export * from './whatsapp-bot.service';
+export * from './whatsapp.types';

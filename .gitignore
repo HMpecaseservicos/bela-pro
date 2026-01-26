@@ -10,3 +10,8 @@ coverage/
 .DS_Store
 
 *.tsbuildinfo
+# WhatsApp sessions (whatsapp-web.js)
+.whatsapp-sessions/
+
+# Uploads temporários
+tmp/uploads/

@@ -1,245 +1,237 @@
+/**
+ * Chatbot Controller
+ * 
+ * Endpoints REST para gerenciar bot WhatsApp.
+ * 
+ * Endpoints:
+ * - GET  /chatbot/health           - Health check
+ * - GET  /chatbot/whatsapp/status  - Status da conexão
+ * - POST /chatbot/whatsapp/connect - Iniciar conexão
+ * - GET  /chatbot/whatsapp/qrcode  - Obter QR Code
+ * - POST /chatbot/whatsapp/disconnect - Desconectar
+ * 
+ * @module chatbot
+ */
+
 import {
   Controller,
   Get,
   Post,
-  Body,
-  Param,
-  Query,
   UseGuards,
+  Req,
+  Logger,
   HttpCode,
   HttpStatus,
-  Logger,
-  Res,
 } from '@nestjs/common';
-import type { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { WhatsAppService } from './whatsapp.service';
+import { WhatsAppSessionManager } from './whatsapp-session.manager';
+import { 
+  WhatsAppStatusResponse, 
+  WhatsAppQrCodeResponse,
+  WhatsAppConnectResponse,
+  WhatsAppDisconnectResponse,
+  WhatsAppSessionState,
+} from './whatsapp.types';
 
-/**
- * ChatbotController
- * 
- * Endpoints do chatbot.
- * WhatsApp integration foi removida temporariamente.
- * 
- * @version 2.0.0
- * @updated 2026-01-26
- */
+interface AuthenticatedRequest {
+  user: {
+    userId: string;
+    workspaceId: string;
+    role: string;
+  };
+}
+
 @Controller('api/v1/chatbot')
 export class ChatbotController {
   private readonly logger = new Logger(ChatbotController.name);
 
   constructor(
-    private readonly whatsappService: WhatsAppService,
+    private readonly sessionManager: WhatsAppSessionManager,
   ) {}
 
   // ==========================================================================
-  // HEALTH CHECK (Público)
+  // HEALTH CHECK
   // ==========================================================================
 
   @Get('health')
   healthCheck() {
-    return { status: 'ok', module: 'chatbot', timestamp: new Date().toISOString() };
+    return { 
+      status: 'ok', 
+      module: 'chatbot',
+      version: '2.0.0',
+      timestamp: new Date().toISOString(),
+    };
   }
 
   // ==========================================================================
-  // WEBHOOK ENDPOINTS (Públicos) - Stub para quando WhatsApp Cloud API for implementado
+  // WHATSAPP STATUS
   // ==========================================================================
 
-  @Get('webhook')
-  verifyWebhook(
-    @Query('hub.mode') mode: string,
-    @Query('hub.verify_token') token: string,
-    @Query('hub.challenge') challenge: string,
-    @Res() res: Response,
-  ) {
-    this.logger.log(`[Webhook] Verificação: mode=${mode}, token=${token}`);
-
-    if (mode === 'subscribe' && token === this.whatsappService.getWebhookVerifyToken()) {
-      this.logger.log('[Webhook] Verificação bem-sucedida');
-      return res.status(200).send(challenge);
-    }
-
-    this.logger.warn('[Webhook] Verificação falhou');
-    return res.status(403).send('Forbidden');
-  }
-
-  @Post('webhook')
-  @HttpCode(HttpStatus.OK)
-  handleWebhook(@Body() payload: unknown) {
-    this.logger.log(`[Webhook] Payload recebido (ignorado - WhatsApp desabilitado)`);
-    return { status: 'received', note: 'WhatsApp integration coming soon' };
-  }
-
-  // ==========================================================================
-  // WHATSAPP CONNECTION - Temporariamente desabilitado
-  // ==========================================================================
-
+  /**
+   * Retorna status da conexão WhatsApp do workspace
+   */
   @Get('whatsapp/status')
   @UseGuards(JwtAuthGuard)
-  getWhatsAppStatus() {
+  getStatus(@Req() req: AuthenticatedRequest): WhatsAppStatusResponse {
+    const { workspaceId } = req.user;
+    
+    const info = this.sessionManager.getSessionInfo(workspaceId);
+
     return {
       success: true,
       data: {
-        hasInstance: false,
-        instanceName: null,
-        connectionState: 'disabled',
-        webhookUrl: null,
-        lastConnectedAt: null,
-        message: 'Integração WhatsApp em desenvolvimento. Em breve disponível com WhatsApp Cloud API.',
+        state: info.state,
+        connectedPhone: info.connectedPhone,
+        connectedAt: info.connectedAt?.toISOString() || null,
+        qrCode: info.state === WhatsAppSessionState.QR_PENDING ? info.qrCode : null,
       },
     };
   }
 
-  @Post('whatsapp/qrcode')
+  // ==========================================================================
+  // CONNECT
+  // ==========================================================================
+
+  /**
+   * Inicia conexão WhatsApp (gera QR Code)
+   */
+  @Post('whatsapp/connect')
   @UseGuards(JwtAuthGuard)
-  getWhatsAppQRCode() {
-    return {
-      success: false,
-      error: 'Integração WhatsApp em desenvolvimento. Em breve disponível com WhatsApp Cloud API.',
-      comingSoon: true,
-    };
+  @HttpCode(HttpStatus.OK)
+  async connect(@Req() req: AuthenticatedRequest): Promise<WhatsAppConnectResponse> {
+    const { workspaceId } = req.user;
+
+    this.logger.log(`[${workspaceId}] Solicitação de conexão WhatsApp`);
+
+    try {
+      const info = await this.sessionManager.startSession(workspaceId);
+
+      return {
+        success: true,
+        message: info.state === WhatsAppSessionState.CONNECTED 
+          ? 'WhatsApp já está conectado'
+          : 'Sessão iniciada. Aguarde o QR Code.',
+        data: {
+          state: info.state,
+          qrCode: info.qrCode,
+        },
+      };
+    } catch (err) {
+      this.logger.error(`[${workspaceId}] Erro ao conectar: ${err}`);
+      
+      return {
+        success: false,
+        message: err instanceof Error ? err.message : 'Erro ao iniciar conexão',
+      };
+    }
   }
 
-  @Post('whatsapp/disconnect')
+  // ==========================================================================
+  // QR CODE
+  // ==========================================================================
+
+  /**
+   * Retorna QR Code atual (se disponível)
+   */
+  @Get('whatsapp/qrcode')
   @UseGuards(JwtAuthGuard)
-  disconnectWhatsApp() {
+  getQrCode(@Req() req: AuthenticatedRequest): WhatsAppQrCodeResponse {
+    const { workspaceId } = req.user;
+    
+    const info = this.sessionManager.getSessionInfo(workspaceId);
+
+    // Se não está aguardando QR ou já conectado
+    if (info.state === WhatsAppSessionState.DISCONNECTED) {
+      return {
+        success: false,
+        data: null,
+        error: 'Sessão não iniciada. Use POST /whatsapp/connect primeiro.',
+      };
+    }
+
+    if (info.state === WhatsAppSessionState.CONNECTED) {
+      return {
+        success: true,
+        data: {
+          qrCode: null,
+          state: info.state,
+        },
+      };
+    }
+
+    if (!info.qrCode) {
+      return {
+        success: true,
+        data: {
+          qrCode: null,
+          state: info.state,
+        },
+      };
+    }
+
     return {
       success: true,
-      data: { message: 'Nenhuma conexão ativa. WhatsApp Cloud API em breve.' },
+      data: {
+        qrCode: info.qrCode,
+        state: info.state,
+      },
     };
   }
 
   // ==========================================================================
-  // EVOLUTION API - Removido (stubs para compatibilidade)
+  // DISCONNECT
   // ==========================================================================
 
-  @Post('evolution/webhook')
+  /**
+   * Desconecta WhatsApp e limpa sessão
+   */
+  @Post('whatsapp/disconnect')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  handleEvolutionWebhook(@Body() payload: unknown) {
-    this.logger.log('[Evolution Webhook] Ignorado - Evolution API removida');
-    return { status: 'ignored', note: 'Evolution API removed' };
-  }
+  async disconnect(@Req() req: AuthenticatedRequest): Promise<WhatsAppDisconnectResponse> {
+    const { workspaceId } = req.user;
 
-  @Get('evolution/status')
-  @UseGuards(JwtAuthGuard)
-  getEvolutionStatus() {
-    return { 
-      success: false, 
-      error: 'Evolution API foi removida. WhatsApp Cloud API em desenvolvimento.',
-    };
-  }
+    this.logger.log(`[${workspaceId}] Solicitação de desconexão WhatsApp`);
 
-  @Get('evolution/qrcode')
-  @UseGuards(JwtAuthGuard)
-  getEvolutionQRCode() {
-    return { 
-      success: false, 
-      error: 'Evolution API foi removida. WhatsApp Cloud API em desenvolvimento.',
-    };
-  }
+    try {
+      await this.sessionManager.logoutSession(workspaceId);
 
-  @Post('evolution/configure-webhook')
-  @UseGuards(JwtAuthGuard)
-  configureEvolutionWebhook() {
-    return { 
-      success: false, 
-      error: 'Evolution API foi removida. WhatsApp Cloud API em desenvolvimento.',
-    };
+      return {
+        success: true,
+        message: 'WhatsApp desconectado com sucesso',
+      };
+    } catch (err) {
+      this.logger.error(`[${workspaceId}] Erro ao desconectar: ${err}`);
+      
+      return {
+        success: false,
+        message: err instanceof Error ? err.message : 'Erro ao desconectar',
+      };
+    }
   }
 
   // ==========================================================================
-  // ADMIN ENDPOINTS - Mantidos para quando WhatsApp voltar
+  // LEGACY STUBS (compatibilidade com frontend antigo)
   // ==========================================================================
 
   @Get('conversations')
   @UseGuards(JwtAuthGuard)
-  listMyConversations() {
+  listConversations() {
     return {
       success: true,
       data: [],
-      message: 'Chatbot WhatsApp em desenvolvimento.',
+      message: 'Em desenvolvimento - visualização de conversas em breve.',
     };
   }
-
-  @Get('conversation/:conversationId')
-  @UseGuards(JwtAuthGuard)
-  getMyConversation(@Param('conversationId') conversationId: string) {
-    return { 
-      success: false, 
-      error: 'Conversa não encontrada. Chatbot WhatsApp em desenvolvimento.' 
-    };
-  }
-
-  @Get(':workspaceId/conversations')
-  @UseGuards(JwtAuthGuard)
-  listConversations(@Param('workspaceId') workspaceId: string) {
-    return {
-      success: true,
-      data: [],
-      message: 'Chatbot WhatsApp em desenvolvimento.',
-    };
-  }
-
-  @Get(':workspaceId/conversations/handoff')
-  @UseGuards(JwtAuthGuard)
-  listHandoffConversations(@Param('workspaceId') workspaceId: string) {
-    return {
-      success: true,
-      data: [],
-      count: 0,
-      message: 'Chatbot WhatsApp em desenvolvimento.',
-    };
-  }
-
-  @Get(':workspaceId/conversation/:conversationId')
-  @UseGuards(JwtAuthGuard)
-  getConversation(
-    @Param('workspaceId') workspaceId: string,
-    @Param('conversationId') conversationId: string,
-  ) {
-    return {
-      success: false,
-      error: 'Conversa não encontrada. Chatbot WhatsApp em desenvolvimento.',
-    };
-  }
-
-  @Post(':workspaceId/conversation/:conversationId/handoff')
-  @UseGuards(JwtAuthGuard)
-  toggleHandoff(
-    @Param('workspaceId') workspaceId: string,
-    @Param('conversationId') conversationId: string,
-    @Body('isHandoff') isHandoff: boolean,
-  ) {
-    return {
-      success: false,
-      error: 'Chatbot WhatsApp em desenvolvimento.',
-    };
-  }
-
-  @Post(':workspaceId/conversation/:conversationId/message')
-  @UseGuards(JwtAuthGuard)
-  sendMessage(
-    @Param('workspaceId') workspaceId: string,
-    @Param('conversationId') conversationId: string,
-    @Body('text') text: string,
-  ) {
-    return {
-      success: false,
-      message: 'Chatbot WhatsApp em desenvolvimento.',
-    };
-  }
-
-  // ==========================================================================
-  // STATUS
-  // ==========================================================================
 
   @Get('status')
-  getStatus() {
+  getGlobalStatus() {
     return {
       success: true,
-      configured: false,
-      whatsappEnabled: false,
-      message: 'WhatsApp Cloud API em desenvolvimento.',
+      configured: true,
+      whatsappEnabled: true,
+      version: '2.0.0',
+      message: 'Bot WhatsApp via QR Code',
       timestamp: new Date().toISOString(),
     };
   }
