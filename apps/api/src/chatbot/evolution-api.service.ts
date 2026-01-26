@@ -87,6 +87,14 @@ export class EvolutionApiService {
     this.baseUrl = this.configService.get<string>('EVOLUTION_API_URL') || 'http://localhost:8080';
     this.apiKey = this.configService.get<string>('EVOLUTION_API_KEY') || '';
     this.defaultInstanceName = this.configService.get<string>('EVOLUTION_INSTANCE_NAME') || 'bela-pro';
+
+    if (!this.apiKey.trim()) {
+      this.logger.warn('EVOLUTION_API_KEY não configurada; chamadas à Evolution API podem falhar.');
+    }
+
+    if (process.env.NODE_ENV === 'production' && this.baseUrl.includes('localhost')) {
+      this.logger.warn('EVOLUTION_API_URL está em localhost em produção; ajuste para o endpoint do serviço Evolution.');
+    }
   }
 
   private getInstanceName(instanceName?: string): string {
@@ -137,7 +145,21 @@ export class EvolutionApiService {
     endpoint: string,
     body?: any,
   ): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
+    const baseUrl = this.baseUrl.trim();
+    if (!baseUrl) {
+      throw new Error('EVOLUTION_API_URL não configurada');
+    }
+
+    // Em produção, evitar o default que sempre falha (localhost no container da API)
+    if (process.env.NODE_ENV === 'production' && baseUrl.includes('localhost')) {
+      throw new Error('EVOLUTION_API_URL inválida em produção (está apontando para localhost)');
+    }
+
+    if (!this.apiKey.trim()) {
+      throw new Error('EVOLUTION_API_KEY não configurada');
+    }
+
+    const url = `${baseUrl}${endpoint}`;
     
     try {
       const response = await fetch(url, {
