@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { HealthController } from './health.controller';
+import { RootController } from './root.controller';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { ServicesModule } from './services/services.module';
@@ -40,6 +41,6 @@ import { ChatbotTestModule } from './chatbot-test/chatbot-test.module';
     ChatbotModule,
     ChatbotTestModule,
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, RootController],
 })
 export class AppModule {}
