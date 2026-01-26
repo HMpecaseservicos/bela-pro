@@ -71,6 +71,11 @@ export interface SendListOptions {
   }>;
 }
 
+export interface EvolutionQrCode {
+  base64: string;
+  code?: string | null;
+}
+
 @Injectable()
 export class EvolutionApiService {
   private readonly logger = new Logger(EvolutionApiService.name);
@@ -167,15 +172,56 @@ export class EvolutionApiService {
   /**
    * Obtém o QR Code para conexão
    */
-  async getQRCode(instanceName?: string): Promise<{ base64: string; code: string } | null> {
-    try {
-      const instance = this.getInstanceName(instanceName);
-      const result = await this.request<any>('GET', `/instance/connect/${instance}`);
-      return result;
-    } catch (error) {
-      this.logger.error('Failed to get QR Code:', error);
+  async getQRCode(instanceName?: string): Promise<EvolutionQrCode> {
+    const instance = this.getInstanceName(instanceName);
+    const raw: unknown = await this.request('GET', `/instance/connect/${instance}`);
+
+    const normalizeBase64 = (value: string): string => {
+      const commaIndex = value.indexOf(',');
+      if (value.startsWith('data:image') && commaIndex >= 0) {
+        return value.slice(commaIndex + 1);
+      }
+      return value;
+    };
+
+    const tryGetString = (value: unknown): string | null => (typeof value === 'string' && value.trim() ? value : null);
+
+    const tryGetQrFromObject = (value: unknown): EvolutionQrCode | null => {
+      if (!value || typeof value !== 'object') return null;
+      const rec = value as Record<string, unknown>;
+
+      const directBase64 = tryGetString(rec.base64);
+      const directCode = tryGetString(rec.code);
+      if (directBase64) {
+        return { base64: normalizeBase64(directBase64), code: directCode };
+      }
+
+      const nested = rec.qrcode ?? rec.qrCode ?? rec.qr;
+      if (nested && typeof nested === 'object') {
+        const n = nested as Record<string, unknown>;
+        const nestedBase64 = tryGetString(n.base64) ?? tryGetString(n.qr);
+        const nestedCode = tryGetString(n.code);
+        if (nestedBase64) {
+          return { base64: normalizeBase64(nestedBase64), code: nestedCode };
+        }
+      }
+
       return null;
+    };
+
+    const parsed = tryGetQrFromObject(raw);
+    if (!parsed?.base64 || parsed.base64.length < 20) {
+      const rawPreview = (() => {
+        try {
+          return JSON.stringify(raw).slice(0, 500);
+        } catch {
+          return String(raw);
+        }
+      })();
+      throw new Error(`Evolution não retornou QR Code (instance=${instance}). Resposta: ${rawPreview}`);
     }
+
+    return parsed;
   }
 
   /**
@@ -247,9 +293,6 @@ export class EvolutionApiService {
     });
   }
 
-  /**
-   * Envia mensagem com lista de opções
-   */
   /**
    * Configura o webhook para receber mensagens
    */

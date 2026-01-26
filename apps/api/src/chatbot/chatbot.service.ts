@@ -124,15 +124,20 @@ export class ChatbotService {
       });
     }
 
-    // Garantir que a instância existe (se já existir, ignore erro)
-    await this.evolutionApi.createInstance(instanceName).catch(() => {
-      // best-effort
+    const isIgnorableInstanceError = (err: unknown): boolean => {
+      const msg = err instanceof Error ? err.message : String(err);
+      return /already exists|exist|duplicat|conflict/i.test(msg);
+    };
+
+    // Garantir que a instância existe
+    await this.evolutionApi.createInstance(instanceName).catch(err => {
+      if (!isIgnorableInstanceError(err)) {
+        throw err;
+      }
     });
 
     // Configurar webhook automaticamente
-    await this.evolutionApi.configureWebhook(webhookUrl, instanceName).catch(() => {
-      // best-effort
-    });
+    await this.evolutionApi.configureWebhook(webhookUrl, instanceName);
 
     await this.prisma.workspace.update({
       where: { id: ws.id },

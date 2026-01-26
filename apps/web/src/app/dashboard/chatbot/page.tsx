@@ -48,6 +48,21 @@ function isBoolean(value: unknown): value is boolean {
   return typeof value === 'boolean';
 }
 
+function extractErrorMessage(json: unknown, fallback: string): string {
+  if (!isRecord(json)) return fallback;
+  const directError = json.error;
+  if (typeof directError === 'string' && directError.trim()) return directError;
+
+  const message = json.message;
+  if (typeof message === 'string' && message.trim()) return message;
+  if (Array.isArray(message)) {
+    const first = message.find(m => typeof m === 'string' && m.trim());
+    if (typeof first === 'string') return first;
+  }
+
+  return fallback;
+}
+
 function isConversationListItem(value: unknown): value is ConversationListItem {
   if (!isRecord(value)) return false;
   return (
@@ -291,8 +306,7 @@ export default function ChatbotPage() {
 
       const json: unknown = await res.json().catch(() => null);
       if (!res.ok) {
-        const maybeError = isRecord(json) ? json.error : undefined;
-        throw new Error(typeof maybeError === 'string' ? maybeError : `Erro ao gerar QR Code (${res.status})`);
+        throw new Error(extractErrorMessage(json, `Erro ao gerar QR Code (${res.status})`));
       }
 
       if (!isRecord(json) || !isRecord(json.data)) {

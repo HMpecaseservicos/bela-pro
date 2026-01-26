@@ -11,6 +11,7 @@ import {
   Logger,
   Req,
   Res,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -172,8 +173,13 @@ export class ChatbotController {
     const baseUrl = this.getPublicBaseUrl(req as Request);
     const webhookUrl = `${baseUrl}/api/v1/chatbot/evolution/webhook`;
 
-    const qr = await this.chatbotService.getWhatsAppQrCode(workspaceId, webhookUrl);
-    return { success: true, data: qr };
+    try {
+      const qr = await this.chatbotService.getWhatsAppQrCode(workspaceId, webhookUrl);
+      return { success: true, data: qr };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao gerar QR Code';
+      throw new InternalServerErrorException(message);
+    }
   }
 
   /**
