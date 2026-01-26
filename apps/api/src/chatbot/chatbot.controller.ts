@@ -178,6 +178,11 @@ export class ChatbotController {
       return { success: true, data: qr };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Erro ao gerar QR Code';
+      const stack = err instanceof Error ? err.stack : undefined;
+      this.logger.error(
+        `[WhatsApp QR] Falha ao gerar QR (workspaceId=${workspaceId}) webhookUrl=${webhookUrl} :: ${message}`,
+        stack,
+      );
       throw new InternalServerErrorException(message);
     }
   }
