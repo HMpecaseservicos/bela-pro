@@ -28,6 +28,14 @@ interface ConversationDetails {
   }>;
 }
 
+interface WhatsAppConnectionStatus {
+  hasInstance: boolean;
+  instanceName: string | null;
+  connectionState: string | null;
+  webhookUrl: string | null;
+  lastConnectedAt: string | null;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
@@ -93,6 +101,9 @@ export default function ChatbotPage() {
   const [selectedConversation, setSelectedConversation] = useState<ConversationDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [waStatus, setWaStatus] = useState<WhatsAppConnectionStatus | null>(null);
+  const [qrBase64, setQrBase64] = useState<string | null>(null);
+  const [loadingQr, setLoadingQr] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -110,14 +121,13 @@ export default function ChatbotPage() {
         setLoading(true);
 
         const token = localStorage.getItem('token');
-        const workspaceId = localStorage.getItem('workspaceId');
-        if (!token || !workspaceId) {
+        if (!token) {
           window.location.href = '/login';
           return;
         }
 
         const apiUrl = getApiUrl();
-        const res = await fetch(`${apiUrl}/chatbot/${workspaceId}/conversations`, {
+        const res = await fetch(`${apiUrl}/chatbot/conversations`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -158,19 +168,65 @@ export default function ChatbotPage() {
   useEffect(() => {
     let isMounted = true;
 
+    async function loadWhatsAppStatus() {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const apiUrl = getApiUrl();
+        const res = await fetch(`${apiUrl}/chatbot/whatsapp/status`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const json: unknown = await res.json().catch(() => null);
+        if (!res.ok) {
+          return;
+        }
+
+        if (!isRecord(json) || !isRecord(json.data)) {
+          return;
+        }
+
+        const data = json.data as Record<string, unknown>;
+        const parsed: WhatsAppConnectionStatus = {
+          hasInstance: Boolean(data.hasInstance),
+          instanceName: isString(data.instanceName) ? data.instanceName : null,
+          connectionState: isString(data.connectionState) ? data.connectionState : null,
+          webhookUrl: isString(data.webhookUrl) ? data.webhookUrl : null,
+          lastConnectedAt: isString(data.lastConnectedAt) ? data.lastConnectedAt : null,
+        };
+
+        if (isMounted) {
+          setWaStatus(parsed);
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    loadWhatsAppStatus();
+    const interval = window.setInterval(loadWhatsAppStatus, 10000);
+    return () => {
+      isMounted = false;
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
     async function loadConversationDetails(conversationId: string) {
       try {
         setError(null);
 
         const token = localStorage.getItem('token');
-        const workspaceId = localStorage.getItem('workspaceId');
-        if (!token || !workspaceId) {
+        if (!token) {
           window.location.href = '/login';
           return;
         }
 
         const apiUrl = getApiUrl();
-        const res = await fetch(`${apiUrl}/chatbot/${workspaceId}/conversation/${conversationId}`, {
+        const res = await fetch(`${apiUrl}/chatbot/conversation/${conversationId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -213,6 +269,74 @@ export default function ChatbotPage() {
   const viaBot = conversations.filter(c => !c.isHumanHandoff).length;
   const conversionRate = conversations.length === 0 ? 0 : Math.round((viaBot / conversations.length) * 100);
 
+  const waConnected = (waStatus?.connectionState || '').toLowerCase().includes('open');
+
+  async function handleGenerateQr() {
+    try {
+      setError(null);
+      setLoadingQr(true);
+      setQrBase64(null);
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        window.location.href = '/login';
+        return;
+      }
+
+      const apiUrl = getApiUrl();
+      const res = await fetch(`${apiUrl}/chatbot/whatsapp/qrcode`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const json: unknown = await res.json().catch(() => null);
+      if (!res.ok) {
+        const maybeError = isRecord(json) ? json.error : undefined;
+        throw new Error(typeof maybeError === 'string' ? maybeError : `Erro ao gerar QR Code (${res.status})`);
+      }
+
+      if (!isRecord(json) || !isRecord(json.data)) {
+        throw new Error('Resposta inválida do servidor');
+      }
+
+      const base64 = (json.data as Record<string, unknown>).base64;
+      if (!isString(base64) || base64.length < 20) {
+        throw new Error('QR Code não disponível (tente novamente)');
+      }
+
+      setQrBase64(base64);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro desconhecido');
+    } finally {
+      setLoadingQr(false);
+    }
+  }
+
+  async function handleDisconnectWhatsApp() {
+    try {
+      setError(null);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        window.location.href = '/login';
+        return;
+      }
+
+      const apiUrl = getApiUrl();
+      const res = await fetch(`${apiUrl}/chatbot/whatsapp/disconnect`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        throw new Error(`Erro ao desconectar (${res.status})`);
+      }
+
+      setQrBase64(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro desconhecido');
+    }
+  }
+
   return (
     <div style={{ padding: isMobile ? 16 : 32, height: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
@@ -220,6 +344,100 @@ export default function ChatbotPage() {
         <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 28, fontWeight: 700, color: '#1a1a2e' }}>Chatbot</h1>
         <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: isMobile ? 13 : 15 }}>Gerencie conversas e automações</p>
       </div>
+
+      {/* WhatsApp Connection */}
+      <div style={{
+        background: 'white',
+        borderRadius: 16,
+        padding: isMobile ? 14 : 18,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+        marginBottom: isMobile ? 16 : 20,
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'stretch' : 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 10, height: 10, borderRadius: 999, background: waConnected ? '#10b981' : '#f59e0b' }} />
+            <div style={{ fontWeight: 700, color: '#0f172a' }}>WhatsApp</div>
+          </div>
+          <div style={{ marginTop: 6, color: '#64748b', fontSize: 13 }}>
+            {waStatus
+              ? (waConnected
+                  ? `Conectado (${waStatus.connectionState || 'OPEN'})`
+                  : `Desconectado (${waStatus.connectionState || '—'})`)
+              : 'Carregando status…'}
+          </div>
+          {waStatus?.webhookUrl ? (
+            <div style={{ marginTop: 4, color: '#94a3b8', fontSize: 12, wordBreak: 'break-all' }}>
+              Webhook: {waStatus.webhookUrl}
+            </div>
+          ) : null}
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button
+            onClick={handleGenerateQr}
+            disabled={loadingQr}
+            style={{
+              background: '#667eea',
+              color: 'white',
+              border: 'none',
+              padding: '10px 14px',
+              borderRadius: 10,
+              fontWeight: 600,
+              cursor: loadingQr ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {loadingQr ? 'Gerando…' : 'Gerar QR Code'}
+          </button>
+          <button
+            onClick={handleDisconnectWhatsApp}
+            style={{
+              background: 'white',
+              color: '#0f172a',
+              border: '1px solid #e2e8f0',
+              padding: '10px 14px',
+              borderRadius: 10,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Desconectar
+          </button>
+        </div>
+      </div>
+
+      {qrBase64 ? (
+        <div style={{
+          background: 'white',
+          borderRadius: 16,
+          padding: 16,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+          marginBottom: 16,
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: 16,
+          alignItems: 'center',
+        }}>
+          <img
+            src={`data:image/png;base64,${qrBase64}`}
+            alt="QR Code do WhatsApp"
+            style={{ width: 220, height: 220, borderRadius: 12, border: '1px solid #e2e8f0' }}
+          />
+          <div style={{ color: '#334155', fontSize: 14, lineHeight: 1.5 }}>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>Conectar WhatsApp</div>
+            <div>1) No celular: WhatsApp → <b>Aparelhos conectados</b></div>
+            <div>2) Toque em <b>Conectar um aparelho</b></div>
+            <div>3) Aponte a câmera para este QR Code</div>
+            <div style={{ marginTop: 10, color: '#64748b', fontSize: 13 }}>
+              Depois de conectar, as conversas começam a aparecer automaticamente.
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))', gap: isMobile ? 12 : 16, marginBottom: isMobile ? 16 : 24 }}>

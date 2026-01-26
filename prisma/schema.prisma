@@ -96,6 +96,12 @@ model Workspace {
   plan WorkspacePlan @default(BASIC)  // Plano do workspace
   chatbotEnabled Boolean @default(true)  // Chatbot ativo/inativo
 
+  // WhatsApp (conexão simplificada via Evolution API)
+  whatsappEvolutionInstanceName String? @unique
+  whatsappLastConnectionState   String?
+  whatsappLastConnectedAt       DateTime?
+  whatsappWebhookUrl            String?
+
   memberships  Membership[]
   inviteTokens InviteToken[]
   profile      ProfessionalProfile?

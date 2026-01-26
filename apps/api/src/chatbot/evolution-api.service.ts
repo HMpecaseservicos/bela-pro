@@ -76,12 +76,16 @@ export class EvolutionApiService {
   private readonly logger = new Logger(EvolutionApiService.name);
   private readonly baseUrl: string;
   private readonly apiKey: string;
-  private readonly instanceName: string;
+  private readonly defaultInstanceName: string;
 
   constructor(private readonly configService: ConfigService) {
     this.baseUrl = this.configService.get<string>('EVOLUTION_API_URL') || 'http://localhost:8080';
     this.apiKey = this.configService.get<string>('EVOLUTION_API_KEY') || '';
-    this.instanceName = this.configService.get<string>('EVOLUTION_INSTANCE_NAME') || 'bela-pro';
+    this.defaultInstanceName = this.configService.get<string>('EVOLUTION_INSTANCE_NAME') || 'bela-pro';
+  }
+
+  private getInstanceName(instanceName?: string): string {
+    return instanceName?.trim() ? instanceName.trim() : this.defaultInstanceName;
   }
 
   /**
@@ -155,16 +159,18 @@ export class EvolutionApiService {
   /**
    * Verifica o status da instância
    */
-  async getInstanceStatus(): Promise<any> {
-    return this.request('GET', `/instance/connectionState/${this.instanceName}`);
+  async getInstanceStatus(instanceName?: string): Promise<any> {
+    const instance = this.getInstanceName(instanceName);
+    return this.request('GET', `/instance/connectionState/${instance}`);
   }
 
   /**
    * Obtém o QR Code para conexão
    */
-  async getQRCode(): Promise<{ base64: string; code: string } | null> {
+  async getQRCode(instanceName?: string): Promise<{ base64: string; code: string } | null> {
     try {
-      const result = await this.request<any>('GET', `/instance/connect/${this.instanceName}`);
+      const instance = this.getInstanceName(instanceName);
+      const result = await this.request<any>('GET', `/instance/connect/${instance}`);
       return result;
     } catch (error) {
       this.logger.error('Failed to get QR Code:', error);
@@ -175,9 +181,10 @@ export class EvolutionApiService {
   /**
    * Cria uma nova instância
    */
-  async createInstance(): Promise<any> {
+  async createInstance(instanceName?: string): Promise<any> {
+    const instance = this.getInstanceName(instanceName);
     return this.request('POST', '/instance/create', {
-      instanceName: this.instanceName,
+      instanceName: instance,
       qrcode: true,
       integration: 'WHATSAPP-BAILEYS',
     });
@@ -186,12 +193,13 @@ export class EvolutionApiService {
   /**
    * Envia mensagem de texto simples
    */
-  async sendText(options: SendMessageOptions): Promise<any> {
+  async sendText(options: SendMessageOptions, instanceName?: string): Promise<any> {
+    const instance = this.getInstanceName(instanceName);
     const number = this.formatNumber(options.number);
     
     this.logger.log(`Sending text to ${number}: ${options.text.substring(0, 50)}...`);
 
-    return this.request('POST', `/message/sendText/${this.instanceName}`, {
+    return this.request('POST', `/message/sendText/${instance}`, {
       number,
       text: options.text,
       delay: options.delay || 1000,
@@ -201,12 +209,13 @@ export class EvolutionApiService {
   /**
    * Envia mensagem com botões
    */
-  async sendButtons(options: SendButtonsOptions): Promise<any> {
+  async sendButtons(options: SendButtonsOptions, instanceName?: string): Promise<any> {
+    const instance = this.getInstanceName(instanceName);
     const number = this.formatNumber(options.number);
 
     this.logger.log(`Sending buttons to ${number}`);
 
-    return this.request('POST', `/message/sendButtons/${this.instanceName}`, {
+    return this.request('POST', `/message/sendButtons/${instance}`, {
       number,
       title: options.title,
       description: options.description,
@@ -222,12 +231,13 @@ export class EvolutionApiService {
   /**
    * Envia mensagem com lista de opções
    */
-  async sendList(options: SendListOptions): Promise<any> {
+  async sendList(options: SendListOptions, instanceName?: string): Promise<any> {
+    const instance = this.getInstanceName(instanceName);
     const number = this.formatNumber(options.number);
 
     this.logger.log(`Sending list to ${number}`);
 
-    return this.request('POST', `/message/sendList/${this.instanceName}`, {
+    return this.request('POST', `/message/sendList/${instance}`, {
       number,
       title: options.title,
       description: options.description,
@@ -238,12 +248,16 @@ export class EvolutionApiService {
   }
 
   /**
+   * Envia mensagem com lista de opções
+   */
+  /**
    * Configura o webhook para receber mensagens
    */
-  async configureWebhook(webhookUrl: string): Promise<any> {
+  async configureWebhook(webhookUrl: string, instanceName?: string): Promise<any> {
+    const instance = this.getInstanceName(instanceName);
     this.logger.log(`Configuring webhook: ${webhookUrl}`);
 
-    return this.request('POST', `/webhook/set/${this.instanceName}`, {
+    return this.request('POST', `/webhook/set/${instance}`, {
       webhook: {
         enabled: true,
         url: webhookUrl,
@@ -261,14 +275,16 @@ export class EvolutionApiService {
   /**
    * Desconecta a instância (logout)
    */
-  async logout(): Promise<any> {
-    return this.request('DELETE', `/instance/logout/${this.instanceName}`);
+  async logout(instanceName?: string): Promise<any> {
+    const instance = this.getInstanceName(instanceName);
+    return this.request('DELETE', `/instance/logout/${instance}`);
   }
 
   /**
    * Reinicia a instância
    */
-  async restart(): Promise<any> {
-    return this.request('PUT', `/instance/restart/${this.instanceName}`);
+  async restart(instanceName?: string): Promise<any> {
+    const instance = this.getInstanceName(instanceName);
+    return this.request('PUT', `/instance/restart/${instance}`);
   }
 }

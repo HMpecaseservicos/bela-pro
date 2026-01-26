@@ -9,9 +9,10 @@ import {
   HttpCode,
   HttpStatus,
   Logger,
+  Req,
   Res,
 } from '@nestjs/common';
-import { Response } from 'express';
+import type { Request, Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ChatbotService } from './chatbot.service';
 import { WhatsAppService } from './whatsapp.service';
@@ -32,6 +33,24 @@ import { WhatsAppWebhookPayload, ChatConversationState } from './chatbot.types';
 @Controller('api/v1/chatbot')
 export class ChatbotController {
   private readonly logger = new Logger(ChatbotController.name);
+
+  private getPublicBaseUrl(req: Request): string {
+    const envBase = process.env.PUBLIC_API_BASE_URL;
+    if (envBase && envBase.trim()) {
+      return envBase.trim().replace(/\/$/, '');
+    }
+
+    const forwardedProto = req.headers['x-forwarded-proto'];
+    const proto = Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto;
+    const scheme = (proto || req.protocol || 'https').toString();
+
+    const forwardedHost = req.headers['x-forwarded-host'];
+    const host = Array.isArray(forwardedHost)
+      ? forwardedHost[0]
+      : (forwardedHost || req.get('host') || '').toString();
+
+    return `${scheme}://${host}`.replace(/\/$/, '');
+  }
 
   constructor(
     private readonly chatbotService: ChatbotService,
@@ -126,6 +145,49 @@ export class ChatbotController {
     return { status: 'received' };
   }
 
+  // ==========================================================================
+  // WHATSAPP CONNECTION (Autenticado - fluxo simplificado)
+  // ==========================================================================
+
+  /**
+   * GET /chatbot/whatsapp/status
+   * Retorna status da conexão do WhatsApp (Evolution) do workspace do JWT.
+   */
+  @Get('whatsapp/status')
+  @UseGuards(JwtAuthGuard)
+  async getWhatsAppStatus(@Req() req: any) {
+    const workspaceId = req.user.workspaceId as string;
+    const data = await this.chatbotService.getWhatsAppConnectionStatus(workspaceId);
+    return { success: true, data };
+  }
+
+  /**
+   * POST /chatbot/whatsapp/qrcode
+   * Gera/retorna QRCode (e configura webhook) para conectar o WhatsApp no workspace do JWT.
+   */
+  @Post('whatsapp/qrcode')
+  @UseGuards(JwtAuthGuard)
+  async getWhatsAppQRCode(@Req() req: any) {
+    const workspaceId = req.user.workspaceId as string;
+    const baseUrl = this.getPublicBaseUrl(req as Request);
+    const webhookUrl = `${baseUrl}/api/v1/chatbot/evolution/webhook`;
+
+    const qr = await this.chatbotService.getWhatsAppQrCode(workspaceId, webhookUrl);
+    return { success: true, data: qr };
+  }
+
+  /**
+   * POST /chatbot/whatsapp/disconnect
+   * Desconecta (logout) a instância do WhatsApp do workspace do JWT.
+   */
+  @Post('whatsapp/disconnect')
+  @UseGuards(JwtAuthGuard)
+  async disconnectWhatsApp(@Req() req: any) {
+    const workspaceId = req.user.workspaceId as string;
+    const result = await this.chatbotService.disconnectWhatsApp(workspaceId);
+    return { success: true, data: result };
+  }
+
   /**
    * GET /chatbot/evolution/status
    * 
@@ -186,6 +248,58 @@ export class ChatbotController {
   // ==========================================================================
   // ADMIN ENDPOINTS (Autenticados)
   // ==========================================================================
+
+  /**
+   * GET /chatbot/conversations
+   * Lista conversas do workspace do JWT.
+   */
+  @Get('conversations')
+  @UseGuards(JwtAuthGuard)
+  async listMyConversations(
+    @Req() req: any,
+    @Query('state') state?: string,
+    @Query('handoff') handoff?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const workspaceId = req.user.workspaceId as string;
+
+    const conversations = await this.chatbotService.listConversations(workspaceId, {
+      state: state as ChatConversationState,
+      isHumanHandoff: handoff === 'true' ? true : handoff === 'false' ? false : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+    });
+
+    return {
+      success: true,
+      data: conversations.map(conv => ({
+        id: conv.id,
+        phoneE164: conv.phoneE164,
+        state: conv.state,
+        isHumanHandoff: conv.isHumanHandoff,
+        lastMessage: conv.messages[0]?.text || null,
+        lastMessageAt: conv.messages[0]?.createdAt || conv.updatedAt,
+        createdAt: conv.createdAt,
+        updatedAt: conv.updatedAt,
+      })),
+    };
+  }
+
+  /**
+   * GET /chatbot/conversation/:conversationId
+   * Busca conversa do workspace do JWT.
+   */
+  @Get('conversation/:conversationId')
+  @UseGuards(JwtAuthGuard)
+  async getMyConversation(@Req() req: any, @Param('conversationId') conversationId: string) {
+    const workspaceId = req.user.workspaceId as string;
+    const conversation = await this.chatbotService.getConversation(conversationId);
+
+    if (!conversation || conversation.workspaceId !== workspaceId) {
+      return { success: false, error: 'Conversa não encontrada' };
+    }
+
+    return { success: true, data: conversation };
+  }
 
   /**
    * GET /chatbot/:workspaceId/conversations

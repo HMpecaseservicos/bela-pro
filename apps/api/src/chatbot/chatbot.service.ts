@@ -39,6 +39,139 @@ export class ChatbotService {
     private readonly evolutionApi: EvolutionApiService,
   ) {}
 
+  private buildDefaultEvolutionInstanceName(workspaceId: string): string {
+    // Mantém simples e determinístico (instância por workspace)
+    return `ws_${workspaceId.slice(0, 24)}`;
+  }
+
+  private extractConnectionState(status: unknown): string | null {
+    if (!status || typeof status !== 'object') return null;
+    const rec = status as Record<string, unknown>;
+
+    const direct = rec.state;
+    if (typeof direct === 'string') return direct;
+
+    const instance = rec.instance;
+    if (instance && typeof instance === 'object') {
+      const state = (instance as Record<string, unknown>).state;
+      if (typeof state === 'string') return state;
+    }
+
+    return null;
+  }
+
+  async getWhatsAppConnectionStatus(workspaceId: string) {
+    const ws = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        whatsappEvolutionInstanceName: true,
+        whatsappWebhookUrl: true,
+        whatsappLastConnectionState: true,
+        whatsappLastConnectedAt: true,
+      },
+    });
+
+    if (!ws?.whatsappEvolutionInstanceName) {
+      return {
+        hasInstance: false,
+        instanceName: null,
+        connectionState: ws?.whatsappLastConnectionState ?? null,
+        webhookUrl: ws?.whatsappWebhookUrl ?? null,
+        lastConnectedAt: ws?.whatsappLastConnectedAt ?? null,
+      };
+    }
+
+    const status = await this.evolutionApi.getInstanceStatus(ws.whatsappEvolutionInstanceName).catch(() => null);
+    const connectionState = this.extractConnectionState(status) ?? (typeof status === 'string' ? status : null);
+
+    await this.prisma.workspace.update({
+      where: { id: workspaceId },
+      data: {
+        whatsappLastConnectionState: connectionState ?? ws.whatsappLastConnectionState ?? null,
+        whatsappLastConnectedAt: connectionState?.toLowerCase().includes('open') ? new Date() : ws.whatsappLastConnectedAt,
+      },
+    }).catch(() => {
+      // best-effort
+    });
+
+    return {
+      hasInstance: true,
+      instanceName: ws.whatsappEvolutionInstanceName,
+      connectionState,
+      webhookUrl: ws.whatsappWebhookUrl ?? null,
+      lastConnectedAt: ws.whatsappLastConnectedAt ?? null,
+      rawStatus: status,
+    };
+  }
+
+  async getWhatsAppQrCode(workspaceId: string, webhookUrl: string) {
+    const ws = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { id: true, whatsappEvolutionInstanceName: true },
+    });
+
+    if (!ws) {
+      throw new Error('Workspace não encontrado');
+    }
+
+    const instanceName = ws.whatsappEvolutionInstanceName ?? this.buildDefaultEvolutionInstanceName(ws.id);
+
+    // Persistir instanceName (uma vez) para ficar fixo
+    if (!ws.whatsappEvolutionInstanceName) {
+      await this.prisma.workspace.update({
+        where: { id: ws.id },
+        data: { whatsappEvolutionInstanceName: instanceName },
+      });
+    }
+
+    // Garantir que a instância existe (se já existir, ignore erro)
+    await this.evolutionApi.createInstance(instanceName).catch(() => {
+      // best-effort
+    });
+
+    // Configurar webhook automaticamente
+    await this.evolutionApi.configureWebhook(webhookUrl, instanceName).catch(() => {
+      // best-effort
+    });
+
+    await this.prisma.workspace.update({
+      where: { id: ws.id },
+      data: { whatsappWebhookUrl: webhookUrl },
+    }).catch(() => {
+      // best-effort
+    });
+
+    return this.evolutionApi.getQRCode(instanceName);
+  }
+
+  async disconnectWhatsApp(workspaceId: string) {
+    const ws = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { whatsappEvolutionInstanceName: true },
+    });
+
+    const instanceName = ws?.whatsappEvolutionInstanceName;
+    if (!instanceName) {
+      return { success: true };
+    }
+
+    await this.evolutionApi.logout(instanceName).catch(() => {
+      // best-effort
+    });
+
+    await this.prisma.workspace.update({
+      where: { id: workspaceId },
+      data: {
+        whatsappLastConnectionState: 'DISCONNECTED',
+        whatsappLastConnectedAt: null,
+      },
+    }).catch(() => {
+      // best-effort
+    });
+
+    return { success: true };
+  }
+
   /**
    * Processa webhook do WhatsApp Cloud API
    */
@@ -114,23 +247,28 @@ export class ChatbotService {
       phoneNumberId: payload.instance,
     };
 
-    await this.handleIncomingMessage(messageData, true); // true = usar Evolution API
+    await this.handleIncomingMessage(messageData, { evolutionInstanceName: payload.instance });
   }
 
   /**
    * Processa uma mensagem recebida
    */
-  async handleIncomingMessage(data: IncomingMessageData, useEvolutionApi = false): Promise<void> {
+  async handleIncomingMessage(
+    data: IncomingMessageData,
+    options?: { evolutionInstanceName?: string },
+  ): Promise<void> {
     const { phoneE164, contactName, messageText, phoneNumberId } = data;
+    const evolutionInstanceName = options?.evolutionInstanceName;
 
     this.logger.log(`[Chatbot] Mensagem de ${phoneE164}: "${messageText}"`);
 
     try {
-      // 1. Identificar workspace pelo phoneNumberId
-      // Nota: o mapeamento phoneNumberId -> workspaceId ainda é heurístico
-      // Por enquanto, buscar workspace que tenha conversas com este telefone
-      // ou usar um workspace padrão
-      const workspaceId = await this.resolveWorkspaceId(phoneNumberId, phoneE164);
+      // 1. Identificar workspace (Evolution: por instanceName; Cloud API: fallback)
+      const workspaceId = await this.resolveWorkspaceId(
+        evolutionInstanceName ?? phoneNumberId,
+        phoneE164,
+        { preferEvolutionInstance: Boolean(evolutionInstanceName) },
+      );
 
       if (!workspaceId) {
         this.logger.warn(`[Chatbot] Workspace não encontrado para ${phoneNumberId}`);
@@ -143,6 +281,18 @@ export class ChatbotService {
         phoneE164,
         contactName,
       );
+
+      // Se veio da Evolution, garantir que o workspace está vinculado à instância
+      if (evolutionInstanceName) {
+        await this.prisma.workspace.update({
+          where: { id: workspaceId },
+          data: {
+            whatsappEvolutionInstanceName: evolutionInstanceName,
+          },
+        }).catch(() => {
+          // Ignora conflitos/erros (ex.: unique) para não travar processamento do webhook
+        });
+      }
 
       // 3. Processar billing (antes do FSM)
       const billingResult = await this.chatUsage.processMessageBilling({
@@ -206,7 +356,7 @@ export class ChatbotService {
         let success = false;
         let responseText = '';
 
-        if (useEvolutionApi) {
+        if (evolutionInstanceName) {
           // Usar Evolution API
           try {
             if (transition.response.type === 'text') {
@@ -214,7 +364,7 @@ export class ChatbotService {
               await this.evolutionApi.sendText({
                 number: phoneE164,
                 text: responseText,
-              });
+              }, evolutionInstanceName);
               success = true;
             } else if (transition.response.type === 'interactive') {
               // Converter para lista ou botões
@@ -233,7 +383,7 @@ export class ChatbotService {
                       description: row.description,
                     })),
                   })),
-                });
+                }, evolutionInstanceName);
                 responseText = interactive.body.text;
                 success = true;
               } else if (interactive.type === 'button') {
@@ -245,7 +395,7 @@ export class ChatbotService {
                     buttonId: btn.reply.id,
                     buttonText: btn.reply.title,
                   })),
-                });
+                }, evolutionInstanceName);
                 responseText = interactive.body.text;
                 success = true;
               }
@@ -296,9 +446,21 @@ export class ChatbotService {
   private async resolveWorkspaceId(
     phoneNumberId: string,
     clientPhone: string,
+    opts?: { preferEvolutionInstance?: boolean },
   ): Promise<string | null> {
-    // Nota: idealmente usar uma tabela de mapeamento phoneNumberId -> workspaceId
-    // Por enquanto, buscar workspace que tenha conversas com este cliente
+    // Evolution: mapear instanceName -> workspaceId (determinístico)
+    if (opts?.preferEvolutionInstance && phoneNumberId) {
+      const workspaceByInstance = await this.prisma.workspace.findFirst({
+        where: { whatsappEvolutionInstanceName: phoneNumberId, chatbotEnabled: true },
+        select: { id: true },
+      });
+
+      if (workspaceByInstance) {
+        return workspaceByInstance.id;
+      }
+    }
+
+    // Fallback: buscar conversa existente por telefone
     
     const existingConversation = await this.prisma.chatbotConversation.findFirst({
       where: { phoneE164: clientPhone },
