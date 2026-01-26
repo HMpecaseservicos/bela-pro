@@ -6,8 +6,10 @@
  * - Buscar templates do banco (ChatbotTemplate)
  * - Responder usando templates CONFIGURÁVEIS
  * 
- * IMPORTANTE: Todas as mensagens vêm do banco de dados.
- * Os defaults são fallbacks que o admin pode sobrescrever.
+ * IMPORTANTE: 
+ * - Templates do BOT são da tabela ChatbotTemplate (chaves BOT_*)
+ * - Templates MANUAIS são da tabela MessageTemplate (APPOINTMENT_*, etc.)
+ * - O bot usa SOMENTE ChatbotTemplate
  * 
  * @module chatbot
  */
@@ -27,25 +29,51 @@ export enum BotTemplateKey {
   HUMAN_HANDOFF = 'BOT_HUMAN',       // Transferência para humano
   BOOKING_LINK = 'BOT_BOOKING_LINK', // Link de agendamento
   NO_APPOINTMENTS = 'BOT_NO_APPOINTMENTS', // Sem agendamentos
+  APPOINTMENTS_LIST = 'BOT_APPOINTMENTS_LIST', // Lista de agendamentos
 }
 
-// Templates FALLBACK (usados apenas se admin não configurou no banco)
-// Admin pode sobrescrever via ChatbotTemplate no dashboard
-const DEFAULT_TEMPLATES: Record<string, string> = {
-  [BotTemplateKey.WELCOME]: 
-    'Olá {{clientName}}! 👋\n\nBem-vindo(a) à {{workspaceName}}!\n\nDigite:\n1️⃣ Agendar\n2️⃣ Meus agendamentos\n3️⃣ Falar com atendente',
-  [BotTemplateKey.MENU]: 
-    'Como posso ajudar?\n\n1️⃣ Agendar\n2️⃣ Meus agendamentos\n3️⃣ Falar com atendente',
-  [BotTemplateKey.HELP]: 
-    'Precisa de ajuda? 🤔\n\nDigite o número da opção:\n1 - Agendar um serviço\n2 - Ver seus agendamentos\n3 - Falar com um atendente',
-  [BotTemplateKey.UNKNOWN_COMMAND]: 
-    'Desculpe, não entendi. 😅\n\nDigite:\n1️⃣ Agendar\n2️⃣ Meus agendamentos\n3️⃣ Falar com atendente',
-  [BotTemplateKey.HUMAN_HANDOFF]: 
-    'Certo! Um atendente vai falar com você em breve. ⏳\n\nAguarde, por favor!',
-  [BotTemplateKey.BOOKING_LINK]:
-    '📅 Para agendar, acesse o link:\n\n{{bookingLink}}\n\nÉ rápido e fácil! ✨',
-  [BotTemplateKey.NO_APPOINTMENTS]:
-    'Você não tem agendamentos futuros. 📅\n\nDigite 1 para agendar!',
+// Metadados dos templates (label, descrição, conteúdo padrão)
+export const BOT_TEMPLATE_DEFAULTS: Record<string, { label: string; description: string; content: string }> = {
+  [BotTemplateKey.WELCOME]: {
+    label: 'Boas-vindas',
+    description: 'Primeira mensagem quando cliente entra em contato',
+    content: 'Olá {{clientName}}! 👋\n\nBem-vindo(a) à {{workspaceName}}!\n\nDigite:\n1️⃣ Agendar\n2️⃣ Meus agendamentos\n3️⃣ Falar com atendente',
+  },
+  [BotTemplateKey.MENU]: {
+    label: 'Menu Principal',
+    description: 'Menu de opções exibido quando cliente pede',
+    content: 'Como posso ajudar?\n\n1️⃣ Agendar\n2️⃣ Meus agendamentos\n3️⃣ Falar com atendente',
+  },
+  [BotTemplateKey.HELP]: {
+    label: 'Ajuda',
+    description: 'Mensagem de ajuda',
+    content: 'Precisa de ajuda? 🤔\n\nDigite o número da opção:\n1 - Agendar um serviço\n2 - Ver seus agendamentos\n3 - Falar com um atendente',
+  },
+  [BotTemplateKey.UNKNOWN_COMMAND]: {
+    label: 'Comando não reconhecido',
+    description: 'Quando o bot não entende a mensagem',
+    content: 'Desculpe, não entendi. 😅\n\nDigite:\n1️⃣ Agendar\n2️⃣ Meus agendamentos\n3️⃣ Falar com atendente',
+  },
+  [BotTemplateKey.HUMAN_HANDOFF]: {
+    label: 'Transferência para atendente',
+    description: 'Quando cliente pede para falar com humano',
+    content: 'Certo! Um atendente vai falar com você em breve. ⏳\n\nAguarde, por favor!',
+  },
+  [BotTemplateKey.BOOKING_LINK]: {
+    label: 'Link de Agendamento',
+    description: 'Mensagem com link para agendar',
+    content: '📅 Para agendar, acesse o link:\n\n{{bookingLink}}\n\nÉ rápido e fácil! ✨',
+  },
+  [BotTemplateKey.NO_APPOINTMENTS]: {
+    label: 'Sem Agendamentos',
+    description: 'Quando cliente não tem agendamentos',
+    content: 'Você não tem agendamentos futuros. 📅\n\nDigite 1 para agendar!',
+  },
+  [BotTemplateKey.APPOINTMENTS_LIST]: {
+    label: 'Lista de Agendamentos',
+    description: 'Header da lista de agendamentos',
+    content: '📋 Seus próximos agendamentos:\n\n{{appointmentsList}}\n\nDigite 0 para voltar ao menu.',
+  },
 };
 
 @Injectable()
@@ -159,11 +187,14 @@ export class WhatsAppBotService implements OnModuleInit {
   }
 
   /**
-   * Busca template do banco (ChatbotTemplate) ou usa fallback
+   * Busca template do banco (ChatbotTemplate)
    * 
-   * Prioridade:
-   * 1. Template customizado do workspace (ChatbotTemplate com isActive=true)
-   * 2. Template default (fallback)
+   * IMPORTANTE: Usa SOMENTE templates do banco.
+   * Se não encontrar, usa o default do BOT_TEMPLATE_DEFAULTS e loga aviso.
+   * 
+   * @param workspaceId - ID do workspace
+   * @param templateKey - Chave do template (BOT_WELCOME, etc.)
+   * @param variables - Variáveis para substituição
    */
   async getTemplate(
     workspaceId: string, 
@@ -171,7 +202,7 @@ export class WhatsAppBotService implements OnModuleInit {
     variables: TemplateVariables
   ): Promise<string> {
     try {
-      // Buscar template customizado do banco
+      // Buscar template do banco
       const template = await this.prisma.chatbotTemplate.findFirst({
         where: { 
           workspaceId, 
@@ -181,14 +212,29 @@ export class WhatsAppBotService implements OnModuleInit {
         select: { content: true },
       });
 
-      // Usar template do banco se existir, senão fallback
-      const templateText = template?.content || DEFAULT_TEMPLATES[templateKey] || '';
-      
-      return renderTemplate(templateText, variables);
+      if (template?.content) {
+        // Template encontrado no banco - usa ele
+        this.logger.debug(`[${workspaceId}] Template ${templateKey}: usando do banco`);
+        return renderTemplate(template.content, variables);
+      }
+
+      // Template NÃO encontrado no banco - usa default e loga aviso
+      const defaultTemplate = BOT_TEMPLATE_DEFAULTS[templateKey];
+      if (defaultTemplate) {
+        this.logger.warn(`[${workspaceId}] Template ${templateKey} não configurado, usando padrão`);
+        return renderTemplate(defaultTemplate.content, variables);
+      }
+
+      // Nenhum template encontrado
+      this.logger.error(`[${workspaceId}] Template ${templateKey} não existe nem no banco nem nos defaults!`);
+      return `[Erro: Template ${templateKey} não configurado]`;
     } catch (err) {
-      this.logger.warn(`[${workspaceId}] Erro ao buscar template ${templateKey}: ${err}`);
-      // Em caso de erro, usa fallback
-      return renderTemplate(DEFAULT_TEMPLATES[templateKey] || '', variables);
+      this.logger.error(`[${workspaceId}] Erro ao buscar template ${templateKey}: ${err}`);
+      // Em caso de erro, tenta usar default
+      const defaultTemplate = BOT_TEMPLATE_DEFAULTS[templateKey];
+      return defaultTemplate 
+        ? renderTemplate(defaultTemplate.content, variables)
+        : `[Erro: Template ${templateKey} indisponível]`;
     }
   }
 
@@ -257,20 +303,78 @@ export class WhatsAppBotService implements OnModuleInit {
       });
     }
 
-    // Formatar lista (essa parte é dinâmica, não template)
-    const list = appointments.map((apt, i) => {
+    // Formatar lista de agendamentos
+    const appointmentsList = appointments.map((apt, i) => {
       const date = apt.startAt.toLocaleDateString('pt-BR');
       const time = apt.startAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       const serviceName = apt.services[0]?.service?.name || 'Serviço';
       return `${i + 1}. ${serviceName}\n   📅 ${date} às ${time}`;
     }).join('\n\n');
 
-    return `📋 Seus próximos agendamentos:\n\n${list}\n\nDigite 0 para voltar ao menu.`;
+    // Usar template do banco para a lista
+    return this.getTemplate(context.workspaceId, BotTemplateKey.APPOINTMENTS_LIST, {
+      clientName: context.clientName,
+      appointmentsList,
+    });
+  }
+
+  // ==========================================================================
+  // GERENCIAMENTO DE TEMPLATES
+  // ==========================================================================
+
+  /**
+   * Cria todos os templates padrão para um workspace
+   * Chamado quando o admin conecta o bot pela primeira vez
+   * 
+   * @param workspaceId - ID do workspace
+   * @returns Número de templates criados
+   */
+  async createDefaultTemplates(workspaceId: string): Promise<number> {
+    this.logger.log(`[${workspaceId}] Criando templates padrão do bot...`);
+    
+    let created = 0;
+    
+    for (const [key, meta] of Object.entries(BOT_TEMPLATE_DEFAULTS)) {
+      try {
+        // Verifica se já existe
+        const existing = await this.prisma.chatbotTemplate.findUnique({
+          where: { workspaceId_key: { workspaceId, key } },
+        });
+        
+        if (!existing) {
+          await this.prisma.chatbotTemplate.create({
+            data: {
+              workspaceId,
+              key,
+              content: meta.content,
+              isActive: true,
+            },
+          });
+          created++;
+          this.logger.log(`[${workspaceId}] Template ${key} criado`);
+        }
+      } catch (err) {
+        this.logger.error(`[${workspaceId}] Erro ao criar template ${key}: ${err}`);
+      }
+    }
+    
+    this.logger.log(`[${workspaceId}] ${created} templates criados`);
+    return created;
+  }
+
+  /**
+   * Verifica se o workspace tem templates configurados
+   */
+  async hasTemplatesConfigured(workspaceId: string): Promise<boolean> {
+    const count = await this.prisma.chatbotTemplate.count({
+      where: { workspaceId, isActive: true },
+    });
+    return count >= Object.keys(BOT_TEMPLATE_DEFAULTS).length;
   }
 
   /**
    * Envia mensagem proativa (para notificações do sistema)
-   * Usa templates do MessageTemplatesModule
+   * NOTA: Usa MessageTemplate (templates manuais), NÃO templates do bot
    */
   async sendProactiveMessage(
     workspaceId: string,
@@ -278,7 +382,7 @@ export class WhatsAppBotService implements OnModuleInit {
     templateType: string,
     variables: TemplateVariables
   ): Promise<boolean> {
-    // Buscar template usando raw query para aceitar qualquer eventType string
+    // Buscar template de MessageTemplate (templates manuais)
     const templates = await this.prisma.$queryRaw<Array<{ message: string }>>`
       SELECT message FROM "MessageTemplate" 
       WHERE "workspaceId" = ${workspaceId} 
@@ -288,7 +392,7 @@ export class WhatsAppBotService implements OnModuleInit {
     `;
 
     if (!templates || templates.length === 0) {
-      this.logger.warn(`[${workspaceId}] Template ${templateType} não encontrado ou desabilitado`);
+      this.logger.warn(`[${workspaceId}] MessageTemplate ${templateType} não encontrado ou desabilitado`);
       return false;
     }
 
