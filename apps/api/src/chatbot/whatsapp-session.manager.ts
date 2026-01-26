@@ -22,6 +22,7 @@ import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Client, LocalAuth, Message } from 'whatsapp-web.js';
 import * as path from 'path';
 import * as fs from 'fs';
+import { execSync } from 'child_process';
 import { 
   WhatsAppSessionState, 
   WhatsAppSessionInfo,
@@ -32,13 +33,69 @@ import {
 export type MessageCallback = (message: IncomingWhatsAppMessage) => Promise<void>;
 
 /**
+ * Detecta o caminho do Chromium/Chrome no sistema.
+ * Tenta múltiplos caminhos conhecidos em diferentes ambientes.
+ */
+function findChromiumExecutable(): string | undefined {
+  // Se definido via env var, usa diretamente
+  const envPath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  if (envPath && fs.existsSync(envPath)) {
+    return envPath;
+  }
+
+  // Caminhos conhecidos para Chromium/Chrome
+  const knownPaths = [
+    // Nix (Railway)
+    '/nix/var/nix/profiles/default/bin/chromium',
+    // Nix alternativo
+    (process.env.HOME || '') + '/.nix-profile/bin/chromium',
+    // Ubuntu/Debian apt
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    // Snap
+    '/snap/bin/chromium',
+    // MacOS
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Chromium.app/Contents/MacOS/Chromium',
+  ];
+
+  for (const chromePath of knownPaths) {
+    if (fs.existsSync(chromePath)) {
+      return chromePath;
+    }
+  }
+
+  // Tenta via 'which' como último recurso
+  try {
+    const whichResult = execSync('which chromium || which chromium-browser || which google-chrome || true', { encoding: 'utf-8' }).trim();
+    if (whichResult && fs.existsSync(whichResult)) {
+      return whichResult;
+    }
+  } catch {
+    // Ignora erro do which
+  }
+
+  // Não encontrou - deixa puppeteer tentar encontrar
+  return undefined;
+}
+
+/**
  * Configuração do Puppeteer para ambientes gerenciados (Railway, Heroku, etc.)
  * - headless: true (sem GUI)
- * - executablePath: usa PUPPETEER_EXECUTABLE_PATH se definido
+ * - executablePath: detecta automaticamente o Chromium
  * - args: flags obrigatórias para ambientes sem privilégios root
  */
 function getPuppeteerConfig() {
-  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+  const executablePath = findChromiumExecutable();
+  
+  const logger = new Logger('PuppeteerConfig');
+  if (executablePath) {
+    logger.log(`Chromium encontrado: ${executablePath}`);
+  } else {
+    logger.warn('Chromium não encontrado em caminhos conhecidos, tentando padrão do Puppeteer');
+  }
   
   return {
     headless: true,
