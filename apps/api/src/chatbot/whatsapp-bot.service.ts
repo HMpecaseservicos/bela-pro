@@ -240,6 +240,7 @@ export class WhatsAppBotService implements OnModuleInit {
 
   /**
    * Gera mensagem com link de agendamento
+   * Rota pública: /{slug}/booking
    */
   private async getBookingLinkMessage(workspaceId: string, variables: TemplateVariables): Promise<string> {
     const workspace = await this.prisma.workspace.findUnique({
@@ -248,7 +249,8 @@ export class WhatsAppBotService implements OnModuleInit {
     });
 
     const baseUrl = process.env.PUBLIC_BASE_URL || 'http://localhost:3000';
-    const bookingLink = `${baseUrl}/agendar/${workspace?.slug || workspaceId}`;
+    // Rota correta: /{slug}/booking (ex: https://belapro.app/salao-da-maria/booking)
+    const bookingLink = `${baseUrl}/${workspace?.slug || workspaceId}/booking`;
 
     // Adicionar bookingLink às variáveis
     const vars = { ...variables, bookingLink };
