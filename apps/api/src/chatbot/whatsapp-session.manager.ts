@@ -410,7 +410,7 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
 
   /**
    * Envia mensagem de texto para qualquer número (mesmo sem conversa prévia)
-   * Usa client.sendMessage() do whatsapp-web.js que funciona para novos contatos
+   * Usa pupPage.evaluate com WWebJS.sendMessage (contorna bug do markedUnread)
    */
   async sendMessage(workspaceId: string, to: string, text: string): Promise<boolean> {
     const session = this.sessions.get(workspaceId);
@@ -425,15 +425,42 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
       const chatId = this.formatPhoneForWhatsApp(to);
       this.logger.log(`[${workspaceId}] sendMessage: ${to} -> ${chatId}`);
       
-      // Usa client.sendMessage diretamente - funciona para novos contatos
-      const msg = await session.client.sendMessage(chatId, text);
+      // Acessa pupPage do cliente
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pupPage = (session.client as any).pupPage;
       
-      if (msg) {
-        this.logger.log(`[${workspaceId}] ✅ Mensagem enviada para ${to} (id: ${msg.id?.id || 'N/A'})`);
+      if (!pupPage) {
+        this.logger.error(`[${workspaceId}] pupPage não disponível`);
+        return false;
+      }
+      
+      // Usa window.WWebJS.sendMessage diretamente (contorna bug do markedUnread)
+      const result = await pupPage.evaluate(async (chatId: string, content: string) => {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const win = window as any;
+          
+          // Busca ou cria o chat
+          const chat = await win.WWebJS.getChat(chatId, { getAsModel: false });
+          
+          if (!chat) {
+            return { success: false, error: 'Chat não encontrado' };
+          }
+          
+          // Envia mensagem
+          const msg = await win.WWebJS.sendMessage(chat, content, {});
+          return { success: !!msg, error: null };
+        } catch (err: unknown) {
+          return { success: false, error: String(err) };
+        }
+      }, chatId, text);
+      
+      if (result.success) {
+        this.logger.log(`[${workspaceId}] ✅ Mensagem enviada para ${to}`);
         return true;
       }
       
-      this.logger.warn(`[${workspaceId}] ⚠️ sendMessage retornou null para ${to}`);
+      this.logger.warn(`[${workspaceId}] ⚠️ Falha ao enviar para ${to}: ${result.error}`);
       return false;
     } catch (err) {
       this.logger.error(`[${workspaceId}] ❌ Erro ao enviar mensagem para ${to}: ${err}`);
