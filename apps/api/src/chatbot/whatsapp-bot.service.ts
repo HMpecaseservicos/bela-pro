@@ -410,6 +410,8 @@ export class WhatsAppBotService implements OnModuleInit {
     templateType: string,
     variables: TemplateVariables
   ): Promise<boolean> {
+    this.logger.log(`[${workspaceId}] sendProactiveMessage: ${templateType} para ${to}`);
+
     // Buscar template de MessageTemplate (templates manuais)
     const templates = await this.prisma.$queryRaw<Array<{ message: string }>>`
       SELECT message FROM "MessageTemplate" 
@@ -421,10 +423,19 @@ export class WhatsAppBotService implements OnModuleInit {
 
     if (!templates || templates.length === 0) {
       this.logger.warn(`[${workspaceId}] MessageTemplate ${templateType} não encontrado ou desabilitado`);
+      
+      // Tentar usar mensagem padrão para APPOINTMENT_CONFIRMED
+      if (templateType === 'APPOINTMENT_CONFIRMED') {
+        const defaultMsg = `Olá ${variables.clientName}! ✅\n\nSeu agendamento está confirmado:\n📅 ${variables.date} às ${variables.time}\n💇 ${variables.serviceName}\n📍 ${variables.workspaceName}\n\nTe esperamos!`;
+        this.logger.log(`[${workspaceId}] Usando mensagem padrão para ${templateType}`);
+        return this.sessionManager.sendMessage(workspaceId, to, defaultMsg);
+      }
+      
       return false;
     }
 
     const message = renderTemplate(templates[0].message, variables);
+    this.logger.log(`[${workspaceId}] Enviando mensagem proativa: ${message.substring(0, 50)}...`);
     
     return this.sessionManager.sendMessage(workspaceId, to, message);
   }

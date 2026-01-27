@@ -122,10 +122,13 @@ export class AppointmentsService {
       },
     });
 
+    this.logger.log(`Agendamento criado: ${appointment.id} para ${appointment.client.name} (${appointment.client.phoneE164})`);
+
     // Enviar notificação automática via WhatsApp (APPOINTMENT_CONFIRMED pois já está confirmado)
     // Executa em background para não bloquear a resposta
+    this.logger.log(`Iniciando envio de notificação WhatsApp para ${appointment.client.phoneE164}...`);
     this.sendAppointmentNotification(appointment).catch(err => {
-      this.logger.warn(`Falha ao enviar notificação do agendamento ${appointment.id}: ${err}`);
+      this.logger.error(`Falha ao enviar notificação do agendamento ${appointment.id}: ${err}`);
     });
 
     return appointment;
