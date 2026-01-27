@@ -435,19 +435,20 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
       }
       
       // Usa window.WWebJS.sendMessage diretamente (contorna bug do markedUnread)
+      // COPIA EXATA do replyToMessage que funciona
       const result = await pupPage.evaluate(async (chatId: string, content: string) => {
         try {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const win = window as any;
           
-          // Usa getChatById para buscar chat por ID completo (funciona com números novos)
-          const chat = await win.WWebJS.getChatById(chatId);
+          // Busca o chat sem serialização (getAsModel: false) - mesmo que replyToMessage
+          const chat = await win.WWebJS.getChat(chatId, { getAsModel: false });
           
           if (!chat) {
             return { success: false, error: 'Chat não encontrado' };
           }
           
-          // Envia mensagem
+          // Usa sendMessage interno do WWebJS
           const msg = await win.WWebJS.sendMessage(chat, content, {});
           return { success: !!msg, error: null };
         } catch (err: unknown) {
