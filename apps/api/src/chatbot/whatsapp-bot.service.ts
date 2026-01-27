@@ -22,6 +22,7 @@ import { renderTemplate } from '../message-templates/template-renderer';
 
 // Chaves de template do bot (usadas na tabela ChatbotTemplate)
 export enum BotTemplateKey {
+  // Templates de conversa (quando cliente envia mensagem)
   WELCOME = 'BOT_WELCOME',           // Mensagem de boas-vindas
   MENU = 'BOT_MENU',                 // Menu principal
   HELP = 'BOT_HELP',                 // Ajuda
@@ -30,10 +31,17 @@ export enum BotTemplateKey {
   BOOKING_LINK = 'BOT_BOOKING_LINK', // Link de agendamento
   NO_APPOINTMENTS = 'BOT_NO_APPOINTMENTS', // Sem agendamentos
   APPOINTMENTS_LIST = 'BOT_APPOINTMENTS_LIST', // Lista de agendamentos
+  
+  // Templates de notificação (eventos automáticos do sistema)
+  NOTIFY_APPOINTMENT_CONFIRMED = 'BOT_NOTIFY_CONFIRMED',   // Agendamento confirmado
+  NOTIFY_APPOINTMENT_CREATED = 'BOT_NOTIFY_CREATED',       // Agendamento criado
+  NOTIFY_APPOINTMENT_CANCELLED = 'BOT_NOTIFY_CANCELLED',   // Agendamento cancelado
+  NOTIFY_APPOINTMENT_REMINDER = 'BOT_NOTIFY_REMINDER',     // Lembrete de agendamento
 }
 
 // Metadados dos templates (label, descrição, conteúdo padrão)
 export const BOT_TEMPLATE_DEFAULTS: Record<string, { label: string; description: string; content: string }> = {
+  // === TEMPLATES DE CONVERSA ===
   [BotTemplateKey.WELCOME]: {
     label: 'Boas-vindas',
     description: 'Primeira mensagem quando cliente entra em contato',
@@ -73,6 +81,28 @@ export const BOT_TEMPLATE_DEFAULTS: Record<string, { label: string; description:
     label: 'Lista de Agendamentos',
     description: 'Header da lista de agendamentos',
     content: '📋 Seus próximos agendamentos:\n\n{{appointmentsList}}\n\nDigite 0 para voltar ao menu.',
+  },
+  
+  // === TEMPLATES DE NOTIFICAÇÃO (eventos automáticos) ===
+  [BotTemplateKey.NOTIFY_APPOINTMENT_CONFIRMED]: {
+    label: '📩 Notificação: Agendamento Confirmado',
+    description: 'Enviado automaticamente quando agendamento é confirmado',
+    content: 'Olá {{clientName}}! ✅\n\nSeu agendamento está confirmado:\n📅 {{date}} às {{time}}\n💇 {{serviceName}}\n📍 {{workspaceName}}\n\nTe esperamos!',
+  },
+  [BotTemplateKey.NOTIFY_APPOINTMENT_CREATED]: {
+    label: '📩 Notificação: Agendamento Criado',
+    description: 'Enviado automaticamente quando agendamento é criado',
+    content: 'Olá {{clientName}}! 🗓️\n\nSeu agendamento foi recebido:\n📅 {{date}} às {{time}}\n💇 {{serviceName}}\n\nAguarde a confirmação!',
+  },
+  [BotTemplateKey.NOTIFY_APPOINTMENT_CANCELLED]: {
+    label: '📩 Notificação: Agendamento Cancelado',
+    description: 'Enviado automaticamente quando agendamento é cancelado',
+    content: 'Olá {{clientName}}.\n\nSeu agendamento de {{date}} às {{time}} foi cancelado.\n\nCaso queira reagendar, entre em contato! 📱',
+  },
+  [BotTemplateKey.NOTIFY_APPOINTMENT_REMINDER]: {
+    label: '📩 Notificação: Lembrete',
+    description: 'Lembrete enviado antes do agendamento',
+    content: 'Olá {{clientName}}! ⏰\n\nLembrete: você tem horário marcado:\n📅 {{date}} às {{time}}\n💇 {{serviceName}}\n\nTe esperamos!',
   },
 };
 
@@ -373,12 +403,13 @@ export class WhatsAppBotService implements OnModuleInit {
   /**
    * Cria todos os templates padrão para um workspace
    * Chamado quando o admin conecta o bot pela primeira vez
+   * Também pode ser chamado para garantir que todos os templates existam
    * 
    * @param workspaceId - ID do workspace
    * @returns Número de templates criados
    */
   async createDefaultTemplates(workspaceId: string): Promise<number> {
-    this.logger.log(`[${workspaceId}] Criando templates padrão do bot...`);
+    this.logger.log(`[${workspaceId}] Verificando/criando templates do bot (total: ${Object.keys(BOT_TEMPLATE_DEFAULTS).length})...`);
     
     let created = 0;
     
@@ -406,7 +437,12 @@ export class WhatsAppBotService implements OnModuleInit {
       }
     }
     
-    this.logger.log(`[${workspaceId}] ${created} templates criados`);
+    if (created > 0) {
+      this.logger.log(`[${workspaceId}] ${created} novos templates criados`);
+    } else {
+      this.logger.log(`[${workspaceId}] Todos os templates já existem`);
+    }
+    
     return created;
   }
 
@@ -421,42 +457,55 @@ export class WhatsAppBotService implements OnModuleInit {
   }
 
   /**
-   * Envia mensagem proativa (para notificações do sistema)
-   * NOTA: Usa MessageTemplate (templates manuais), NÃO templates do bot
+   * Envia mensagem proativa (para notificações automáticas do sistema)
+   * 
+   * IMPORTANTE: Usa ChatbotTemplate (tabela do bot), NÃO MessageTemplate
+   * Isso garante que as notificações funcionem com os templates configurados na página do Bot
+   * 
+   * Mapeamento de eventos:
+   * - APPOINTMENT_CONFIRMED -> BOT_NOTIFY_CONFIRMED
+   * - APPOINTMENT_CREATED -> BOT_NOTIFY_CREATED
+   * - APPOINTMENT_CANCELLED -> BOT_NOTIFY_CANCELLED
+   * - APPOINTMENT_REMINDER_* -> BOT_NOTIFY_REMINDER
    */
   async sendProactiveMessage(
     workspaceId: string,
     to: string,
-    templateType: string,
+    eventType: string,
     variables: TemplateVariables
   ): Promise<boolean> {
-    this.logger.log(`[${workspaceId}] sendProactiveMessage: ${templateType} para ${to}`);
+    this.logger.log(`[${workspaceId}] sendProactiveMessage: ${eventType} para ${to}`);
 
-    // Buscar template de MessageTemplate (templates manuais)
-    const templates = await this.prisma.$queryRaw<Array<{ message: string }>>`
-      SELECT message FROM "MessageTemplate" 
-      WHERE "workspaceId" = ${workspaceId} 
-        AND "eventType" = ${templateType}
-        AND "enabled" = true
-      LIMIT 1
-    `;
+    // Mapear evento para template do bot
+    const templateKey = this.mapEventToTemplate(eventType);
+    this.logger.log(`[${workspaceId}] Mapeado para template: ${templateKey}`);
 
-    if (!templates || templates.length === 0) {
-      this.logger.warn(`[${workspaceId}] MessageTemplate ${templateType} não encontrado ou desabilitado`);
-      
-      // Tentar usar mensagem padrão para APPOINTMENT_CONFIRMED
-      if (templateType === 'APPOINTMENT_CONFIRMED') {
-        const defaultMsg = `Olá ${variables.clientName}! ✅\n\nSeu agendamento está confirmado:\n📅 ${variables.date} às ${variables.time}\n💇 ${variables.serviceName}\n📍 ${variables.workspaceName}\n\nTe esperamos!`;
-        this.logger.log(`[${workspaceId}] Usando mensagem padrão para ${templateType}`);
-        return this.sessionManager.sendMessage(workspaceId, to, defaultMsg);
-      }
-      
+    // Usar o mesmo sistema de templates do bot (ChatbotTemplate)
+    const message = await this.getTemplate(workspaceId, templateKey, variables);
+    
+    if (!message) {
+      this.logger.error(`[${workspaceId}] Não foi possível obter template ${templateKey}`);
       return false;
     }
 
-    const message = renderTemplate(templates[0].message, variables);
-    this.logger.log(`[${workspaceId}] Enviando mensagem proativa: ${message.substring(0, 50)}...`);
+    this.logger.log(`[${workspaceId}] Enviando notificação: ${message.substring(0, 50)}...`);
     
     return this.sessionManager.sendMessage(workspaceId, to, message);
+  }
+
+  /**
+   * Mapeia evento de agendamento para template do bot
+   */
+  private mapEventToTemplate(eventType: string): string {
+    const mapping: Record<string, string> = {
+      'APPOINTMENT_CONFIRMED': BotTemplateKey.NOTIFY_APPOINTMENT_CONFIRMED,
+      'APPOINTMENT_CREATED': BotTemplateKey.NOTIFY_APPOINTMENT_CREATED,
+      'APPOINTMENT_CANCELLED': BotTemplateKey.NOTIFY_APPOINTMENT_CANCELLED,
+      'APPOINTMENT_REMINDER_24H': BotTemplateKey.NOTIFY_APPOINTMENT_REMINDER,
+      'APPOINTMENT_REMINDER_2H': BotTemplateKey.NOTIFY_APPOINTMENT_REMINDER,
+      'APPOINTMENT_COMPLETED': BotTemplateKey.NOTIFY_APPOINTMENT_CONFIRMED, // Usa confirmado como fallback
+    };
+    
+    return mapping[eventType] || BotTemplateKey.NOTIFY_APPOINTMENT_CONFIRMED;
   }
 }
