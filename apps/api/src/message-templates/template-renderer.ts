@@ -66,9 +66,11 @@ export function generateWhatsAppLink(phone: string, message: string): string {
 
 /**
  * Formata data para exibição no template
+ * Usa timezone do Brasil (America/Sao_Paulo)
  */
 export function formatDate(date: Date): string {
   return date.toLocaleDateString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
     weekday: 'long',
     day: '2-digit',
     month: '2-digit',
@@ -78,9 +80,11 @@ export function formatDate(date: Date): string {
 
 /**
  * Formata horário para exibição no template
+ * Usa timezone do Brasil (America/Sao_Paulo)
  */
 export function formatTime(date: Date): string {
   return date.toLocaleTimeString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
     hour: '2-digit',
     minute: '2-digit',
   });
