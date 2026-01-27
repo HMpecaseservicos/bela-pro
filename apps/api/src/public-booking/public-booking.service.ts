@@ -1,5 +1,6 @@
-import { Injectable, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, Logger, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AppointmentNotificationService } from '../appointments/appointment-notification.service';
 import { z } from 'zod';
 
 const createPublicBookingSchema = z.object({
@@ -12,7 +13,13 @@ const createPublicBookingSchema = z.object({
 
 @Injectable()
 export class PublicBookingService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(PublicBookingService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => AppointmentNotificationService))
+    private readonly notificationService: AppointmentNotificationService,
+  ) {}
 
   async createBooking(input: unknown) {
     const data = createPublicBookingSchema.parse(input);
@@ -114,6 +121,40 @@ export class PublicBookingService {
           },
         },
       },
+    });
+
+    this.logger.log(
+      `✅ [${data.workspaceId}] Agendamento público criado: ${appointment.id} | ` +
+      `cliente=${appointment.client.name} phone=${appointment.client.phoneE164}`
+    );
+
+    // Enviar notificação WhatsApp (APPOINTMENT_CREATED pois está pendente)
+    const serviceName = appointment.services
+      .map(s => s.service?.name)
+      .filter(Boolean)
+      .join(', ') || 'Serviço';
+
+    this.logger.log(
+      `📤 [${data.workspaceId}] Enviando notificação de agendamento criado | ` +
+      `appt=${appointment.id} phone=${appointment.client.phoneE164}`
+    );
+
+    // Envia em background
+    this.notificationService.notifyAppointmentCreated({
+      appointmentId: appointment.id,
+      workspaceId: appointment.workspaceId,
+      clientPhone: appointment.client.phoneE164,
+      clientName: appointment.client.name,
+      serviceName,
+      startAt: appointment.startAt,
+    }).then(sent => {
+      if (sent) {
+        this.logger.log(`✅ [${data.workspaceId}] Notificação CREATED enviada`);
+      } else {
+        this.logger.warn(`⚠️ [${data.workspaceId}] Notificação não enviada (WhatsApp desconectado?)`);
+      }
+    }).catch(err => {
+      this.logger.error(`❌ [${data.workspaceId}] Erro ao enviar notificação: ${err}`);
     });
 
     return appointment;
