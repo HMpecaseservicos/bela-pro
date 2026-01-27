@@ -263,35 +263,51 @@ export class WhatsAppBotService implements OnModuleInit {
    * 
    * IMPORTANTE: Normalização de telefone
    * - WhatsApp envia: 556699880161 (sem @c.us, já removido)
-   * - Banco salva: 556699880161 (só dígitos, sem +)
-   * - Comparação deve ser feita com mesmo formato
+   * - Banco pode ter: 556699880161, 6699880161, +556699880161, etc.
+   * - Tenta múltiplos formatos para encontrar o cliente
    */
   private async getMyAppointmentsMessage(context: BotMessageContext): Promise<string> {
-    // Normalizar telefone para formato do banco (apenas dígitos)
-    // WhatsApp: 556699880161 -> Banco: 556699880161
+    // Normalizar telefone - remover tudo que não é dígito
     const phone = context.clientPhone.replace(/\D/g, '');
-    // Garantir DDI 55 (Brasil)
-    const phoneE164 = phone.startsWith('55') ? phone : `55${phone}`;
+    
+    // Criar variações para busca
+    // WhatsApp BR sempre vem com 55 + DDD + número
+    const phoneWithDDI = phone.startsWith('55') ? phone : `55${phone}`;
+    const phoneWithoutDDI = phone.startsWith('55') ? phone.substring(2) : phone;
+    const phoneWithPlus = `+${phoneWithDDI}`;
 
-    this.logger.log(`[${context.workspaceId}] Buscando agendamentos para telefone: ${phoneE164}`);
+    this.logger.log(`[${context.workspaceId}] Buscando cliente com telefone: ${phoneWithDDI} ou ${phoneWithoutDDI} ou ${phoneWithPlus}`);
 
-    // Buscar cliente pelo phoneE164
+    // Buscar cliente tentando múltiplos formatos
     const client = await this.prisma.client.findFirst({
       where: {
         workspaceId: context.workspaceId,
-        phoneE164,
+        OR: [
+          { phoneE164: phoneWithDDI },
+          { phoneE164: phoneWithoutDDI },
+          { phoneE164: phoneWithPlus },
+          // Busca parcial - contém o número sem DDI
+          { phoneE164: { contains: phoneWithoutDDI } },
+        ],
       },
-      select: { id: true, name: true },
+      select: { id: true, name: true, phoneE164: true },
     });
 
     if (!client) {
-      this.logger.log(`[${context.workspaceId}] Cliente não encontrado para ${phoneE164}`);
+      // Log para debug - listar clientes do workspace para ver o formato
+      const allClients = await this.prisma.client.findMany({
+        where: { workspaceId: context.workspaceId },
+        select: { phoneE164: true, name: true },
+        take: 5,
+      });
+      this.logger.warn(`[${context.workspaceId}] Cliente não encontrado. Clientes existentes: ${JSON.stringify(allClients.map(c => c.phoneE164))}`);
+      
       return this.getTemplate(context.workspaceId, BotTemplateKey.NO_APPOINTMENTS, {
         clientName: context.clientName,
       });
     }
 
-    this.logger.log(`[${context.workspaceId}] Cliente encontrado: ${client.id} (${client.name})`);
+    this.logger.log(`[${context.workspaceId}] Cliente encontrado: ${client.id} (${client.name}) - telefone no banco: ${client.phoneE164}`);
 
     // Buscar próximos agendamentos ATIVOS
     const now = new Date();
