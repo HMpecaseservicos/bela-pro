@@ -380,6 +380,144 @@ export class ChatbotController {
   }
 
   // ==========================================================================
+  // TEST ENDPOINTS (diagnóstico)
+  // ==========================================================================
+
+  /**
+   * Endpoint de teste para enviar notificação proativa
+   * Útil para debugar sem depender do fluxo de agendamento
+   * 
+   * POST /api/v1/chatbot/test/proactive
+   * Body: { phone, templateKey?, message? }
+   */
+  @Post('test/proactive')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async testProactiveMessage(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: { phone: string; templateKey?: string; message?: string },
+  ) {
+    const { workspaceId } = req.user;
+    const { phone, templateKey, message } = body;
+
+    this.logger.log(
+      `🧪 [${workspaceId}] Teste de envio proativo | phone=${phone} template=${templateKey || 'direct'}`
+    );
+
+    // Verificar sessão
+    const sessionInfo = this.sessionManager.getSessionInfo(workspaceId);
+    
+    if (sessionInfo.state !== WhatsAppSessionState.CONNECTED) {
+      return {
+        success: false,
+        error: 'SESSION_NOT_CONNECTED',
+        sessionState: sessionInfo.state,
+        message: `Sessão WhatsApp não conectada (estado: ${sessionInfo.state})`,
+      };
+    }
+
+    // Normalizar telefone
+    const phoneNormalized = phone.replace(/\D/g, '');
+    const phoneWhatsApp = phoneNormalized.startsWith('55') 
+      ? phoneNormalized 
+      : `55${phoneNormalized}`;
+
+    try {
+      let sent = false;
+      let finalMessage = message || '';
+
+      if (templateKey) {
+        // Buscar template
+        const template = await this.prisma.chatbotTemplate.findFirst({
+          where: { workspaceId, key: templateKey },
+        });
+
+        if (!template) {
+          return {
+            success: false,
+            error: 'TEMPLATE_NOT_FOUND',
+            templateKey,
+            message: `Template ${templateKey} não encontrado`,
+          };
+        }
+
+        if (!template.isActive) {
+          return {
+            success: false,
+            error: 'TEMPLATE_DISABLED',
+            templateKey,
+            message: `Template ${templateKey} está desabilitado`,
+          };
+        }
+
+        // Renderizar com variáveis de teste
+        finalMessage = template.content
+          .replace('{{clientName}}', 'Cliente Teste')
+          .replace('{{serviceName}}', 'Serviço Teste')
+          .replace('{{date}}', 'segunda-feira, 27/01')
+          .replace('{{time}}', '14:00')
+          .replace('{{workspaceName}}', 'Salão Teste');
+
+        sent = await this.sessionManager.sendMessage(workspaceId, phoneWhatsApp, finalMessage);
+      } else if (message) {
+        // Mensagem direta
+        sent = await this.sessionManager.sendMessage(workspaceId, phoneWhatsApp, message);
+        finalMessage = message;
+      } else {
+        return {
+          success: false,
+          error: 'NO_MESSAGE_OR_TEMPLATE',
+          message: 'Forneça "message" ou "templateKey" no body',
+        };
+      }
+
+      return {
+        success: sent,
+        workspaceId,
+        phone: phoneWhatsApp,
+        templateKey: templateKey || null,
+        messagePreview: finalMessage.substring(0, 100) + (finalMessage.length > 100 ? '...' : ''),
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      this.logger.error(`❌ [${workspaceId}] Erro no teste proativo: ${error}`);
+      return {
+        success: false,
+        error: 'SEND_ERROR',
+        message: String(error),
+      };
+    }
+  }
+
+  /**
+   * Retorna estatísticas da fila de notificações
+   * GET /api/v1/chatbot/queue/stats
+   */
+  @Get('queue/stats')
+  @UseGuards(JwtAuthGuard)
+  async getQueueStats(@Req() req: AuthenticatedRequest) {
+    const { workspaceId } = req.user;
+    
+    // Importar dinamicamente para evitar dependência circular
+    try {
+      const { NotificationQueueService } = await import('../notification-queue/notification-queue.service');
+      // O service será injetado se disponível
+      return {
+        success: true,
+        workspaceId,
+        message: 'Use os logs do Railway para verificar estatísticas da fila',
+        timestamp: new Date().toISOString(),
+      };
+    } catch {
+      return {
+        success: false,
+        error: 'QUEUE_NOT_AVAILABLE',
+        message: 'Módulo de fila não disponível',
+      };
+    }
+  }
+
+  // ==========================================================================
   // LEGACY STUBS (compatibilidade com frontend antigo)
   // ==========================================================================
 

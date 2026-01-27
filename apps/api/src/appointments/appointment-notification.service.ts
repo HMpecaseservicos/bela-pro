@@ -1,21 +1,28 @@
 /**
  * Appointment Notification Service
  * 
- * Responsável por enviar notificações automáticas via WhatsApp
+ * Responsável por enfileirar notificações automáticas via WhatsApp
  * quando eventos de agendamento ocorrem.
+ * 
+ * ARQUITETURA:
+ * - Este serviço NÃO envia diretamente
+ * - Enfileira jobs no Redis (BullMQ)
+ * - Worker separado (NotificationQueueProcessor) processa e envia
+ * - Isso garante resiliência em ambiente multi-instância (Railway)
  * 
  * Eventos suportados:
  * - APPOINTMENT_CREATED: Quando agendamento é criado (público)
- * - APPOINTMENT_CONFIRMED: Quando agendamento é confirmado (admin ou atualização)
+ * - APPOINTMENT_CONFIRMED: Quando agendamento é confirmado
  * - APPOINTMENT_CANCELLED: Quando agendamento é cancelado
+ * - APPOINTMENT_REMINDER: Lembrete antes do agendamento
  * 
  * @module appointments
  */
 
-import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { WhatsAppBotService } from '../chatbot/whatsapp-bot.service';
-import { MessageEventType } from '../message-templates/message-events';
+import { NotificationQueueService } from '../notification-queue/notification-queue.service';
+import { BotTemplateKey } from '../chatbot/whatsapp-bot.service';
 
 export interface AppointmentNotificationData {
   appointmentId: string;
@@ -26,45 +33,69 @@ export interface AppointmentNotificationData {
   startAt: Date;
 }
 
+/**
+ * Mapeamento de eventos para templates do bot
+ */
+const EVENT_TO_TEMPLATE: Record<string, string> = {
+  'APPOINTMENT_CREATED': BotTemplateKey.NOTIFY_APPOINTMENT_CREATED,
+  'APPOINTMENT_CONFIRMED': BotTemplateKey.NOTIFY_APPOINTMENT_CONFIRMED,
+  'APPOINTMENT_CANCELLED': BotTemplateKey.NOTIFY_APPOINTMENT_CANCELLED,
+  'APPOINTMENT_REMINDER': BotTemplateKey.NOTIFY_APPOINTMENT_REMINDER,
+};
+
 @Injectable()
 export class AppointmentNotificationService {
   private readonly logger = new Logger(AppointmentNotificationService.name);
 
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(forwardRef(() => WhatsAppBotService))
-    private readonly whatsAppBotService: WhatsAppBotService,
-  ) {}
-
-  /**
-   * Envia notificação de agendamento criado
-   */
-  async notifyAppointmentCreated(data: AppointmentNotificationData): Promise<boolean> {
-    return this.sendNotification(data, MessageEventType.APPOINTMENT_CREATED);
+    private readonly notificationQueue: NotificationQueueService,
+  ) {
+    this.logger.log('📬 AppointmentNotificationService inicializado com fila');
   }
 
   /**
-   * Envia notificação de agendamento confirmado
+   * Enfileira notificação de agendamento criado
    */
-  async notifyAppointmentConfirmed(data: AppointmentNotificationData): Promise<boolean> {
-    return this.sendNotification(data, MessageEventType.APPOINTMENT_CONFIRMED);
+  async notifyAppointmentCreated(data: AppointmentNotificationData): Promise<string> {
+    return this.enqueueNotification(data, 'APPOINTMENT_CREATED');
   }
 
   /**
-   * Envia notificação de agendamento cancelado
+   * Enfileira notificação de agendamento confirmado
    */
-  async notifyAppointmentCancelled(data: AppointmentNotificationData): Promise<boolean> {
-    return this.sendNotification(data, MessageEventType.APPOINTMENT_CANCELLED);
+  async notifyAppointmentConfirmed(data: AppointmentNotificationData): Promise<string> {
+    return this.enqueueNotification(data, 'APPOINTMENT_CONFIRMED');
   }
 
   /**
-   * Envia notificação genérica
+   * Enfileira notificação de agendamento cancelado
    */
-  private async sendNotification(
+  async notifyAppointmentCancelled(data: AppointmentNotificationData): Promise<string> {
+    return this.enqueueNotification(data, 'APPOINTMENT_CANCELLED');
+  }
+
+  /**
+   * Enfileira notificação de lembrete
+   */
+  async notifyAppointmentReminder(data: AppointmentNotificationData): Promise<string> {
+    return this.enqueueNotification(data, 'APPOINTMENT_REMINDER');
+  }
+
+  /**
+   * Enfileira notificação na fila Redis
+   */
+  private async enqueueNotification(
     data: AppointmentNotificationData,
-    eventType: MessageEventType,
-  ): Promise<boolean> {
-    const { workspaceId, clientPhone, clientName, serviceName, startAt } = data;
+    eventType: string,
+  ): Promise<string> {
+    const { workspaceId, appointmentId, clientPhone, clientName, serviceName, startAt } = data;
+    const templateKey = EVENT_TO_TEMPLATE[eventType] || BotTemplateKey.NOTIFY_APPOINTMENT_CONFIRMED;
+
+    this.logger.log(
+      `📤 [${workspaceId}] Enfileirando notificação ${eventType} | ` +
+      `appt=${appointmentId} phone=${clientPhone} template=${templateKey}`
+    );
 
     try {
       // Buscar dados do workspace
@@ -74,8 +105,8 @@ export class AppointmentNotificationService {
       });
 
       if (!workspace) {
-        this.logger.warn(`[${workspaceId}] Workspace não encontrado para notificação`);
-        return false;
+        this.logger.warn(`⚠️ [${workspaceId}] Workspace não encontrado para notificação`);
+        return 'WORKSPACE_NOT_FOUND';
       }
 
       // Formatar data e hora com timezone do Brasil
@@ -94,8 +125,6 @@ export class AppointmentNotificationService {
       });
 
       // Normalizar telefone para formato WhatsApp
-      // Banco salva: 6699880161 ou 556699880161 (variável)
-      // WhatsApp precisa: 556699880161 (com DDI)
       const phoneNormalized = clientPhone.replace(/\D/g, '');
       const phoneWhatsApp = phoneNormalized.startsWith('55') 
         ? phoneNormalized 
@@ -110,30 +139,27 @@ export class AppointmentNotificationService {
         workspaceName: workspace.brandName || workspace.name,
       };
 
-      this.logger.log(
-        `[${workspaceId}] Enviando notificação ${eventType} para ${phoneWhatsApp}: ${clientName}, ${serviceName}, ${date} ${time}`
-      );
-
-      // Usar sendProactiveMessage do WhatsAppBotService
-      const sent = await this.whatsAppBotService.sendProactiveMessage(
+      // Enfileirar no Redis
+      const jobId = await this.notificationQueue.enqueue({
         workspaceId,
-        phoneWhatsApp,
-        eventType,
+        appointmentId,
+        toPhone: phoneWhatsApp,
+        templateKey,
         variables,
+      });
+
+      this.logger.log(
+        `✅ [${workspaceId}] Notificação enfileirada | ` +
+        `jobId=${jobId} event=${eventType} phone=${phoneWhatsApp}`
       );
 
-      if (sent) {
-        this.logger.log(`[${workspaceId}] Notificação ${eventType} enviada com sucesso para ${phoneWhatsApp}`);
-      } else {
-        this.logger.warn(`[${workspaceId}] Falha ao enviar notificação ${eventType} para ${phoneWhatsApp}`);
-      }
+      return jobId;
 
-      return sent;
     } catch (error) {
       this.logger.error(
-        `[${workspaceId}] Erro ao enviar notificação ${eventType}: ${error}`,
+        `❌ [${workspaceId}] Erro ao enfileirar notificação ${eventType}: ${error}`,
       );
-      return false;
+      throw error;
     }
   }
 
@@ -155,7 +181,7 @@ export class AppointmentNotificationService {
     });
 
     if (!appointment) {
-      this.logger.warn(`Agendamento ${appointmentId} não encontrado`);
+      this.logger.warn(`⚠️ Agendamento ${appointmentId} não encontrado`);
       return null;
     }
 
@@ -172,5 +198,19 @@ export class AppointmentNotificationService {
       serviceName,
       startAt: appointment.startAt,
     };
+  }
+
+  /**
+   * Retorna estatísticas da fila de notificações
+   */
+  async getQueueStats() {
+    return this.notificationQueue.getStats();
+  }
+
+  /**
+   * Retorna jobs falhados recentes
+   */
+  async getFailedJobs(limit = 10) {
+    return this.notificationQueue.getFailedJobs(limit);
   }
 }

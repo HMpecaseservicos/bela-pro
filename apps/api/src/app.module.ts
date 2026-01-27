@@ -18,6 +18,7 @@ import { MessageTemplatesModule } from './message-templates/message-templates.mo
 import { ChatUsageModule } from './chat-usage/chat-usage.module';
 import { ChatbotModule } from './chatbot/chatbot.module';
 import { ChatbotTestModule } from './chatbot-test/chatbot-test.module';
+import { NotificationQueueModule } from './notification-queue/notification-queue.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { ChatbotTestModule } from './chatbot-test/chatbot-test.module';
     ChatUsageModule,
     ChatbotModule,
     ChatbotTestModule,
+    NotificationQueueModule,
   ],
   controllers: [HealthController, RootController],
 })

@@ -122,13 +122,38 @@ export class AppointmentsService {
       },
     });
 
-    this.logger.log(`Agendamento criado: ${appointment.id} para ${appointment.client.name} (${appointment.client.phoneE164})`);
+    this.logger.log(
+      `✅ [${appointment.workspaceId}] Agendamento criado: ${appointment.id} | ` +
+      `cliente=${appointment.client.name} phone=${appointment.client.phoneE164}`
+    );
 
-    // Enviar notificação automática via WhatsApp (APPOINTMENT_CONFIRMED pois já está confirmado)
-    // Executa em background para não bloquear a resposta
-    this.logger.log(`Iniciando envio de notificação WhatsApp para ${appointment.client.phoneE164}...`);
-    this.sendAppointmentNotification(appointment).catch(err => {
-      this.logger.error(`Falha ao enviar notificação do agendamento ${appointment.id}: ${err}`);
+    // Enfileirar notificação automática via WhatsApp (APPOINTMENT_CONFIRMED pois já está confirmado)
+    // Usa fila Redis para garantir entrega mesmo com múltiplas instâncias
+    const serviceName = appointment.services
+      .map(s => s.service?.name)
+      .filter(Boolean)
+      .join(', ') || 'Serviço';
+
+    this.logger.log(
+      `📤 [${appointment.workspaceId}] Enfileirando notificação WhatsApp | ` +
+      `appt=${appointment.id} phone=${appointment.client.phoneE164} service=${serviceName}`
+    );
+
+    this.notificationService.notifyAppointmentConfirmed({
+      appointmentId: appointment.id,
+      workspaceId: appointment.workspaceId,
+      clientPhone: appointment.client.phoneE164,
+      clientName: appointment.client.name,
+      serviceName,
+      startAt: appointment.startAt,
+    }).then(jobId => {
+      this.logger.log(
+        `✅ [${appointment.workspaceId}] Notificação enfileirada | appt=${appointment.id} jobId=${jobId}`
+      );
+    }).catch(err => {
+      this.logger.error(
+        `❌ [${appointment.workspaceId}] Falha ao enfileirar notificação: ${err} | appt=${appointment.id}`
+      );
     });
 
     return appointment;
@@ -247,35 +272,5 @@ export class AppointmentsService {
     }
 
     return this.findOne(workspaceId, id);
-  }
-
-  /**
-   * Envia notificação automática via WhatsApp para o cliente
-   * Chamado após criar agendamento (confirmado) ou atualizar status
-   */
-  private async sendAppointmentNotification(appointment: {
-    id: string;
-    workspaceId: string;
-    startAt: Date;
-    client: { phoneE164: string; name: string };
-    services: Array<{ service: { name: string } | null }>;
-  }): Promise<void> {
-    const serviceName = appointment.services
-      .map(s => s.service?.name)
-      .filter(Boolean)
-      .join(', ') || 'Serviço';
-
-    this.logger.log(
-      `Enviando notificação para ${appointment.client.name} (${appointment.client.phoneE164}) - ${serviceName}`
-    );
-
-    await this.notificationService.notifyAppointmentConfirmed({
-      appointmentId: appointment.id,
-      workspaceId: appointment.workspaceId,
-      clientPhone: appointment.client.phoneE164,
-      clientName: appointment.client.name,
-      serviceName,
-      startAt: appointment.startAt,
-    });
   }
 }
