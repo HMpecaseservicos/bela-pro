@@ -399,41 +399,6 @@ export default function ConfigPage() {
         </div>
       </div>
 
-      {/* Comunicação */}
-      <div style={{
-        background: 'white',
-        borderRadius: isMobile ? 12 : 16,
-        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-        padding: isMobile ? 16 : 32,
-        marginBottom: isMobile ? 16 : 24,
-      }}>
-        <h3 style={{ margin: '0 0 16px', fontSize: isMobile ? 16 : 18, fontWeight: 600, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span>📱</span> Comunicação
-        </h3>
-        <p style={{ margin: '0 0 16px', color: '#64748b', fontSize: isMobile ? 13 : 14 }}>
-          Configure mensagens automáticas para seus clientes.
-        </p>
-        <a
-          href="/dashboard/config/comunicacao"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-            color: 'white',
-            border: 'none',
-            padding: isMobile ? '10px 16px' : '12px 24px',
-            borderRadius: 10,
-            fontWeight: 600,
-            cursor: 'pointer',
-            fontSize: isMobile ? 13 : 14,
-            textDecoration: 'none',
-          }}
-        >
-          💬 Gerenciar Mensagens
-        </a>
-      </div>
-
       {/* Danger Zone */}
       <div style={{
         background: 'white',
