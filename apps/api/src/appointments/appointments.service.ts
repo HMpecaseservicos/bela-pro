@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { z } from 'zod';
+import { AppointmentNotificationService } from './appointment-notification.service';
 
 const createAppointmentSchema = z.object({
   clientName: z.string().min(2).max(80),
@@ -12,7 +13,12 @@ const createAppointmentSchema = z.object({
 
 @Injectable()
 export class AppointmentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(AppointmentsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationService: AppointmentNotificationService,
+  ) {}
 
   async create(workspaceId: string, input: unknown) {
     const data = createAppointmentSchema.parse(input);
@@ -114,6 +120,12 @@ export class AppointmentsService {
           },
         },
       },
+    });
+
+    // Enviar notificação automática via WhatsApp (APPOINTMENT_CONFIRMED pois já está confirmado)
+    // Executa em background para não bloquear a resposta
+    this.sendAppointmentNotification(appointment).catch(err => {
+      this.logger.warn(`Falha ao enviar notificação do agendamento ${appointment.id}: ${err}`);
     });
 
     return appointment;
@@ -232,5 +244,35 @@ export class AppointmentsService {
     }
 
     return this.findOne(workspaceId, id);
+  }
+
+  /**
+   * Envia notificação automática via WhatsApp para o cliente
+   * Chamado após criar agendamento (confirmado) ou atualizar status
+   */
+  private async sendAppointmentNotification(appointment: {
+    id: string;
+    workspaceId: string;
+    startAt: Date;
+    client: { phoneE164: string; name: string };
+    services: Array<{ service: { name: string } | null }>;
+  }): Promise<void> {
+    const serviceName = appointment.services
+      .map(s => s.service?.name)
+      .filter(Boolean)
+      .join(', ') || 'Serviço';
+
+    this.logger.log(
+      `Enviando notificação para ${appointment.client.name} (${appointment.client.phoneE164}) - ${serviceName}`
+    );
+
+    await this.notificationService.notifyAppointmentConfirmed({
+      appointmentId: appointment.id,
+      workspaceId: appointment.workspaceId,
+      clientPhone: appointment.client.phoneE164,
+      clientName: appointment.client.name,
+      serviceName,
+      startAt: appointment.startAt,
+    });
   }
 }
