@@ -6,7 +6,7 @@ import { AppointmentsService } from './appointments.service';
 import { AppointmentNotificationService } from './appointment-notification.service';
 
 @Module({
-  imports: [PrismaModule, NotificationQueueModule],
+  imports: [PrismaModule, NotificationQueueModule.forRoot()],
   controllers: [AppointmentsController],
   providers: [AppointmentsService, AppointmentNotificationService],
   exports: [AppointmentsService, AppointmentNotificationService],

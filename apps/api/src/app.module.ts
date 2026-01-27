@@ -41,7 +41,7 @@ import { NotificationQueueModule } from './notification-queue/notification-queue
     ChatUsageModule,
     ChatbotModule,
     ChatbotTestModule,
-    NotificationQueueModule,
+    NotificationQueueModule.forRoot(),
   ],
   controllers: [HealthController, RootController],
 })
