@@ -236,11 +236,35 @@ export class AppointmentsService {
       throw new NotFoundException('Agendamento não encontrado.');
     }
 
+    // Envia notificação de cancelamento
+    const serviceName = appointment.services
+      .map(s => s.service?.name)
+      .filter(Boolean)
+      .join(', ') || 'Serviço';
+
+    this.notificationService.notifyAppointmentCancelled({
+      appointmentId: appointment.id,
+      workspaceId: appointment.workspaceId,
+      clientPhone: appointment.client.phoneE164,
+      clientName: appointment.client.name,
+      serviceName,
+      startAt: appointment.startAt,
+    }).then(sent => {
+      if (sent) {
+        this.logger.log(`✅ [${workspaceId}] Notificação de CANCELAMENTO enviada`);
+      } else {
+        this.logger.warn(`⚠️ [${workspaceId}] Notificação de cancelamento não enviada`);
+      }
+    }).catch(err => {
+      this.logger.error(`❌ [${workspaceId}] Erro ao enviar notificação de cancelamento: ${err}`);
+    });
+
     return this.findOne(workspaceId, id);
   }
 
   async updateStatus(workspaceId: string, id: string, status: string) {
-    await this.findOne(workspaceId, id);
+    const appointment = await this.findOne(workspaceId, id);
+    const previousStatus = appointment.status;
 
     const validStatuses = ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'] as const;
 
@@ -269,6 +293,45 @@ export class AppointmentsService {
 
     if (result.count === 0) {
       throw new NotFoundException('Agendamento não encontrado.');
+    }
+
+    // Envia notificação se status mudou para CONFIRMED ou CANCELLED
+    if (typedStatus !== previousStatus) {
+      const serviceName = appointment.services
+        .map(s => s.service?.name)
+        .filter(Boolean)
+        .join(', ') || 'Serviço';
+
+      const notificationData = {
+        appointmentId: appointment.id,
+        workspaceId: appointment.workspaceId,
+        clientPhone: appointment.client.phoneE164,
+        clientName: appointment.client.name,
+        serviceName,
+        startAt: appointment.startAt,
+      };
+
+      if (typedStatus === 'CONFIRMED' && previousStatus === 'PENDING') {
+        this.notificationService.notifyAppointmentConfirmed(notificationData).then(sent => {
+          if (sent) {
+            this.logger.log(`✅ [${workspaceId}] Notificação de CONFIRMAÇÃO enviada`);
+          } else {
+            this.logger.warn(`⚠️ [${workspaceId}] Notificação de confirmação não enviada`);
+          }
+        }).catch(err => {
+          this.logger.error(`❌ [${workspaceId}] Erro ao enviar notificação de confirmação: ${err}`);
+        });
+      } else if (typedStatus === 'CANCELLED') {
+        this.notificationService.notifyAppointmentCancelled(notificationData).then(sent => {
+          if (sent) {
+            this.logger.log(`✅ [${workspaceId}] Notificação de CANCELAMENTO enviada`);
+          } else {
+            this.logger.warn(`⚠️ [${workspaceId}] Notificação de cancelamento não enviada`);
+          }
+        }).catch(err => {
+          this.logger.error(`❌ [${workspaceId}] Erro ao enviar notificação de cancelamento: ${err}`);
+        });
+      }
     }
 
     return this.findOne(workspaceId, id);
