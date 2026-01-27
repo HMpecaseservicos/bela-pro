@@ -259,12 +259,21 @@ export class WhatsAppBotService implements OnModuleInit {
   }
 
   /**
-   * Busca agendamentos do cliente
+   * Busca agendamentos do cliente (consulta REAL ao banco)
+   * 
+   * IMPORTANTE: Normalização de telefone
+   * - WhatsApp envia: 556699880161 (sem @c.us, já removido)
+   * - Banco salva: 556699880161 (só dígitos, sem +)
+   * - Comparação deve ser feita com mesmo formato
    */
   private async getMyAppointmentsMessage(context: BotMessageContext): Promise<string> {
-    // Normalizar telefone para formato E.164
+    // Normalizar telefone para formato do banco (apenas dígitos)
+    // WhatsApp: 556699880161 -> Banco: 556699880161
     const phone = context.clientPhone.replace(/\D/g, '');
-    const phoneE164 = phone.startsWith('55') ? `+${phone}` : `+55${phone}`;
+    // Garantir DDI 55 (Brasil)
+    const phoneE164 = phone.startsWith('55') ? phone : `55${phone}`;
+
+    this.logger.log(`[${context.workspaceId}] Buscando agendamentos para telefone: ${phoneE164}`);
 
     // Buscar cliente pelo phoneE164
     const client = await this.prisma.client.findFirst({
@@ -272,20 +281,25 @@ export class WhatsAppBotService implements OnModuleInit {
         workspaceId: context.workspaceId,
         phoneE164,
       },
-      select: { id: true },
+      select: { id: true, name: true },
     });
 
     if (!client) {
+      this.logger.log(`[${context.workspaceId}] Cliente não encontrado para ${phoneE164}`);
       return this.getTemplate(context.workspaceId, BotTemplateKey.NO_APPOINTMENTS, {
         clientName: context.clientName,
       });
     }
 
-    // Buscar próximos agendamentos
+    this.logger.log(`[${context.workspaceId}] Cliente encontrado: ${client.id} (${client.name})`);
+
+    // Buscar próximos agendamentos ATIVOS
+    const now = new Date();
     const appointments = await this.prisma.appointment.findMany({
       where: {
         clientId: client.id,
-        startAt: { gte: new Date() },
+        workspaceId: context.workspaceId,
+        startAt: { gte: now },
         status: { in: ['PENDING', 'CONFIRMED'] },
       },
       orderBy: { startAt: 'asc' },
@@ -299,23 +313,35 @@ export class WhatsAppBotService implements OnModuleInit {
       },
     });
 
+    this.logger.log(`[${context.workspaceId}] Agendamentos encontrados: ${appointments.length}`);
+
     if (appointments.length === 0) {
       return this.getTemplate(context.workspaceId, BotTemplateKey.NO_APPOINTMENTS, {
         clientName: context.clientName,
       });
     }
 
-    // Formatar lista de agendamentos
+    // Formatar lista de agendamentos com dados REAIS
     const appointmentsList = appointments.map((apt, i) => {
-      const date = apt.startAt.toLocaleDateString('pt-BR');
-      const time = apt.startAt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-      const serviceName = apt.services[0]?.service?.name || 'Serviço';
-      return `${i + 1}. ${serviceName}\n   📅 ${date} às ${time}`;
+      const date = apt.startAt.toLocaleDateString('pt-BR', {
+        weekday: 'long',
+        day: '2-digit',
+        month: '2-digit',
+      });
+      const time = apt.startAt.toLocaleTimeString('pt-BR', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false,
+      });
+      const services = apt.services.map(s => s.service?.name).filter(Boolean).join(', ') || 'Serviço';
+      const statusEmoji = apt.status === 'CONFIRMED' ? '✅' : '⏳';
+      
+      return `${statusEmoji} ${i + 1}. ${services}\n   📅 ${date} às ${time}`;
     }).join('\n\n');
 
     // Usar template do banco para a lista
     return this.getTemplate(context.workspaceId, BotTemplateKey.APPOINTMENTS_LIST, {
-      clientName: context.clientName,
+      clientName: client.name || context.clientName,
       appointmentsList,
     });
   }
