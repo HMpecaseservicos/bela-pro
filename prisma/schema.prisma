@@ -296,6 +296,9 @@ model Appointment {
   cancelledBy CancelledBy?
   cancelReason String?
 
+  // Lembrete automático
+  reminderSentAt DateTime? // quando o lembrete foi enviado
+
   // Financeiro MVP: snapshot
   totalPriceCents Int @default(0)
 

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { HealthController } from './health.controller';
 import { RootController } from './root.controller';
 import { PrismaModule } from './prisma/prisma.module';
@@ -24,6 +25,7 @@ import { ChatbotTestModule } from './chatbot-test/chatbot-test.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     ServicesModule,
