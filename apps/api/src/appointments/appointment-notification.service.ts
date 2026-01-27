@@ -1,28 +1,18 @@
 /**
- * Appointment Notification Service
+ * Appointment Notification Service - VERSÃO SIMPLES
  * 
- * Responsável por enfileirar notificações automáticas via WhatsApp
- * quando eventos de agendamento ocorrem.
+ * Envia notificações via WhatsApp usando o MESMO SessionManager
+ * que o bot usa para responder mensagens.
  * 
- * ARQUITETURA:
- * - Este serviço NÃO envia diretamente
- * - Enfileira jobs no Redis (BullMQ)
- * - Worker separado (NotificationQueueProcessor) processa e envia
- * - Isso garante resiliência em ambiente multi-instância (Railway)
- * 
- * Eventos suportados:
- * - APPOINTMENT_CREATED: Quando agendamento é criado (público)
- * - APPOINTMENT_CONFIRMED: Quando agendamento é confirmado
- * - APPOINTMENT_CANCELLED: Quando agendamento é cancelado
- * - APPOINTMENT_REMINDER: Lembrete antes do agendamento
- * 
- * @module appointments
+ * SEM filas, SEM complexidade, FUNCIONA.
  */
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotificationQueueService } from '../notification-queue/notification-queue.service';
-import { BotTemplateKey } from '../chatbot/whatsapp-bot.service';
+import { WhatsAppSessionManager } from '../chatbot/whatsapp-session.manager';
+import { WhatsAppSessionState } from '../chatbot/whatsapp.types';
+import { BOT_TEMPLATE_DEFAULTS, BotTemplateKey } from '../chatbot/whatsapp-bot.service';
+import { renderTemplate } from '../message-templates/template-renderer';
 
 export interface AppointmentNotificationData {
   appointmentId: string;
@@ -33,83 +23,85 @@ export interface AppointmentNotificationData {
   startAt: Date;
 }
 
-/**
- * Mapeamento de eventos para templates do bot
- */
-const EVENT_TO_TEMPLATE: Record<string, string> = {
-  'APPOINTMENT_CREATED': BotTemplateKey.NOTIFY_APPOINTMENT_CREATED,
-  'APPOINTMENT_CONFIRMED': BotTemplateKey.NOTIFY_APPOINTMENT_CONFIRMED,
-  'APPOINTMENT_CANCELLED': BotTemplateKey.NOTIFY_APPOINTMENT_CANCELLED,
-  'APPOINTMENT_REMINDER': BotTemplateKey.NOTIFY_APPOINTMENT_REMINDER,
-};
-
 @Injectable()
 export class AppointmentNotificationService {
   private readonly logger = new Logger(AppointmentNotificationService.name);
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly notificationQueue: NotificationQueueService,
+    @Inject(forwardRef(() => WhatsAppSessionManager))
+    private readonly sessionManager: WhatsAppSessionManager,
   ) {
-    this.logger.log('📬 AppointmentNotificationService inicializado com fila');
+    this.logger.log('📬 AppointmentNotificationService inicializado');
   }
 
   /**
-   * Enfileira notificação de agendamento criado
+   * Notifica agendamento criado (aguardando confirmação)
    */
-  async notifyAppointmentCreated(data: AppointmentNotificationData): Promise<string> {
-    return this.enqueueNotification(data, 'APPOINTMENT_CREATED');
+  async notifyAppointmentCreated(data: AppointmentNotificationData): Promise<boolean> {
+    return this.sendNotification(data, BotTemplateKey.NOTIFY_APPOINTMENT_CREATED);
   }
 
   /**
-   * Enfileira notificação de agendamento confirmado
+   * Notifica agendamento confirmado
    */
-  async notifyAppointmentConfirmed(data: AppointmentNotificationData): Promise<string> {
-    return this.enqueueNotification(data, 'APPOINTMENT_CONFIRMED');
+  async notifyAppointmentConfirmed(data: AppointmentNotificationData): Promise<boolean> {
+    return this.sendNotification(data, BotTemplateKey.NOTIFY_APPOINTMENT_CONFIRMED);
   }
 
   /**
-   * Enfileira notificação de agendamento cancelado
+   * Notifica agendamento cancelado
    */
-  async notifyAppointmentCancelled(data: AppointmentNotificationData): Promise<string> {
-    return this.enqueueNotification(data, 'APPOINTMENT_CANCELLED');
+  async notifyAppointmentCancelled(data: AppointmentNotificationData): Promise<boolean> {
+    return this.sendNotification(data, BotTemplateKey.NOTIFY_APPOINTMENT_CANCELLED);
   }
 
   /**
-   * Enfileira notificação de lembrete
+   * Notifica lembrete de agendamento
    */
-  async notifyAppointmentReminder(data: AppointmentNotificationData): Promise<string> {
-    return this.enqueueNotification(data, 'APPOINTMENT_REMINDER');
+  async notifyAppointmentReminder(data: AppointmentNotificationData): Promise<boolean> {
+    return this.sendNotification(data, BotTemplateKey.NOTIFY_APPOINTMENT_REMINDER);
   }
 
   /**
-   * Enfileira notificação na fila Redis
+   * Envia notificação - MÉTODO PRINCIPAL
    */
-  private async enqueueNotification(
+  private async sendNotification(
     data: AppointmentNotificationData,
-    eventType: string,
-  ): Promise<string> {
+    templateKey: string,
+  ): Promise<boolean> {
     const { workspaceId, appointmentId, clientPhone, clientName, serviceName, startAt } = data;
-    const templateKey = EVENT_TO_TEMPLATE[eventType] || BotTemplateKey.NOTIFY_APPOINTMENT_CONFIRMED;
 
     this.logger.log(
-      `📤 [${workspaceId}] Enfileirando notificação ${eventType} | ` +
-      `appt=${appointmentId} phone=${clientPhone} template=${templateKey}`
+      `📤 [${workspaceId}] Enviando notificação ${templateKey} | ` +
+      `appt=${appointmentId} phone=${clientPhone} client=${clientName}`
     );
 
     try {
-      // Buscar dados do workspace
+      // 1. VERIFICAR SESSÃO WHATSAPP
+      const sessionInfo = this.sessionManager.getSessionInfo(workspaceId);
+      
+      if (!sessionInfo || sessionInfo.state !== WhatsAppSessionState.CONNECTED) {
+        this.logger.warn(
+          `⚠️ [${workspaceId}] WhatsApp não conectado (${sessionInfo?.state || 'SEM_SESSÃO'}) - notificação não enviada`
+        );
+        return false;
+      }
+
+      this.logger.log(`✅ [${workspaceId}] Sessão WhatsApp conectada`);
+
+      // 2. BUSCAR WORKSPACE
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
         select: { name: true, brandName: true },
       });
 
       if (!workspace) {
-        this.logger.warn(`⚠️ [${workspaceId}] Workspace não encontrado para notificação`);
-        return 'WORKSPACE_NOT_FOUND';
+        this.logger.error(`❌ [${workspaceId}] Workspace não encontrado`);
+        return false;
       }
 
-      // Formatar data e hora com timezone do Brasil
+      // 3. FORMATAR DATA/HORA (timezone Brasil)
       const brazilTz = 'America/Sao_Paulo';
       const date = startAt.toLocaleDateString('pt-BR', {
         timeZone: brazilTz,
@@ -124,13 +116,43 @@ export class AppointmentNotificationService {
         hour12: false,
       });
 
-      // Normalizar telefone para formato WhatsApp
+      // 4. NORMALIZAR TELEFONE
       const phoneNormalized = clientPhone.replace(/\D/g, '');
       const phoneWhatsApp = phoneNormalized.startsWith('55') 
         ? phoneNormalized 
         : `55${phoneNormalized}`;
 
-      // Variáveis para o template
+      // 5. BUSCAR OU CRIAR TEMPLATE
+      let template = await this.prisma.chatbotTemplate.findFirst({
+        where: { workspaceId, key: templateKey },
+        select: { content: true, isActive: true },
+      });
+
+      if (!template) {
+        const defaultConfig = BOT_TEMPLATE_DEFAULTS[templateKey];
+        if (defaultConfig) {
+          this.logger.log(`🔧 [${workspaceId}] Criando template ${templateKey}`);
+          template = await this.prisma.chatbotTemplate.create({
+            data: {
+              workspaceId,
+              key: templateKey,
+              content: defaultConfig.content,
+              isActive: true,
+            },
+            select: { content: true, isActive: true },
+          });
+        } else {
+          this.logger.error(`❌ [${workspaceId}] Template ${templateKey} não existe`);
+          return false;
+        }
+      }
+
+      if (!template.isActive) {
+        this.logger.warn(`🚫 [${workspaceId}] Template ${templateKey} desabilitado`);
+        return false;
+      }
+
+      // 6. RENDERIZAR MENSAGEM
       const variables = {
         clientName,
         serviceName,
@@ -138,34 +160,33 @@ export class AppointmentNotificationService {
         time,
         workspaceName: workspace.brandName || workspace.name,
       };
+      const message = renderTemplate(template.content, variables);
 
-      // Enfileirar no Redis
-      const jobId = await this.notificationQueue.enqueue({
-        workspaceId,
-        appointmentId,
-        toPhone: phoneWhatsApp,
-        templateKey,
-        variables,
-      });
+      this.logger.log(`📝 [${workspaceId}] Mensagem: "${message.substring(0, 60)}..."`);
 
-      this.logger.log(
-        `✅ [${workspaceId}] Notificação enfileirada | ` +
-        `jobId=${jobId} event=${eventType} phone=${phoneWhatsApp}`
-      );
+      // 7. ENVIAR VIA WHATSAPP
+      const sent = await this.sessionManager.sendMessage(workspaceId, phoneWhatsApp, message);
 
-      return jobId;
+      if (sent) {
+        this.logger.log(
+          `✅ [${workspaceId}] NOTIFICAÇÃO ENVIADA | phone=${phoneWhatsApp} template=${templateKey}`
+        );
+        return true;
+      } else {
+        this.logger.error(
+          `❌ [${workspaceId}] Falha ao enviar | phone=${phoneWhatsApp}`
+        );
+        return false;
+      }
 
     } catch (error) {
-      this.logger.error(
-        `❌ [${workspaceId}] Erro ao enfileirar notificação ${eventType}: ${error}`,
-      );
-      throw error;
+      this.logger.error(`❌ [${workspaceId}] Erro: ${error}`);
+      return false;
     }
   }
 
   /**
-   * Extrai dados do agendamento para notificação
-   * Útil para chamar a partir do ID do agendamento
+   * Busca dados de um agendamento para notificação
    */
   async getAppointmentNotificationData(appointmentId: string): Promise<AppointmentNotificationData | null> {
     const appointment = await this.prisma.appointment.findUnique({
@@ -180,37 +201,15 @@ export class AppointmentNotificationService {
       },
     });
 
-    if (!appointment) {
-      this.logger.warn(`⚠️ Agendamento ${appointmentId} não encontrado`);
-      return null;
-    }
-
-    const serviceName = appointment.services
-      .map(s => s.service?.name)
-      .filter(Boolean)
-      .join(', ') || 'Serviço';
+    if (!appointment) return null;
 
     return {
       appointmentId: appointment.id,
       workspaceId: appointment.workspaceId,
       clientPhone: appointment.client.phoneE164,
       clientName: appointment.client.name,
-      serviceName,
+      serviceName: appointment.services.map(s => s.service?.name).filter(Boolean).join(', ') || 'Serviço',
       startAt: appointment.startAt,
     };
-  }
-
-  /**
-   * Retorna estatísticas da fila de notificações
-   */
-  async getQueueStats() {
-    return this.notificationQueue.getStats();
-  }
-
-  /**
-   * Retorna jobs falhados recentes
-   */
-  async getFailedJobs(limit = 10) {
-    return this.notificationQueue.getFailedJobs(limit);
   }
 }

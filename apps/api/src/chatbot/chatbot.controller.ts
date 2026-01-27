@@ -490,31 +490,23 @@ export class ChatbotController {
   }
 
   /**
-   * Retorna estatísticas da fila de notificações
+   * Retorna status da sessão WhatsApp
    * GET /api/v1/chatbot/queue/stats
    */
   @Get('queue/stats')
   @UseGuards(JwtAuthGuard)
   async getQueueStats(@Req() req: AuthenticatedRequest) {
     const { workspaceId } = req.user;
+    const sessionInfo = this.sessionManager.getSessionInfo(workspaceId);
     
-    // Importar dinamicamente para evitar dependência circular
-    try {
-      const { NotificationQueueService } = await import('../notification-queue/notification-queue.service');
-      // O service será injetado se disponível
-      return {
-        success: true,
-        workspaceId,
-        message: 'Use os logs do Railway para verificar estatísticas da fila',
-        timestamp: new Date().toISOString(),
-      };
-    } catch {
-      return {
-        success: false,
-        error: 'QUEUE_NOT_AVAILABLE',
-        message: 'Módulo de fila não disponível',
-      };
-    }
+    return {
+      success: true,
+      workspaceId,
+      sessionState: sessionInfo.state,
+      connectedPhone: sessionInfo.connectedPhone,
+      message: 'Notificações são enviadas diretamente (sem fila)',
+      timestamp: new Date().toISOString(),
+    };
   }
 
   // ==========================================================================

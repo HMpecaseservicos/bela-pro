@@ -127,18 +127,18 @@ export class AppointmentsService {
       `cliente=${appointment.client.name} phone=${appointment.client.phoneE164}`
     );
 
-    // Enfileirar notificação automática via WhatsApp (APPOINTMENT_CONFIRMED pois já está confirmado)
-    // Usa fila Redis para garantir entrega mesmo com múltiplas instâncias
+    // Enviar notificação WhatsApp (em background para não bloquear resposta)
     const serviceName = appointment.services
       .map(s => s.service?.name)
       .filter(Boolean)
       .join(', ') || 'Serviço';
 
     this.logger.log(
-      `📤 [${appointment.workspaceId}] Enfileirando notificação WhatsApp | ` +
-      `appt=${appointment.id} phone=${appointment.client.phoneE164} service=${serviceName}`
+      `📤 [${appointment.workspaceId}] Enviando notificação WhatsApp | ` +
+      `appt=${appointment.id} phone=${appointment.client.phoneE164}`
     );
 
+    // Não usa await - envia em background
     this.notificationService.notifyAppointmentConfirmed({
       appointmentId: appointment.id,
       workspaceId: appointment.workspaceId,
@@ -146,14 +146,14 @@ export class AppointmentsService {
       clientName: appointment.client.name,
       serviceName,
       startAt: appointment.startAt,
-    }).then(jobId => {
-      this.logger.log(
-        `✅ [${appointment.workspaceId}] Notificação enfileirada | appt=${appointment.id} jobId=${jobId}`
-      );
+    }).then(sent => {
+      if (sent) {
+        this.logger.log(`✅ [${appointment.workspaceId}] Notificação enviada com sucesso`);
+      } else {
+        this.logger.warn(`⚠️ [${appointment.workspaceId}] Notificação não enviada (WhatsApp desconectado?)`);
+      }
     }).catch(err => {
-      this.logger.error(
-        `❌ [${appointment.workspaceId}] Falha ao enfileirar notificação: ${err} | appt=${appointment.id}`
-      );
+      this.logger.error(`❌ [${appointment.workspaceId}] Erro ao enviar notificação: ${err}`);
     });
 
     return appointment;
