@@ -12,7 +12,7 @@
  * @module appointments
  */
 
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { WhatsAppBotService } from '../chatbot/whatsapp-bot.service';
 import { MessageEventType } from '../message-templates/message-events';
@@ -32,6 +32,7 @@ export class AppointmentNotificationService {
 
   constructor(
     private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => WhatsAppBotService))
     private readonly whatsAppBotService: WhatsAppBotService,
   ) {}
 
@@ -77,21 +78,24 @@ export class AppointmentNotificationService {
         return false;
       }
 
-      // Formatar data e hora
+      // Formatar data e hora com timezone do Brasil
+      const brazilTz = 'America/Sao_Paulo';
       const date = startAt.toLocaleDateString('pt-BR', {
+        timeZone: brazilTz,
         weekday: 'long',
         day: '2-digit',
         month: '2-digit',
       });
       const time = startAt.toLocaleTimeString('pt-BR', {
+        timeZone: brazilTz,
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
       });
 
       // Normalizar telefone para formato WhatsApp
-      // Banco salva: 556699880161
-      // WhatsApp precisa: 556699880161 (sem +)
+      // Banco salva: 6699880161 ou 556699880161 (variável)
+      // WhatsApp precisa: 556699880161 (com DDI)
       const phoneNormalized = clientPhone.replace(/\D/g, '');
       const phoneWhatsApp = phoneNormalized.startsWith('55') 
         ? phoneNormalized 

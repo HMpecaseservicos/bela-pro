@@ -338,13 +338,17 @@ export class WhatsAppBotService implements OnModuleInit {
     }
 
     // Formatar lista de agendamentos com dados REAIS
+    // IMPORTANTE: Usar timezone do Brasil (America/Sao_Paulo)
+    const brazilTz = 'America/Sao_Paulo';
     const appointmentsList = appointments.map((apt, i) => {
       const date = apt.startAt.toLocaleDateString('pt-BR', {
+        timeZone: brazilTz,
         weekday: 'long',
         day: '2-digit',
         month: '2-digit',
       });
       const time = apt.startAt.toLocaleTimeString('pt-BR', { 
+        timeZone: brazilTz,
         hour: '2-digit', 
         minute: '2-digit',
         hour12: false,
