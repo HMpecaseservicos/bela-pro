@@ -440,8 +440,8 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const win = window as any;
           
-          // Busca ou cria o chat
-          const chat = await win.WWebJS.getChat(chatId, { getAsModel: false });
+          // Usa getChatById para buscar chat por ID completo (funciona com números novos)
+          const chat = await win.WWebJS.getChatById(chatId);
           
           if (!chat) {
             return { success: false, error: 'Chat não encontrado' };
