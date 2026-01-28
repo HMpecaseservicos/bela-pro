@@ -309,11 +309,17 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
     this.setupClientEvents(workspaceId, client, sessionData);
 
     // Inicializar cliente (não bloqueia)
-    client.initialize().catch(err => {
-      this.logger.error(`[${workspaceId}] Erro ao inicializar: ${err.message}`);
-      sessionData.state = WhatsAppSessionState.AUTH_FAILURE;
-      sessionData.lastError = err.message;
-    });
+    this.logger.log(`[${workspaceId}] 🚀 Iniciando client.initialize()...`);
+    client.initialize()
+      .then(() => {
+        this.logger.log(`[${workspaceId}] ✅ client.initialize() completou com sucesso`);
+      })
+      .catch(err => {
+        this.logger.error(`[${workspaceId}] ❌ Erro ao inicializar: ${err.message}`);
+        this.logger.error(`[${workspaceId}] Stack: ${err.stack}`);
+        sessionData.state = WhatsAppSessionState.AUTH_FAILURE;
+        sessionData.lastError = err.message;
+      });
 
     return this.getSessionInfo(workspaceId);
   }
@@ -322,21 +328,34 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
    * Configura os event handlers do cliente
    */
   private setupClientEvents(workspaceId: string, client: Client, sessionData: SessionData): void {
+    // Log de TODOS os eventos para debug
+    client.on('loading_screen', (percent: number, message: string) => {
+      this.logger.debug(`[${workspaceId}] 📊 Loading: ${percent}% - ${message}`);
+    });
+
     // QR Code gerado
     client.on('qr', (qr: string) => {
-      this.logger.log(`[${workspaceId}] QR Code gerado`);
+      this.logger.log(`[${workspaceId}] 📱 QR Code gerado`);
       sessionData.state = WhatsAppSessionState.QR_PENDING;
       sessionData.qrCode = qr;
     });
 
     // Autenticação bem sucedida
     client.on('authenticated', () => {
-      this.logger.log(`[${workspaceId}] Autenticado com sucesso`);
+      this.logger.log(`[${workspaceId}] ✅ Autenticado com sucesso`);
       sessionData.qrCode = null;
+    });
+
+    // Falha na autenticação
+    client.on('auth_failure', (msg: string) => {
+      this.logger.error(`[${workspaceId}] ❌ Falha na autenticação: ${msg}`);
+      sessionData.state = WhatsAppSessionState.AUTH_FAILURE;
+      sessionData.lastError = msg;
     });
 
     // Pronto para usar
     client.on('ready', async () => {
+      this.logger.log(`[${workspaceId}] 🚀 WhatsApp READY!`);
       sessionData.state = WhatsAppSessionState.CONNECTED;
       sessionData.qrCode = null;
       sessionData.connectedAt = new Date();
