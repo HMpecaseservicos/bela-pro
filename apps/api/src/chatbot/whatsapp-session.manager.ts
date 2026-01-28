@@ -128,7 +128,12 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
   private readonly logger = new Logger(WhatsAppSessionManager.name);
   
   // Map de sessões: workspaceId -> SessionData
+  // CADA workspace tem sua própria sessão isolada
   private sessions = new Map<string, SessionData>();
+  
+  // Map de telefones conectados: phoneNumber -> workspaceId
+  // Garante que um número WhatsApp não seja usado em múltiplos workspaces
+  private connectedPhones = new Map<string, string>();
   
   // Callback global para mensagens (set pelo BotService)
   private messageCallback: MessageCallback | null = null;
@@ -141,6 +146,9 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
     if (!fs.existsSync(this.sessionsDir)) {
       fs.mkdirSync(this.sessionsDir, { recursive: true });
     }
+    
+    // Log de inicialização com ID da instância para debug
+    this.logger.log(`[INIT] SessionManager criado - instância única para todo o processo`);
   }
 
   /**
@@ -165,9 +173,17 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
 
   /**
    * Retorna informações da sessão
+   * SEMPRE retorna dados específicos do workspace solicitado
    */
   getSessionInfo(workspaceId: string): WhatsAppSessionInfo {
     const session = this.sessions.get(workspaceId);
+    
+    // Log para debug de isolamento
+    this.logger.debug(
+      `[${workspaceId}] getSessionInfo() | ` +
+      `sessões ativas: ${this.sessions.size} | ` +
+      `workspaces: [${Array.from(this.sessions.keys()).join(', ')}]`
+    );
     
     if (!session) {
       return {
@@ -193,8 +209,15 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
   /**
    * Inicia uma nova sessão para o workspace
    * Se já existir uma sessão conectada, retorna ela
+   * CADA WORKSPACE tem seu próprio client isolado
    */
   async startSession(workspaceId: string): Promise<WhatsAppSessionInfo> {
+    this.logger.log(
+      `[${workspaceId}] startSession() chamado | ` +
+      `sessões existentes: ${this.sessions.size} | ` +
+      `workspaces: [${Array.from(this.sessions.keys()).join(', ')}]`
+    );
+    
     const existing = this.sessions.get(workspaceId);
     
     // Se já está conectado ou conectando, retorna
@@ -203,17 +226,20 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
       existing.state === WhatsAppSessionState.CONNECTING ||
       existing.state === WhatsAppSessionState.QR_PENDING
     )) {
+      this.logger.log(`[${workspaceId}] Sessão já existe (${existing.state}) - retornando existente`);
       return this.getSessionInfo(workspaceId);
     }
 
     // Limpar sessão anterior se existir
     if (existing) {
+      this.logger.log(`[${workspaceId}] Limpando sessão anterior...`);
       await this.destroySession(workspaceId);
     }
 
-    this.logger.log(`[${workspaceId}] Iniciando nova sessão WhatsApp...`);
+    this.logger.log(`[${workspaceId}] 🔄 Criando NOVA sessão WhatsApp (cliente isolado)...`);
 
     // Criar cliente com autenticação local (persistente)
+    // IMPORTANTE: clientId = workspaceId garante isolamento de dados
     const client = new Client({
       authStrategy: new LocalAuth({
         clientId: workspaceId,
@@ -233,6 +259,11 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
     };
 
     this.sessions.set(workspaceId, sessionData);
+    
+    this.logger.log(
+      `[${workspaceId}] Sessão registrada no Map | ` +
+      `total de sessões: ${this.sessions.size}`
+    );
 
     // Configurar event handlers
     this.setupClientEvents(workspaceId, client, sessionData);
@@ -266,7 +297,6 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
 
     // Pronto para usar
     client.on('ready', async () => {
-      this.logger.log(`[${workspaceId}] WhatsApp conectado e pronto`);
       sessionData.state = WhatsAppSessionState.CONNECTED;
       sessionData.qrCode = null;
       sessionData.connectedAt = new Date();
@@ -275,16 +305,48 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
       try {
         const info = client.info;
         if (info?.wid?.user) {
-          sessionData.connectedPhone = `+${info.wid.user}`;
+          const phoneNumber = info.wid.user;
+          sessionData.connectedPhone = `+${phoneNumber}`;
+          
+          // Verificar se este número já está em uso por outro workspace
+          const existingWorkspace = this.connectedPhones.get(phoneNumber);
+          if (existingWorkspace && existingWorkspace !== workspaceId) {
+            this.logger.error(
+              `[${workspaceId}] ⚠️ CONFLITO: Número ${phoneNumber} já conectado no workspace ${existingWorkspace}`
+            );
+            // Desconecta esta sessão para evitar conflito
+            sessionData.state = WhatsAppSessionState.AUTH_FAILURE;
+            sessionData.lastError = `Número já em uso pelo workspace ${existingWorkspace}`;
+            await client.logout().catch(() => {});
+            return;
+          }
+          
+          // Registrar número como em uso por este workspace
+          this.connectedPhones.set(phoneNumber, workspaceId);
+          
+          this.logger.log(
+            `[${workspaceId}] ✅ WhatsApp conectado e pronto | ` +
+            `telefone: +${phoneNumber} | ` +
+            `sessões ativas: ${this.sessions.size}`
+          );
+        } else {
+          this.logger.log(`[${workspaceId}] ✅ WhatsApp conectado e pronto`);
         }
       } catch {
-        // Ignora erro ao obter info
+        this.logger.log(`[${workspaceId}] ✅ WhatsApp conectado e pronto`);
       }
     });
 
     // Desconectado
     client.on('disconnected', (reason: string) => {
       this.logger.warn(`[${workspaceId}] Desconectado: ${reason}`);
+      
+      // Remover número do registro de telefones conectados
+      if (sessionData.connectedPhone) {
+        const phoneNumber = sessionData.connectedPhone.replace('+', '');
+        this.connectedPhones.delete(phoneNumber);
+      }
+      
       sessionData.state = WhatsAppSessionState.DISCONNECTED;
       sessionData.connectedPhone = null;
       sessionData.connectedAt = null;
@@ -491,15 +553,27 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
 
   /**
    * Destrói uma sessão
+   * Remove APENAS a sessão do workspace especificado
    */
   async destroySession(workspaceId: string): Promise<void> {
     const session = this.sessions.get(workspaceId);
     
     if (!session) {
+      this.logger.debug(`[${workspaceId}] destroySession() - sessão não existe`);
       return;
     }
 
-    this.logger.log(`[${workspaceId}] Destruindo sessão...`);
+    this.logger.log(
+      `[${workspaceId}] 🗑️ Destruindo sessão | ` +
+      `telefone: ${session.connectedPhone || 'N/A'} | ` +
+      `sessões antes: ${this.sessions.size}`
+    );
+    
+    // Remover número do registro
+    if (session.connectedPhone) {
+      const phoneNumber = session.connectedPhone.replace('+', '');
+      this.connectedPhones.delete(phoneNumber);
+    }
 
     try {
       await session.client.destroy();
@@ -508,19 +582,30 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
     }
 
     this.sessions.delete(workspaceId);
+    
+    this.logger.log(
+      `[${workspaceId}] ✅ Sessão destruída | ` +
+      `sessões restantes: ${this.sessions.size} | ` +
+      `workspaces: [${Array.from(this.sessions.keys()).join(', ')}]`
+    );
   }
 
   /**
    * Desconecta e remove dados da sessão
+   * Remove APENAS a sessão do workspace especificado
    */
   async logoutSession(workspaceId: string): Promise<void> {
     const session = this.sessions.get(workspaceId);
     
     if (!session) {
+      this.logger.debug(`[${workspaceId}] logoutSession() - sessão não existe`);
       return;
     }
 
-    this.logger.log(`[${workspaceId}] Fazendo logout...`);
+    this.logger.log(
+      `[${workspaceId}] 🚪 Fazendo logout | ` +
+      `telefone: ${session.connectedPhone || 'N/A'}`
+    );
 
     try {
       await session.client.logout();
@@ -534,6 +619,7 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
     const sessionPath = path.join(this.sessionsDir, `session-${workspaceId}`);
     if (fs.existsSync(sessionPath)) {
       fs.rmSync(sessionPath, { recursive: true, force: true });
+      this.logger.log(`[${workspaceId}] Pasta de sessão removida`);
     }
   }
 
@@ -550,5 +636,15 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
    */
   getActiveWorkspaces(): string[] {
     return Array.from(this.sessions.keys());
+  }
+  
+  /**
+   * Debug: Retorna estado completo de todas as sessões
+   */
+  getDebugInfo(): { sessions: string[]; phones: Record<string, string> } {
+    return {
+      sessions: Array.from(this.sessions.keys()),
+      phones: Object.fromEntries(this.connectedPhones),
+    };
   }
 }

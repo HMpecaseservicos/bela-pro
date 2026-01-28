@@ -85,11 +85,14 @@ export class ChatbotController {
 
   /**
    * Retorna status da conexão WhatsApp do workspace
+   * Retorna APENAS dados do workspace do token JWT (isolamento)
    */
   @Get('whatsapp/status')
   @UseGuards(JwtAuthGuard)
   getStatus(@Req() req: AuthenticatedRequest): WhatsAppStatusResponse {
     const { workspaceId } = req.user;
+    
+    this.logger.debug(`[${workspaceId}] GET /whatsapp/status`);
     
     const info = this.sessionManager.getSessionInfo(workspaceId);
 
@@ -101,6 +104,32 @@ export class ChatbotController {
         connectedAt: info.connectedAt?.toISOString() || null,
         qrCode: info.state === WhatsAppSessionState.QR_PENDING ? info.qrCode : null,
       },
+    };
+  }
+  
+  /**
+   * Debug: Retorna estado de TODAS as sessões (apenas para troubleshooting)
+   */
+  @Get('whatsapp/debug')
+  @UseGuards(JwtAuthGuard)
+  getDebugInfo(@Req() req: AuthenticatedRequest) {
+    const { workspaceId, role } = req.user;
+    
+    // Apenas owners podem ver debug
+    if (role !== 'OWNER') {
+      return { success: false, message: 'Acesso negado' };
+    }
+    
+    const debugInfo = this.sessionManager.getDebugInfo();
+    
+    this.logger.log(`[${workspaceId}] DEBUG: ${JSON.stringify(debugInfo)}`);
+    
+    return {
+      success: true,
+      requestingWorkspace: workspaceId,
+      activeSessions: debugInfo.sessions,
+      connectedPhones: debugInfo.phones,
+      totalSessions: debugInfo.sessions.length,
     };
   }
 
