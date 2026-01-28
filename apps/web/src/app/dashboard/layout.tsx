@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import WorkspaceSwitcher from './components/WorkspaceSwitcher';
+import { NotificationToggle } from '@/components/NotificationToggle';
 
 const menuItems = [
   { href: '/dashboard', icon: '📊', label: 'Dashboard', exact: true },
@@ -161,6 +162,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* User */}
         <div style={{ padding: 16, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          {/* Notificações */}
+          <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Notificações:</span>
+            <NotificationToggle />
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             <div style={{
               width: 36,

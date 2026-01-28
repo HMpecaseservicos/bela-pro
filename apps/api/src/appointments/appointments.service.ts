@@ -159,6 +159,33 @@ export class AppointmentsService {
     return appointment;
   }
 
+  /**
+   * Retorna agendamentos criados recentemente (últimos X minutos)
+   * Usado para notificações push no PWA
+   */
+  async findRecent(workspaceId: string, minutes: number = 5) {
+    const since = new Date(Date.now() - minutes * 60 * 1000);
+
+    return this.prisma.appointment.findMany({
+      where: {
+        workspaceId,
+        createdAt: { gte: since },
+      },
+      include: {
+        client: true,
+        services: {
+          include: {
+            service: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 10, // Máximo 10 agendamentos recentes
+    });
+  }
+
   async findAll(
     workspaceId: string,
     from?: string,

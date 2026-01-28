@@ -34,6 +34,20 @@ export class AppointmentsController {
     return this.appointmentsService.findAll(workspaceId, from, to, status);
   }
 
+  /**
+   * Retorna agendamentos recentes (criados nos últimos X minutos)
+   * Usado para notificações push no PWA
+   */
+  @Get('recent')
+  findRecent(
+    @Req() req: any,
+    @Query('minutes') minutes?: string,
+  ) {
+    const { workspaceId } = req.user;
+    const mins = parseInt(minutes || '5', 10);
+    return this.appointmentsService.findRecent(workspaceId, mins);
+  }
+
   @Get(':id')
   findOne(@Req() req: any, @Param('id') id: string) {
     const { workspaceId } = req.user;
