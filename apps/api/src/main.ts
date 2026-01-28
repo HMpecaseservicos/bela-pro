@@ -31,10 +31,11 @@ async function bootstrap() {
         return callback(null, allowed);
       }
 
-      // Fallback: aceita localhost e qualquer subdomínio .railway.app
+      // Fallback: aceita localhost e subdomínios de plataformas conhecidas
       const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
       const isRailway = origin.endsWith('.railway.app');
-      const allowed = isLocalhost || isRailway;
+      const isFly = origin.endsWith('.fly.dev');
+      const allowed = isLocalhost || isRailway || isFly;
       
       if (!allowed) {
         logger.warn(`CORS bloqueado para origin: ${origin}`);

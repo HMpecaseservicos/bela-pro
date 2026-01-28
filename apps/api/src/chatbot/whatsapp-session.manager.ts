@@ -35,6 +35,12 @@ export type MessageCallback = (message: IncomingWhatsAppMessage) => Promise<void
 /**
  * Detecta o caminho do Chromium/Chrome no sistema.
  * Tenta múltiplos caminhos conhecidos em diferentes ambientes.
+ * 
+ * Ordem de prioridade:
+ * 1. PUPPETEER_EXECUTABLE_PATH (env var explícita)
+ * 2. /usr/bin/chromium (Fly.io / Docker Debian)
+ * 3. /nix/var/nix/profiles/default/bin/chromium (Railway Nixpacks)
+ * 4. Outros caminhos conhecidos
  */
 function findChromiumExecutable(): string | undefined {
   // Se definido via env var, usa diretamente
@@ -44,14 +50,16 @@ function findChromiumExecutable(): string | undefined {
   }
 
   // Caminhos conhecidos para Chromium/Chrome
+  // ORDEM IMPORTA: Fly.io primeiro, depois Railway, depois outros
   const knownPaths = [
+    // Fly.io / Docker Debian (PRIORIDADE)
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
     // Nix (Railway)
     '/nix/var/nix/profiles/default/bin/chromium',
     // Nix alternativo
     (process.env.HOME || '') + '/.nix-profile/bin/chromium',
-    // Ubuntu/Debian apt
-    '/usr/bin/chromium',
-    '/usr/bin/chromium-browser',
+    // Outros
     '/usr/bin/google-chrome',
     '/usr/bin/google-chrome-stable',
     // Snap
@@ -138,17 +146,34 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
   // Callback global para mensagens (set pelo BotService)
   private messageCallback: MessageCallback | null = null;
   
-  // Pasta base para armazenar sessões
-  private readonly sessionsDir = path.join(process.cwd(), '.whatsapp-sessions');
+  // Pasta base para armazenar sessões WhatsApp
+  // WHATSAPP_SESSIONS_DIR: volume persistente no Fly.io (/data/whatsapp)
+  // Fallback: pasta local para Railway/dev (.whatsapp-sessions)
+  private readonly sessionsDir: string;
 
   constructor() {
+    // Determinar diretório de sessões
+    // Fly.io: usa /data/whatsapp (volume persistente)
+    // Railway/Dev: usa .whatsapp-sessions (relativo ao cwd)
+    const envSessionsDir = process.env.WHATSAPP_SESSIONS_DIR;
+    
+    if (envSessionsDir && fs.existsSync(path.dirname(envSessionsDir))) {
+      this.sessionsDir = envSessionsDir;
+    } else {
+      this.sessionsDir = path.join(process.cwd(), '.whatsapp-sessions');
+    }
+    
     // Garantir que a pasta de sessões existe
     if (!fs.existsSync(this.sessionsDir)) {
       fs.mkdirSync(this.sessionsDir, { recursive: true });
     }
     
     // Log de inicialização com ID da instância para debug
-    this.logger.log(`[INIT] SessionManager criado - instância única para todo o processo`);
+    this.logger.log(
+      `[INIT] SessionManager criado | ` +
+      `sessionsDir: ${this.sessionsDir} | ` +
+      `env WHATSAPP_SESSIONS_DIR: ${envSessionsDir || '(não definido)'}`
+    );
   }
 
   /**

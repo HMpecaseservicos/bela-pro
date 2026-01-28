@@ -1,16 +1,53 @@
+# =============================================================================
+# BELA PRO - Docker Ignore
+# Arquivos que NÃO devem ir para o contexto do Docker build
+# =============================================================================
+
+# Dependências (serão instaladas no container)
 node_modules
 **/node_modules
+
+# Build artifacts (rebuild no container)
 .next
 **/.next
 dist
 **/dist
 build
 **/build
+
+# Testes
 coverage
 **/coverage
+
+# Logs
 npm-install.log
 *.log
+npm-debug.log*
+
+# Ambiente local
 .env
 .env.*
 !.env.example
+
+# Git
 .git
+
+# Sessões WhatsApp locais (não levar para produção)
+.whatsapp-sessions
+.wwebjs_auth
+.wwebjs_cache
+
+# Temporários
+tmp
+temp
+*.tmp
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
