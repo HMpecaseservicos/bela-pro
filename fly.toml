@@ -25,24 +25,22 @@ primary_region = "gru"
 [http_service]
   internal_port = 8080
   force_https = true
-  auto_stop_machines = "stop"
+  auto_stop_machines = false
   auto_start_machines = true
   min_machines_running = 1
   processes = ["app"]
 
-  # Concurrency settings
   [http_service.concurrency]
     type = "requests"
     soft_limit = 100
     hard_limit = 200
 
-# Health check HTTP
-[[http_service.checks]]
-  grace_period = "30s"
-  interval = "30s"
-  timeout = "5s"
-  method = "GET"
-  path = "/api/v1/health"
+  [[http_service.checks]]
+    grace_period = "30s"
+    interval = "30s"
+    timeout = "5s"
+    method = "GET"
+    path = "/api/v1/health"
 
 # Volume persistente para sessões WhatsApp
 [[mounts]]
@@ -51,13 +49,7 @@ primary_region = "gru"
   processes = ["app"]
 
 # Recursos da VM
-# Nota: Chromium precisa de memória razoável
-[[vm]]
+[vm]
   memory = "1gb"
   cpu_kind = "shared"
   cpus = 1
-
-# Estratégia de restart
-[restart]
-  policy = "always"
-  max_retries = 3
