@@ -10,10 +10,12 @@
 # =============================================================================
 
 [build]
-  # Comando de build (roda do diretório apps/web)
-  command = "npm run build"
-  # Diretório de publicação (Next.js usa .next)
-  publish = ".next"
+  # Base directory (onde o package.json do frontend está)
+  base = "apps/web"
+  # Comando de build
+  command = "npm install && npm run build"
+  # Diretório de publicação (relativo ao base)
+  publish = "apps/web/.next"
 
 # Plugin oficial do Next.js para Netlify
 [[plugins]]
