@@ -1,0 +1,60 @@
+# =============================================================================
+# Netlify Configuration - BELA PRO Frontend
+# =============================================================================
+#
+# Deploy Next.js no Netlify com suporte a:
+# - SSR (Server-Side Rendering) via @netlify/plugin-nextjs
+# - Redirecionamento para API externa (Fly.io)
+# - Headers de segurança
+#
+# =============================================================================
+
+[build]
+  # Comando de build (roda do diretório apps/web)
+  command = "npm run build"
+  # Diretório de publicação (Next.js usa .next)
+  publish = ".next"
+
+# Plugin oficial do Next.js para Netlify
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# =============================================================================
+# Variáveis de ambiente (configurar no painel do Netlify)
+# =============================================================================
+# NEXT_PUBLIC_API_URL = https://bela-pro.fly.dev/api/v1
+# =============================================================================
+
+# =============================================================================
+# Headers de segurança
+# =============================================================================
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Cache para assets estáticos
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/icons/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"
+
+# =============================================================================
+# Redirects - Proxy para API (Fly.io)
+# =============================================================================
+# Redireciona chamadas /api/v1/* para a API no Fly.io
+# Isso permite que o frontend faça chamadas relativas
+
+[[redirects]]
+  from = "/api/v1/*"
+  to = "https://bela-pro.fly.dev/api/v1/:splat"
+  status = 200
+  force = true
+  headers = {X-From = "netlify"}

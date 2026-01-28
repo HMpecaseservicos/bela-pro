@@ -14,10 +14,6 @@ export function getImageUrl(url: string | null | undefined): string {
     if (url.includes('localhost:3001')) {
       return url.replace(/http:\/\/localhost:3001/g, apiBase);
     }
-    // Se é URL antiga do Railway, também converte
-    if (url.includes('bela-pro-production.up.railway.app')) {
-      return url.replace(/https:\/\/bela-pro-production\.up\.railway\.app/g, apiBase);
-    }
     return url;
   }
   
@@ -33,12 +29,10 @@ export function getApiBaseUrl(): string {
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL.replace('/api/v1', '');
   }
-  // Em produção (Railway), usa a mesma origem
-  // Isso funciona porque a API e Web estão no mesmo domínio com proxy reverso
-  // OU podemos usar variável de ambiente configurada no Railway
-  if (typeof window !== 'undefined' && window.location.hostname.includes('railway.app')) {
-    // Assume que API está acessível via /api/v1 no mesmo domínio
-    // Ou configura a URL da API via variável de ambiente
+  // Em produção (Fly.io/Netlify), usa variável de ambiente configurada
+  // API está acessível via NEXT_PUBLIC_API_URL
+  if (typeof window !== 'undefined' && (window.location.hostname.includes('fly.dev') || window.location.hostname.includes('netlify.app'))) {
+    // Usa a URL da API via variável de ambiente
     return window.location.origin;
   }
   // Fallback para localhost em desenvolvimento

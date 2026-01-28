@@ -4,15 +4,15 @@
 
 Bot de WhatsApp integrado via QR Code (WhatsApp Web) usando `whatsapp-web.js`.
 
-**MVP focado em simplicidade e estabilidade** - pronto para deploy no Railway.
+**MVP focado em simplicidade e estabilidade** - pronto para deploy no Fly.io.
 
 ### Características Principais
 
 - ✅ **Multi-tenant real**: cada workspace/admin tem seu próprio bot
 - ✅ **QR Code exclusivo**: isolamento total entre clientes
 - ✅ **Templates configuráveis**: todas as mensagens vêm do banco de dados
-- ✅ **Compatível com Railway**: Node.js direto, sem Docker
-- ✅ **Persistência de sessão**: reconexão automática após restart
+- ✅ **Compatível com Fly.io**: Docker + Chromium configurado
+- ✅ **Persistência de sessão**: volume persistente no Fly.io
 
 ---
 
@@ -31,7 +31,7 @@ chatbot/
 
 ---
 
-## Deploy no Railway
+## Deploy no Fly.io
 
 ### Variáveis de Ambiente (OBRIGATÓRIAS)
 
@@ -45,31 +45,22 @@ JWT_ACCESS_SECRET=sua-chave-secreta
 # Redis (opcional, para cache)
 REDIS_URL=redis://host:6379
 
-# Puppeteer/Chromium (Railway configura automaticamente)
-# PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+# WhatsApp Sessions (volume persistente no Fly.io)
+WHATSAPP_SESSIONS_DIR=/data/whatsapp
 ```
 
-### Configuração Railway
+### Configuração Fly.io
 
-1. Crie um novo projeto no Railway
-2. Conecte o repositório GitHub
-3. Configure as variáveis de ambiente acima
-4. Railway detecta Node.js automaticamente
-5. Deploy acontece via `npm run build && npm start`
+1. Crie o app no Fly.io: `fly apps create bela-pro`
+2. Crie o volume: `fly volumes create whatsapp_data --size 1`
+3. Crie o Postgres: `fly postgres create --name bela-pro-db`
+4. Conecte ao app: `fly postgres attach bela-pro-db`
+5. Configure secrets: `fly secrets set JWT_ACCESS_SECRET=...`
+6. Deploy: `fly deploy`
 
-### Nixpacks (Railway)
+### Dockerfile
 
-O Railway usa Nixpacks para build. Para garantir que Chromium esteja disponível, 
-adicione ao `nixpacks.toml` na raiz:
-
-```toml
-[phases.setup]
-nixPkgs = ["chromium"]
-
-[variables]
-PUPPETEER_EXECUTABLE_PATH = "/nix/store/chromium/bin/chromium"
-PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
-```
+O Dockerfile já inclui Chromium e configurações para WhatsApp Bot.
 
 ---
 
@@ -93,7 +84,7 @@ Workspace C (Clínica Ana)   →  Sessão C  →  WhatsApp da Clínica
 
 ### Persistência
 
-Sessões são salvas em `.whatsapp-sessions/{workspaceId}/` e sobrevivem a restarts.
+Sessões são salvas em `/data/whatsapp/{workspaceId}/` (volume Fly.io) e sobrevivem a restarts.
 
 ---
 
@@ -225,9 +216,9 @@ O frontend implementa:
 
 ### QR Code não aparece
 
-1. Verifique logs do Railway: `railway logs`
-2. Confirme que Chromium está instalado
-3. Verifique `PUPPETEER_EXECUTABLE_PATH`
+1. Verifique logs do Fly.io: `fly logs`
+2. Confirme que Chromium está instalado no container
+3. Verifique `PUPPETEER_EXECUTABLE_PATH` (deve ser `/usr/bin/chromium`)
 
 ### Sessão desconecta sozinha
 
@@ -235,11 +226,11 @@ O frontend implementa:
 2. Verifique estabilidade da conexão
 3. A sessão reconecta automaticamente se persistida
 
-### Erro de Puppeteer no Railway
+### Erro de Puppeteer no Fly.io
 
-1. Adicione Chromium ao `nixpacks.toml`
-2. Configure `PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true`
-3. Verifique se `PUPPETEER_EXECUTABLE_PATH` está correto
+1. Verifique se o Dockerfile instala Chromium
+2. Verifique se volume `/data` está montado
+3. Verifique se `WHATSAPP_SESSIONS_DIR=/data/whatsapp`
 
 ---
 
@@ -250,7 +241,6 @@ O frontend implementa:
 | Funcionalidade | Status |
 |----------------|--------|
 | WhatsApp Cloud API (oficial) | 🔮 Futuro |
-| Docker/Container | 🔮 Futuro |
 | WebSocket para status realtime | 🔮 Futuro |
 | Fila de mensagens (Redis) | 🔮 Futuro |
 | Chatbot com IA/LLM | 🔮 Futuro |
@@ -303,8 +293,7 @@ Este módulo entrega um **WhatsApp Bot funcional** para o MVP do BELA PRO:
 - ✅ Funciona via QR Code
 - ✅ Multi-tenant real
 - ✅ Templates 100% configuráveis
-- ✅ Compatível com Railway
-- ✅ Sem dependência de Docker
+- ✅ Compatível com Fly.io (Docker + volume persistente)
 - ✅ Pronto para produção
 
 **Simplicidade, estabilidade e foco no que importa.**

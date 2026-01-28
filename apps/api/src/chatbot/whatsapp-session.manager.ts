@@ -10,7 +10,7 @@
  * - Manter estado de conexão
  * - Isolar sessões completamente entre workspaces
  * 
- * Compatível com Railway (Node.js gerenciado):
+ * Compatível com Fly.io (Docker + Chromium):
  * - Puppeteer configurado para ambientes sem GUI
  * - Usa PUPPETEER_EXECUTABLE_PATH se disponível
  * - Flags de segurança para containers/VMs
@@ -39,8 +39,7 @@ export type MessageCallback = (message: IncomingWhatsAppMessage) => Promise<void
  * Ordem de prioridade:
  * 1. PUPPETEER_EXECUTABLE_PATH (env var explícita)
  * 2. /usr/bin/chromium (Fly.io / Docker Debian)
- * 3. /nix/var/nix/profiles/default/bin/chromium (Railway Nixpacks)
- * 4. Outros caminhos conhecidos
+ * 3. Outros caminhos conhecidos
  */
 function findChromiumExecutable(): string | undefined {
   // Se definido via env var, usa diretamente
@@ -50,14 +49,12 @@ function findChromiumExecutable(): string | undefined {
   }
 
   // Caminhos conhecidos para Chromium/Chrome
-  // ORDEM IMPORTA: Fly.io primeiro, depois Railway, depois outros
+  // Fly.io Docker tem prioridade
   const knownPaths = [
     // Fly.io / Docker Debian (PRIORIDADE)
     '/usr/bin/chromium',
     '/usr/bin/chromium-browser',
-    // Nix (Railway)
-    '/nix/var/nix/profiles/default/bin/chromium',
-    // Nix alternativo
+    // Nix alternativo (dev local)
     (process.env.HOME || '') + '/.nix-profile/bin/chromium',
     // Outros
     '/usr/bin/google-chrome',
@@ -90,7 +87,7 @@ function findChromiumExecutable(): string | undefined {
 }
 
 /**
- * Configuração do Puppeteer para ambientes gerenciados (Railway, Heroku, etc.)
+ * Configuração do Puppeteer para ambientes gerenciados (Fly.io Docker)
  * - headless: true (sem GUI)
  * - executablePath: detecta automaticamente o Chromium
  * - args: flags obrigatórias para ambientes sem privilégios root
@@ -116,7 +113,7 @@ function getPuppeteerConfig() {
       '--no-first-run',
       '--no-zygote',
       '--disable-gpu',
-      '--single-process', // Importante para Railway
+      '--single-process', // Importante para ambientes containerizados
       '--disable-extensions',
     ],
   };
@@ -148,13 +145,13 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
   
   // Pasta base para armazenar sessões WhatsApp
   // WHATSAPP_SESSIONS_DIR: volume persistente no Fly.io (/data/whatsapp)
-  // Fallback: pasta local para Railway/dev (.whatsapp-sessions)
+  // Fallback: pasta local para dev (.whatsapp-sessions)
   private readonly sessionsDir: string;
 
   constructor() {
     // Determinar diretório de sessões
     // Fly.io: usa /data/whatsapp (volume persistente)
-    // Railway/Dev: usa .whatsapp-sessions (relativo ao cwd)
+    // Dev local: usa .whatsapp-sessions (relativo ao cwd)
     const envSessionsDir = process.env.WHATSAPP_SESSIONS_DIR;
     
     if (envSessionsDir && fs.existsSync(path.dirname(envSessionsDir))) {

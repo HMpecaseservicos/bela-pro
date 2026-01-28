@@ -4,8 +4,8 @@
 #
 # IMPORTANTE: Este arquivo é APENAS para desenvolvimento local.
 # 
-# Em PRODUÇÃO (Railway), o deploy é feito via Node.js direto (sem Docker).
-# Veja: nixpacks.toml para configuração de produção.
+# Em PRODUÇÃO (Fly.io), o deploy é feito via Docker.
+# Veja: Dockerfile e fly.toml para configuração de produção.
 #
 # USO LOCAL:
 #   docker-compose up postgres redis   # Apenas banco e cache
