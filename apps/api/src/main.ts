@@ -13,7 +13,7 @@ async function bootstrap() {
     .map(s => s.trim())
     .filter(Boolean);
 
-  logger.log(`CORS configurado. Origins explícitas: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : '(nenhuma - aceita .railway.app e localhost)'}`);
+  logger.log(`CORS configurado. Origins explícitas: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : '(nenhuma - aceita .fly.dev, .netlify.app, .railway.app e localhost)'}`);
 
   app.enableCors({
     origin: (origin, callback) => {
@@ -24,7 +24,8 @@ async function bootstrap() {
 
       // Se há origins explícitas configuradas, usa elas
       if (allowedOrigins.length > 0) {
-        const allowed = allowedOrigins.includes(origin);
+        const allowed = allowedOrigins.includes(origin) || 
+          allowedOrigins.some(o => o.startsWith('*.') && origin.endsWith(o.slice(1)));
         if (!allowed) {
           logger.warn(`CORS bloqueado para origin: ${origin}`);
         }
@@ -35,7 +36,8 @@ async function bootstrap() {
       const isLocalhost = origin.includes('localhost') || origin.includes('127.0.0.1');
       const isRailway = origin.endsWith('.railway.app');
       const isFly = origin.endsWith('.fly.dev');
-      const allowed = isLocalhost || isRailway || isFly;
+      const isNetlify = origin.endsWith('.netlify.app');
+      const allowed = isLocalhost || isRailway || isFly || isNetlify;
       
       if (!allowed) {
         logger.warn(`CORS bloqueado para origin: ${origin}`);
