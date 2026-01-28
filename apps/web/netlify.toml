@@ -15,7 +15,7 @@
   # Comando de build
   command = "npm install && npm run build"
   # Diretório de publicação (relativo ao base)
-  publish = "apps/web/.next"
+  publish = ".next"
 
 # Plugin oficial do Next.js para Netlify
 [[plugins]]
