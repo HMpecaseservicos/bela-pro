@@ -344,6 +344,31 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
     client.on('authenticated', () => {
       this.logger.log(`[${workspaceId}] ✅ Autenticado com sucesso`);
       sessionData.qrCode = null;
+      sessionData.state = WhatsAppSessionState.CONNECTING; // Estado intermediário
+      
+      // Fallback: se o ready não disparar em 30 segundos após autenticação,
+      // tentamos forçar o estado como conectado (workaround para alguns ambientes)
+      setTimeout(async () => {
+        if (sessionData.state === WhatsAppSessionState.CONNECTING) {
+          this.logger.warn(`[${workspaceId}] ⚠️ Evento 'ready' não disparou, verificando estado...`);
+          try {
+            const info = client.info;
+            if (info?.wid?.user) {
+              this.logger.log(`[${workspaceId}] 🔧 Forçando estado CONNECTED (fallback)`);
+              sessionData.state = WhatsAppSessionState.CONNECTED;
+              sessionData.connectedPhone = `+${info.wid.user}`;
+              sessionData.connectedAt = new Date();
+              
+              // Registrar telefone
+              this.connectedPhones.set(info.wid.user, workspaceId);
+            } else {
+              this.logger.warn(`[${workspaceId}] ⚠️ client.info não disponível ainda`);
+            }
+          } catch (err) {
+            this.logger.error(`[${workspaceId}] Erro ao verificar info: ${err}`);
+          }
+        }
+      }, 30000);
     });
 
     // Falha na autenticação
