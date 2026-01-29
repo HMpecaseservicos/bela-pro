@@ -326,8 +326,12 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
 
   /**
    * Configura os event handlers do cliente
+   * IMPORTANTE: Listeners de mensagem são registrados IMEDIATAMENTE,
+   * não dependem do evento 'ready' (que pode não disparar no Fly.io)
    */
   private setupClientEvents(workspaceId: string, client: Client, sessionData: SessionData): void {
+    this.logger.log(`[${workspaceId}] 🔧 Registrando event handlers (message, qr, auth, ready...)`);
+    
     // Log de TODOS os eventos para debug
     client.on('loading_screen', (percent: number, message: string) => {
       this.logger.debug(`[${workspaceId}] 📊 Loading: ${percent}% - ${message}`);
@@ -445,8 +449,11 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
       sessionData.qrCode = null;
     });
 
-    // Mensagem recebida
+    // Mensagem recebida (via 'message' - mensagens de outros)
+    // IMPORTANTE: Registrar IMEDIATAMENTE, não depender do evento 'ready'
     client.on('message', async (msg: Message) => {
+      this.logger.log(`[${workspaceId}] 📩 Mensagem recebida de ${msg.from}`);
+      
       // Ignorar mensagens de grupo, próprias, de broadcast ou LID
       if (
         msg.from.includes('@g.us') ||       // Grupos
@@ -454,14 +461,18 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
         msg.from.includes('@lid') ||        // LID (identificador interno)
         msg.fromMe                          // Mensagens próprias
       ) {
+        this.logger.debug(`[${workspaceId}] Mensagem ignorada (grupo/broadcast/própria)`);
         return;
       }
 
       // Ignorar mensagens vazias ou muito antigas (sync inicial)
       const messageAge = Date.now() - (msg.timestamp * 1000);
       if (!msg.body || msg.body.trim() === '' || messageAge > 60000) {
+        this.logger.debug(`[${workspaceId}] Mensagem ignorada (vazia ou antiga)`);
         return; // Ignora mensagens vazias ou com mais de 1 minuto
       }
+
+      this.logger.log(`[${workspaceId}] 📨 Processando mensagem: "${msg.body.substring(0, 50)}..."`);
 
       // Obter nome do contato
       let fromName = '';
@@ -486,11 +497,27 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
       // Chamar callback se registrado
       if (this.messageCallback) {
         try {
+          this.logger.log(`[${workspaceId}] 🔄 Chamando messageCallback...`);
           await this.messageCallback(incoming);
+          this.logger.log(`[${workspaceId}] ✅ messageCallback executado com sucesso`);
         } catch (err) {
-          this.logger.error(`[${workspaceId}] Erro no callback de mensagem: ${err}`);
+          this.logger.error(`[${workspaceId}] ❌ Erro no callback de mensagem: ${err}`);
         }
+      } else {
+        this.logger.warn(`[${workspaceId}] ⚠️ messageCallback não registrado!`);
       }
+    });
+
+    // Também escutar 'message_create' como fallback
+    // Alguns ambientes disparam apenas este evento
+    client.on('message_create', async (msg: Message) => {
+      // Ignorar mensagens próprias (já enviadas por nós)
+      if (msg.fromMe) {
+        return;
+      }
+      
+      // Log para debug
+      this.logger.debug(`[${workspaceId}] 📬 message_create de ${msg.from}`);
     });
   }
 
