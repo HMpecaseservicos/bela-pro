@@ -1,7 +1,8 @@
 # =============================================================================
 # BELA PRO - Dockerfile para Fly.io
-# Base: Node.js 20 LTS (Debian Bookworm) + Chromium sistema
+# Base: Node.js 20 LTS (Debian Bookworm)
 # Multi-stage build para imagem otimizada
+# Versão: MVP (sem bot WhatsApp)
 # =============================================================================
 
 # -----------------------------------------------------------------------------
@@ -34,45 +35,18 @@ RUN npm run build -w @bela-pro/api
 # -----------------------------------------------------------------------------
 FROM node:20-bookworm-slim AS production
 
-# Variáveis de ambiente para Puppeteer/Chromium
 ENV NODE_ENV=production
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-ENV WHATSAPP_SESSIONS_DIR=/data/whatsapp
 
-# Instalar Chromium e todas as libs necessárias para Puppeteer headless
+# Instalar apenas dependências essenciais
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    chromium \
-    fonts-liberation \
-    fonts-noto-color-emoji \
-    fonts-freefont-ttf \
     ca-certificates \
-    libnss3 \
-    libatk-bridge2.0-0 \
-    libgtk-3-0 \
-    libgbm1 \
-    libasound2 \
-    libx11-xcb1 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    libxss1 \
-    libxtst6 \
-    libdrm2 \
-    libxkbcommon0 \
-    libpango-1.0-0 \
-    libcups2 \
-    libatspi2.0-0 \
-    libxshmfence1 \
-    libglu1-mesa \
     dumb-init \
-    && rm -rf /var/lib/apt/lists/* \
-    && chromium --version
+    && rm -rf /var/lib/apt/lists/*
 
 # Criar usuário não-root para segurança
-RUN groupadd -r bela && useradd -r -g bela -G audio,video bela \
-    && mkdir -p /home/bela /app /data/whatsapp \
-    && chown -R bela:bela /home/bela /app /data
+RUN groupadd -r bela && useradd -r -g bela bela \
+    && mkdir -p /home/bela /app \
+    && chown -R bela:bela /home/bela /app
 
 WORKDIR /app
 

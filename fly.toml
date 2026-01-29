@@ -12,15 +12,7 @@ primary_region = 'gru'
 [env]
   NODE_ENV = 'production'
   PORT = '8080'
-  PUPPETEER_EXECUTABLE_PATH = '/usr/bin/chromium'
-  PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = 'true'
   TZ = 'America/Sao_Paulo'
-  WHATSAPP_SESSIONS_DIR = '/data/whatsapp'
-
-[[mounts]]
-  source = 'whatsapp_data'
-  destination = '/data'
-  processes = ['app']
 
 [http_service]
   internal_port = 8080
@@ -43,6 +35,6 @@ primary_region = 'gru'
     path = '/api/v1/health'
 
 [vm]
-  memory = '2gb'
+  memory = '512mb'
   cpu_kind = 'shared'
-  cpus = 2
+  cpus = 1

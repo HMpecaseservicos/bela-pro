@@ -1,7 +1,6 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { z } from 'zod';
-import { AppointmentNotificationService } from './appointment-notification.service';
 
 const createAppointmentSchema = z.object({
   clientName: z.string().min(2).max(80),
@@ -17,7 +16,6 @@ export class AppointmentsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly notificationService: AppointmentNotificationService,
   ) {}
 
   async create(workspaceId: string, input: unknown) {
@@ -127,35 +125,6 @@ export class AppointmentsService {
       `cliente=${appointment.client.name} phone=${appointment.client.phoneE164}`
     );
 
-    // Enviar notificação WhatsApp (em background para não bloquear resposta)
-    const serviceName = appointment.services
-      .map(s => s.service?.name)
-      .filter(Boolean)
-      .join(', ') || 'Serviço';
-
-    this.logger.log(
-      `📤 [${appointment.workspaceId}] Enviando notificação WhatsApp | ` +
-      `appt=${appointment.id} phone=${appointment.client.phoneE164}`
-    );
-
-    // Não usa await - envia em background
-    this.notificationService.notifyAppointmentConfirmed({
-      appointmentId: appointment.id,
-      workspaceId: appointment.workspaceId,
-      clientPhone: appointment.client.phoneE164,
-      clientName: appointment.client.name,
-      serviceName,
-      startAt: appointment.startAt,
-    }).then(sent => {
-      if (sent) {
-        this.logger.log(`✅ [${appointment.workspaceId}] Notificação enviada com sucesso`);
-      } else {
-        this.logger.warn(`⚠️ [${appointment.workspaceId}] Notificação não enviada (WhatsApp desconectado?)`);
-      }
-    }).catch(err => {
-      this.logger.error(`❌ [${appointment.workspaceId}] Erro ao enviar notificação: ${err}`);
-    });
-
     return appointment;
   }
 
@@ -263,35 +232,13 @@ export class AppointmentsService {
       throw new NotFoundException('Agendamento não encontrado.');
     }
 
-    // Envia notificação de cancelamento
-    const serviceName = appointment.services
-      .map(s => s.service?.name)
-      .filter(Boolean)
-      .join(', ') || 'Serviço';
-
-    this.notificationService.notifyAppointmentCancelled({
-      appointmentId: appointment.id,
-      workspaceId: appointment.workspaceId,
-      clientPhone: appointment.client.phoneE164,
-      clientName: appointment.client.name,
-      serviceName,
-      startAt: appointment.startAt,
-    }).then(sent => {
-      if (sent) {
-        this.logger.log(`✅ [${workspaceId}] Notificação de CANCELAMENTO enviada`);
-      } else {
-        this.logger.warn(`⚠️ [${workspaceId}] Notificação de cancelamento não enviada`);
-      }
-    }).catch(err => {
-      this.logger.error(`❌ [${workspaceId}] Erro ao enviar notificação de cancelamento: ${err}`);
-    });
+    this.logger.log(`✅ [${workspaceId}] Agendamento ${id} cancelado`);
 
     return this.findOne(workspaceId, id);
   }
 
   async updateStatus(workspaceId: string, id: string, status: string) {
-    const appointment = await this.findOne(workspaceId, id);
-    const previousStatus = appointment.status;
+    await this.findOne(workspaceId, id);
 
     const validStatuses = ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'] as const;
 
@@ -322,44 +269,7 @@ export class AppointmentsService {
       throw new NotFoundException('Agendamento não encontrado.');
     }
 
-    // Envia notificação se status mudou para CONFIRMED ou CANCELLED
-    if (typedStatus !== previousStatus) {
-      const serviceName = appointment.services
-        .map(s => s.service?.name)
-        .filter(Boolean)
-        .join(', ') || 'Serviço';
-
-      const notificationData = {
-        appointmentId: appointment.id,
-        workspaceId: appointment.workspaceId,
-        clientPhone: appointment.client.phoneE164,
-        clientName: appointment.client.name,
-        serviceName,
-        startAt: appointment.startAt,
-      };
-
-      if (typedStatus === 'CONFIRMED' && previousStatus === 'PENDING') {
-        this.notificationService.notifyAppointmentConfirmed(notificationData).then(sent => {
-          if (sent) {
-            this.logger.log(`✅ [${workspaceId}] Notificação de CONFIRMAÇÃO enviada`);
-          } else {
-            this.logger.warn(`⚠️ [${workspaceId}] Notificação de confirmação não enviada`);
-          }
-        }).catch(err => {
-          this.logger.error(`❌ [${workspaceId}] Erro ao enviar notificação de confirmação: ${err}`);
-        });
-      } else if (typedStatus === 'CANCELLED') {
-        this.notificationService.notifyAppointmentCancelled(notificationData).then(sent => {
-          if (sent) {
-            this.logger.log(`✅ [${workspaceId}] Notificação de CANCELAMENTO enviada`);
-          } else {
-            this.logger.warn(`⚠️ [${workspaceId}] Notificação de cancelamento não enviada`);
-          }
-        }).catch(err => {
-          this.logger.error(`❌ [${workspaceId}] Erro ao enviar notificação de cancelamento: ${err}`);
-        });
-      }
-    }
+    this.logger.log(`✅ [${workspaceId}] Status do agendamento ${id} alterado para ${status}`);
 
     return this.findOne(workspaceId, id);
   }
