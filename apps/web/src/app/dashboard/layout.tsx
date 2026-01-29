@@ -114,18 +114,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Logo */}
         <div style={{ padding: 20, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{
-              width: 42,
-              height: 42,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              borderRadius: 12,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 20,
-              fontWeight: 700,
-              flexShrink: 0,
-            }}>B</div>
+            <img 
+              src="/logo.png" 
+              alt="BELA PRO" 
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 8,
+                objectFit: 'contain',
+                flexShrink: 0,
+              }}
+            />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 16 }}>BELA PRO</div>
               <WorkspaceSwitcher />
