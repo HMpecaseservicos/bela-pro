@@ -95,20 +95,16 @@ export default function LoginPage() {
         boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{
-            width: 64,
-            height: 64,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            borderRadius: 16,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 16px',
-            fontSize: 28,
-            color: 'white',
-            fontWeight: 700,
-          }}>B</div>
-          <h1 style={{ fontSize: 28, fontWeight: 700, color: '#1a1a2e', margin: 0 }}>BELA PRO</h1>
+          <img 
+            src="/logo-white.png" 
+            alt="BELA PRO" 
+            style={{
+              width: 180,
+              height: 'auto',
+              margin: '0 auto 16px',
+              display: 'block',
+            }}
+          />
           <p style={{ color: '#888', marginTop: 8 }}>Acesse seu painel</p>
         </div>
 
