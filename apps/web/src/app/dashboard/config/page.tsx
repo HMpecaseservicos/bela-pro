@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
@@ -165,6 +166,46 @@ export default function ConfigPage() {
         <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 28, fontWeight: 700, color: '#1a1a2e' }}>Configurações</h1>
         <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: isMobile ? 13 : 15 }}>Gerencie as configurações do seu negócio</p>
       </div>
+
+      {/* Quick Actions - Mensagens */}
+      <Link href="/dashboard/config/comunicacao" style={{ textDecoration: 'none' }}>
+        <div style={{
+          background: 'white',
+          borderRadius: isMobile ? 12 : 16,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+          padding: isMobile ? 16 : 24,
+          marginBottom: isMobile ? 16 : 24,
+          border: '1px solid #e2e8f0',
+          cursor: 'pointer',
+          transition: 'all 0.15s',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{
+                width: 48,
+                height: 48,
+                borderRadius: 12,
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 24,
+              }}>
+                💬
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 16, color: '#1e293b' }}>
+                  Mensagens
+                </div>
+                <div style={{ fontSize: 14, color: '#64748b' }}>
+                  Personalize as mensagens enviadas aos clientes
+                </div>
+              </div>
+            </div>
+            <span style={{ fontSize: 20, color: '#94a3b8' }}>→</span>
+          </div>
+        </div>
+      </Link>
 
       {/* Link Público de Agendamento */}
       {config.slug && (
