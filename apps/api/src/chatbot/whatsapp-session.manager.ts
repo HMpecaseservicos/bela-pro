@@ -365,6 +365,11 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
               
               // Registrar telefone
               this.connectedPhones.set(info.wid.user, workspaceId);
+              
+              // IMPORTANTE: Tentar emitir o evento 'ready' manualmente
+              // para que os listeners internos da biblioteca sejam ativados
+              this.logger.log(`[${workspaceId}] 🔄 Emitindo evento 'ready' manualmente...`);
+              client.emit('ready');
             } else {
               this.logger.warn(`[${workspaceId}] ⚠️ client.info não disponível ainda`);
             }
@@ -511,13 +516,65 @@ export class WhatsAppSessionManager implements OnModuleDestroy {
     // Também escutar 'message_create' como fallback
     // Alguns ambientes disparam apenas este evento
     client.on('message_create', async (msg: Message) => {
+      // Log SEMPRE para debug (incluindo próprias)
+      this.logger.debug(`[${workspaceId}] 📬 message_create | from: ${msg.from} | fromMe: ${msg.fromMe} | body: "${(msg.body || '').substring(0, 30)}"`);
+      
       // Ignorar mensagens próprias (já enviadas por nós)
       if (msg.fromMe) {
         return;
       }
       
-      // Log para debug
-      this.logger.debug(`[${workspaceId}] 📬 message_create de ${msg.from}`);
+      // Se não veio do evento 'message', processar aqui também
+      // Isso serve como fallback quando o evento 'message' não dispara
+      if (
+        !msg.from.includes('@g.us') &&       // Não é grupo
+        !msg.from.includes('@broadcast') &&  // Não é broadcast
+        !msg.from.includes('@lid') &&        // Não é LID
+        msg.body && msg.body.trim() !== ''
+      ) {
+        const messageAge = Date.now() - (msg.timestamp * 1000);
+        if (messageAge <= 60000) {
+          this.logger.log(`[${workspaceId}] 📨 [FALLBACK message_create] Processando: "${msg.body.substring(0, 50)}..."`);
+          
+          // Processar via callback
+          if (this.messageCallback) {
+            let fromName = '';
+            try {
+              const contact = await msg.getContact();
+              fromName = contact?.pushname || contact?.name || '';
+            } catch {
+              // Ignora erro
+            }
+            
+            const incoming: IncomingWhatsAppMessage = {
+              workspaceId,
+              from: msg.from.replace('@c.us', ''),
+              fromName,
+              body: msg.body || '',
+              timestamp: new Date(msg.timestamp * 1000),
+              messageId: msg.id._serialized,
+              rawMessage: msg,
+            };
+            
+            try {
+              await this.messageCallback(incoming);
+              this.logger.log(`[${workspaceId}] ✅ [FALLBACK] messageCallback executado`);
+            } catch (err) {
+              this.logger.error(`[${workspaceId}] ❌ [FALLBACK] Erro: ${err}`);
+            }
+          }
+        }
+      }
+    });
+
+    // Eventos adicionais para debug
+    client.on('change_state', (state: string) => {
+      this.logger.log(`[${workspaceId}] 🔄 Estado mudou para: ${state}`);
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    client.on('remote_session_saved' as any, () => {
+      this.logger.log(`[${workspaceId}] 💾 Sessão remota salva`);
     });
   }
 
