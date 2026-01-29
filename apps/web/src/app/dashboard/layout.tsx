@@ -13,7 +13,6 @@ const menuItems = [
   { href: '/dashboard/servicos', icon: '💇', label: 'Serviços' },
   { href: '/dashboard/horarios', icon: '⏰', label: 'Horários' },
   { href: '/dashboard/equipe', icon: '👔', label: 'Equipe' },
-  { href: '/dashboard/chatbot', icon: '🤖', label: 'Chatbot' },
   { href: '/dashboard/aparencia', icon: '🎨', label: 'Aparência' },
   { href: '/dashboard/config', icon: '⚙️', label: 'Configurações' },
 ];
