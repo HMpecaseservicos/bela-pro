@@ -352,17 +352,44 @@ export default function BookingPage() {
         onContinue={handleContinue}
       />
 
-      {/* Footer branding */}
+      {/* Footer branding BELA PRO */}
       <footer
         style={{
           textAlign: 'center',
-          padding: '24px 20px 40px',
-          color: COLORS.textMuted,
-          fontSize: 13,
+          padding: '32px 20px 48px',
+          background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.02) 100%)',
         }}
       >
-        Powered by{' '}
-        <span style={{ fontWeight: 600, color: booking.primaryColor }}>BELA PRO</span>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            marginBottom: 8,
+          }}
+        >
+          <span style={{ color: COLORS.textMuted, fontSize: 12 }}>Powered by</span>
+          <img
+            src="/logo.png"
+            alt="BELA PRO"
+            style={{
+              height: 24,
+              width: 'auto',
+              opacity: 0.85,
+            }}
+          />
+        </div>
+        <p
+          style={{
+            color: COLORS.textMuted,
+            fontSize: 11,
+            margin: 0,
+            opacity: 0.7,
+          }}
+        >
+          Sistema de agendamento profissional
+        </p>
       </footer>
     </div>
   );

@@ -229,17 +229,27 @@ export function ConfirmationScreen({
           </button>
         </div>
 
-        {/* Footer */}
-        <p
+        {/* Footer BELA PRO */}
+        <div
           style={{
-            fontSize: 12,
-            color: COLORS.textMuted,
-            margin: '24px 0 0',
+            marginTop: 24,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
           }}
         >
-          Powered by{' '}
-          <span style={{ fontWeight: 600, color: primaryColor }}>BELA PRO</span>
-        </p>
+          <span style={{ fontSize: 11, color: COLORS.textMuted }}>Powered by</span>
+          <img
+            src="/logo.png"
+            alt="BELA PRO"
+            style={{
+              height: 20,
+              width: 'auto',
+              opacity: 0.8,
+            }}
+          />
+        </div>
       </div>
     </div>
   );
