@@ -43,6 +43,6 @@ primary_region = 'gru'
     path = '/api/v1/health'
 
 [vm]
-  memory = '1gb'
+  memory = '2gb'
   cpu_kind = 'shared'
-  cpus = 1
+  cpus = 2
