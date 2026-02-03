@@ -57,6 +57,19 @@ export default function AgendaPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [sendingMessage, setSendingMessage] = useState<string | null>(null);
 
+  // Novo Agendamento Modal
+  const [showNewModal, setShowNewModal] = useState(false);
+  const [newAppointment, setNewAppointment] = useState({
+    clientName: '',
+    clientPhone: '',
+    serviceId: '',
+    date: '',
+    time: '',
+    notes: '',
+  });
+  const [savingNew, setSavingNew] = useState(false);
+  const [newError, setNewError] = useState('');
+
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
   useEffect(() => {
@@ -253,6 +266,98 @@ export default function AgendaPage() {
     }
   }
 
+  function openNewAppointmentModal() {
+    setNewAppointment({
+      clientName: '',
+      clientPhone: '',
+      serviceId: availableServices[0]?.id || '',
+      date: selectedDate.toISOString().split('T')[0],
+      time: '09:00',
+      notes: '',
+    });
+    setNewError('');
+    setShowNewModal(true);
+  }
+
+  function formatPhoneInput(value: string) {
+    // Remove tudo que não é número
+    const numbers = value.replace(/\D/g, '');
+    
+    // Formata como (XX) XXXXX-XXXX
+    if (numbers.length <= 2) return `(${numbers}`;
+    if (numbers.length <= 7) return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    if (numbers.length <= 11) return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+  }
+
+  function phoneToE164(phone: string) {
+    const numbers = phone.replace(/\D/g, '');
+    if (numbers.length === 11) return `+55${numbers}`;
+    if (numbers.length === 10) return `+55${numbers}`;
+    return `+55${numbers}`;
+  }
+
+  async function createNewAppointment() {
+    setNewError('');
+    
+    // Validações
+    if (!newAppointment.clientName.trim()) {
+      setNewError('Informe o nome do cliente');
+      return;
+    }
+    if (newAppointment.clientPhone.replace(/\D/g, '').length < 10) {
+      setNewError('Informe um telefone válido');
+      return;
+    }
+    if (!newAppointment.serviceId) {
+      setNewError('Selecione um serviço');
+      return;
+    }
+    if (!newAppointment.date || !newAppointment.time) {
+      setNewError('Informe data e horário');
+      return;
+    }
+
+    setSavingNew(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      const [year, month, day] = newAppointment.date.split('-').map(Number);
+      const [hour, minute] = newAppointment.time.split(':').map(Number);
+      const startAt = new Date(year, month - 1, day, hour, minute);
+
+      const res = await fetch(`${API_URL}/appointments`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          clientName: newAppointment.clientName.trim(),
+          clientPhone: phoneToE164(newAppointment.clientPhone),
+          serviceIds: [newAppointment.serviceId], // API espera array
+          startAt: startAt.toISOString(),
+          notes: newAppointment.notes || undefined,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || 'Erro ao criar agendamento');
+      }
+
+      setShowNewModal(false);
+      fetchAppointments();
+      
+      // Navega para a data do agendamento
+      setSelectedDate(startAt);
+    } catch (err: any) {
+      setNewError(err.message || 'Erro ao criar agendamento');
+    } finally {
+      setSavingNew(false);
+    }
+  }
+
   function formatTime(iso: string) {
     return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   }
@@ -301,8 +406,39 @@ export default function AgendaPage() {
           <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: isMobile ? 13 : 15 }}>Gerencie seus atendimentos</p>
         </div>
         
-        {!isMobile && (
-          <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          {/* Botão Novo Agendamento */}
+          <button
+            onClick={openNewAppointmentModal}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '10px 20px',
+              background: 'linear-gradient(135deg, #667eea 0%, #5a67d8 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: 10,
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontSize: 14,
+              boxShadow: '0 2px 8px rgba(102, 126, 234, 0.35)',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.45)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.35)';
+            }}
+          >
+            <span style={{ fontSize: 18 }}>+</span>
+            {isMobile ? 'Novo' : 'Novo Agendamento'}
+          </button>
+
+          {!isMobile && (
             <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 10, padding: 4 }}>
               <button 
                 onClick={() => setView('day')}
@@ -337,8 +473,8 @@ export default function AgendaPage() {
                 Semana
               </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Date Navigation */}
@@ -756,6 +892,183 @@ export default function AgendaPage() {
                   </div>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Appointment Modal */}
+      {showNewModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 1000, padding: 16,
+        }} onClick={() => setShowNewModal(false)}>
+          <div style={{
+            background: 'white', borderRadius: 16, width: '100%', maxWidth: 500,
+            maxHeight: '90vh', overflow: 'auto', boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
+          }} onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div style={{
+              padding: '20px 24px', borderBottom: '1px solid #e2e8f0',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              background: 'linear-gradient(135deg, #667eea 0%, #5a67d8 100%)',
+              borderRadius: '16px 16px 0 0',
+            }}>
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: 'white' }}>
+                ✨ Novo Agendamento
+              </h2>
+              <button onClick={() => setShowNewModal(false)} style={{
+                background: 'rgba(255,255,255,0.2)', border: 'none', fontSize: 20, cursor: 'pointer', 
+                color: 'white', padding: '4px 8px', borderRadius: 6,
+              }}>×</button>
+            </div>
+
+            <div style={{ padding: 24 }}>
+              {/* Erro */}
+              {newError && (
+                <div style={{
+                  background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8,
+                  padding: '12px 16px', marginBottom: 20, color: '#dc2626', fontSize: 14,
+                }}>
+                  {newError}
+                </div>
+              )}
+
+              {/* Cliente */}
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 8 }}>
+                  👤 Nome do Cliente *
+                </label>
+                <input
+                  type="text"
+                  value={newAppointment.clientName}
+                  onChange={(e) => setNewAppointment({ ...newAppointment, clientName: e.target.value })}
+                  placeholder="Ex: Maria Silva"
+                  style={{
+                    width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0',
+                    borderRadius: 10, fontSize: 15, transition: 'border-color 0.2s',
+                  }}
+                  onFocus={(e) => e.currentTarget.style.borderColor = '#667eea'}
+                  onBlur={(e) => e.currentTarget.style.borderColor = '#e2e8f0'}
+                />
+              </div>
+
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 8 }}>
+                  📱 WhatsApp *
+                </label>
+                <input
+                  type="tel"
+                  value={newAppointment.clientPhone}
+                  onChange={(e) => setNewAppointment({ ...newAppointment, clientPhone: formatPhoneInput(e.target.value) })}
+                  placeholder="(11) 99999-9999"
+                  style={{
+                    width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0',
+                    borderRadius: 10, fontSize: 15, transition: 'border-color 0.2s',
+                  }}
+                  onFocus={(e) => e.currentTarget.style.borderColor = '#667eea'}
+                  onBlur={(e) => e.currentTarget.style.borderColor = '#e2e8f0'}
+                />
+              </div>
+
+              {/* Serviço */}
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 8 }}>
+                  💅 Serviço *
+                </label>
+                <select
+                  value={newAppointment.serviceId}
+                  onChange={(e) => setNewAppointment({ ...newAppointment, serviceId: e.target.value })}
+                  style={{
+                    width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0',
+                    borderRadius: 10, fontSize: 15, background: 'white', cursor: 'pointer',
+                  }}
+                >
+                  <option value="">Selecione um serviço</option>
+                  {availableServices.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} - {formatPrice(s.priceCents)} ({s.durationMinutes}min)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Data e Hora */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 8 }}>
+                    📅 Data *
+                  </label>
+                  <input
+                    type="date"
+                    value={newAppointment.date}
+                    onChange={(e) => setNewAppointment({ ...newAppointment, date: e.target.value })}
+                    style={{
+                      width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0',
+                      borderRadius: 10, fontSize: 15,
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 8 }}>
+                    ⏰ Horário *
+                  </label>
+                  <input
+                    type="time"
+                    value={newAppointment.time}
+                    onChange={(e) => setNewAppointment({ ...newAppointment, time: e.target.value })}
+                    style={{
+                      width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0',
+                      borderRadius: 10, fontSize: 15,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Observações */}
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 8 }}>
+                  📝 Observações
+                </label>
+                <textarea
+                  value={newAppointment.notes}
+                  onChange={(e) => setNewAppointment({ ...newAppointment, notes: e.target.value })}
+                  rows={3}
+                  placeholder="Alguma observação sobre o atendimento..."
+                  style={{
+                    width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0',
+                    borderRadius: 10, fontSize: 14, resize: 'vertical',
+                  }}
+                />
+              </div>
+
+              {/* Botões */}
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button 
+                  onClick={() => setShowNewModal(false)}
+                  style={{ 
+                    flex: 1, padding: '14px', background: 'white', color: '#64748b', 
+                    border: '2px solid #e2e8f0', borderRadius: 10, fontWeight: 600, 
+                    cursor: 'pointer', fontSize: 15,
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={createNewAppointment} 
+                  disabled={savingNew}
+                  style={{ 
+                    flex: 1, padding: '14px', 
+                    background: savingNew ? '#94a3b8' : 'linear-gradient(135deg, #667eea 0%, #5a67d8 100%)', 
+                    color: 'white', border: 'none', borderRadius: 10, fontWeight: 600, 
+                    cursor: savingNew ? 'not-allowed' : 'pointer', fontSize: 15,
+                    boxShadow: savingNew ? 'none' : '0 2px 8px rgba(102, 126, 234, 0.35)',
+                  }}
+                >
+                  {savingNew ? 'Criando...' : '✓ Criar Agendamento'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
