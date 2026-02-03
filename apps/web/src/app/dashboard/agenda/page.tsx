@@ -65,15 +65,20 @@ export default function AgendaPage() {
     clientPhone: '',
     serviceId: '',
     date: '',
-    time: '',
+    startAt: '', // ISO string do horário selecionado
     notes: '',
   });
   const [availableDays, setAvailableDays] = useState<string[]>([]);
-  const [availableSlots, setAvailableSlots] = useState<{ time: string; available: boolean }[]>([]);
+  const [availableSlots, setAvailableSlots] = useState<{ startAt: string; endAt: string; available: boolean }[]>([]);
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const [savingNew, setSavingNew] = useState(false);
   const [newError, setNewError] = useState('');
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  
+  // Clientes existentes (para autocomplete)
+  const [existingClients, setExistingClients] = useState<{ id: string; name: string; phoneE164: string }[]>([]);
+  const [showClientSuggestions, setShowClientSuggestions] = useState(false);
+  const [filteredClients, setFilteredClients] = useState<{ id: string; name: string; phoneE164: string }[]>([]);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
@@ -89,6 +94,7 @@ export default function AgendaPage() {
     fetchMessageEvents();
     fetchServices();
     fetchWorkspaceId();
+    fetchExistingClients();
     setWorkspaceName(localStorage.getItem('workspaceName') || 'Meu Negócio');
   }, []);
 
@@ -96,6 +102,21 @@ export default function AgendaPage() {
     const wsId = localStorage.getItem('workspaceId');
     if (wsId) {
       setWorkspaceId(wsId);
+    }
+  }
+
+  async function fetchExistingClients() {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/clients`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setExistingClients(data);
+      }
+    } catch (err) {
+      console.error('Error fetching clients:', err);
     }
   }
 
@@ -285,20 +306,21 @@ export default function AgendaPage() {
       clientPhone: '',
       serviceId: '',
       date: '',
-      time: '',
+      startAt: '',
       notes: '',
     });
     setNewStep(1);
     setAvailableDays([]);
     setAvailableSlots([]);
     setNewError('');
+    setShowClientSuggestions(false);
     setShowNewModal(true);
   }
 
   async function selectNewService(serviceId: string) {
     if (!workspaceId) return;
     
-    setNewAppointment(prev => ({ ...prev, serviceId, date: '', time: '' }));
+    setNewAppointment(prev => ({ ...prev, serviceId, date: '', startAt: '' }));
     setLoadingAvailability(true);
     setNewError('');
     
@@ -323,7 +345,7 @@ export default function AgendaPage() {
   async function selectNewDate(date: string) {
     if (!workspaceId || !newAppointment.serviceId) return;
     
-    setNewAppointment(prev => ({ ...prev, date, time: '' }));
+    setNewAppointment(prev => ({ ...prev, date, startAt: '' }));
     setLoadingAvailability(true);
     setNewError('');
     
@@ -345,21 +367,49 @@ export default function AgendaPage() {
     }
   }
 
-  function selectNewTime(time: string) {
-    setNewAppointment(prev => ({ ...prev, time }));
+  function selectNewTime(startAt: string) {
+    setNewAppointment(prev => ({ ...prev, startAt }));
     setNewStep(4);
+  }
+
+  function handleClientNameChange(value: string) {
+    setNewAppointment(prev => ({ ...prev, clientName: value }));
+    
+    // Filtrar clientes existentes
+    if (value.length >= 2) {
+      const filtered = existingClients.filter(c => 
+        c.name.toLowerCase().includes(value.toLowerCase())
+      );
+      setFilteredClients(filtered);
+      setShowClientSuggestions(filtered.length > 0);
+    } else {
+      setShowClientSuggestions(false);
+    }
+  }
+
+  function selectExistingClient(client: { id: string; name: string; phoneE164: string }) {
+    // Formata o telefone E164 para exibição
+    const phone = client.phoneE164.replace('+55', '');
+    const formattedPhone = formatPhoneInput(phone);
+    
+    setNewAppointment(prev => ({
+      ...prev,
+      clientName: client.name,
+      clientPhone: formattedPhone,
+    }));
+    setShowClientSuggestions(false);
   }
 
   function goBackNewStep() {
     if (newStep === 2) {
       setNewStep(1);
-      setNewAppointment(prev => ({ ...prev, serviceId: '', date: '', time: '' }));
+      setNewAppointment(prev => ({ ...prev, serviceId: '', date: '', startAt: '' }));
     } else if (newStep === 3) {
       setNewStep(2);
-      setNewAppointment(prev => ({ ...prev, date: '', time: '' }));
+      setNewAppointment(prev => ({ ...prev, date: '', startAt: '' }));
     } else if (newStep === 4) {
       setNewStep(3);
-      setNewAppointment(prev => ({ ...prev, time: '' }));
+      setNewAppointment(prev => ({ ...prev, startAt: '' }));
     }
   }
 
@@ -393,7 +443,7 @@ export default function AgendaPage() {
       setNewError('Informe um telefone válido');
       return;
     }
-    if (!newAppointment.serviceId || !newAppointment.time) {
+    if (!newAppointment.serviceId || !newAppointment.startAt) {
       setNewError('Selecione serviço, data e horário');
       return;
     }
@@ -403,8 +453,8 @@ export default function AgendaPage() {
     try {
       const token = localStorage.getItem('token');
       
-      // O time já é o ISO string do slot
-      const startAt = newAppointment.time;
+      // O startAt já é o ISO string do slot
+      const startAt = newAppointment.startAt;
 
       const res = await fetch(`${API_URL}/appointments`, {
         method: 'POST',
@@ -1177,11 +1227,11 @@ export default function AgendaPage() {
                   </p>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
                     {availableSlots.map(slot => {
-                      const time = new Date(slot.time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                      const time = new Date(slot.startAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                       return (
                         <button
-                          key={slot.time}
-                          onClick={() => selectNewTime(slot.time)}
+                          key={slot.startAt}
+                          onClick={() => selectNewTime(slot.startAt)}
                           style={{
                             padding: '12px 8px', background: '#f8fafc', border: '2px solid #e2e8f0',
                             borderRadius: 8, cursor: 'pointer', transition: 'all 0.2s', textAlign: 'center',
@@ -1226,7 +1276,7 @@ export default function AgendaPage() {
                           {availableServices.find(s => s.id === newAppointment.serviceId)?.name}
                         </div>
                         <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>
-                          {new Date(newAppointment.time).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })} às {new Date(newAppointment.time).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(newAppointment.startAt).toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })} às {new Date(newAppointment.startAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         </div>
                       </div>
                       <div style={{ fontWeight: 700, color: '#667eea' }}>
@@ -1235,23 +1285,61 @@ export default function AgendaPage() {
                     </div>
                   </div>
 
-                  {/* Nome */}
-                  <div style={{ marginBottom: 16 }}>
+                  {/* Nome com Autocomplete */}
+                  <div style={{ marginBottom: 16, position: 'relative' }}>
                     <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 8 }}>
                       👤 Nome do Cliente *
                     </label>
                     <input
                       type="text"
                       value={newAppointment.clientName}
-                      onChange={(e) => setNewAppointment({ ...newAppointment, clientName: e.target.value })}
-                      placeholder="Ex: Maria Silva"
+                      onChange={(e) => handleClientNameChange(e.target.value)}
+                      onFocus={() => {
+                        if (newAppointment.clientName.length >= 2) {
+                          const filtered = existingClients.filter(c => 
+                            c.name.toLowerCase().includes(newAppointment.clientName.toLowerCase())
+                          );
+                          setFilteredClients(filtered);
+                          setShowClientSuggestions(filtered.length > 0);
+                        }
+                      }}
+                      onBlur={() => setTimeout(() => setShowClientSuggestions(false), 200)}
+                      placeholder="Digite para buscar ou criar novo..."
                       style={{
                         width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0',
                         borderRadius: 10, fontSize: 15, transition: 'border-color 0.2s',
                       }}
-                      onFocus={(e) => e.currentTarget.style.borderColor = '#667eea'}
-                      onBlur={(e) => e.currentTarget.style.borderColor = '#e2e8f0'}
                     />
+                    
+                    {/* Lista de sugestões de clientes */}
+                    {showClientSuggestions && filteredClients.length > 0 && (
+                      <div style={{
+                        position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
+                        background: 'white', border: '2px solid #667eea', borderRadius: 10,
+                        marginTop: 4, maxHeight: 200, overflow: 'auto',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                      }}>
+                        <div style={{ padding: '8px 12px', fontSize: 11, color: '#64748b', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                          📋 Clientes existentes
+                        </div>
+                        {filteredClients.map(client => (
+                          <button
+                            key={client.id}
+                            onClick={() => selectExistingClient(client)}
+                            style={{
+                              width: '100%', padding: '12px 14px', border: 'none', background: 'white',
+                              textAlign: 'left', cursor: 'pointer', borderBottom: '1px solid #f1f5f9',
+                              transition: 'background 0.15s',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = '#f0f4ff'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                          >
+                            <div style={{ fontWeight: 600, color: '#1e293b', fontSize: 14 }}>{client.name}</div>
+                            <div style={{ fontSize: 12, color: '#64748b' }}>{client.phoneE164.replace('+55', '').replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')}</div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Telefone */}
