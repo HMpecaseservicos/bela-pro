@@ -131,6 +131,9 @@ model User {
   passwordHash String
 
   isActive  Boolean @default(true)
+  
+  // Super Admin: acesso global a todos os workspaces
+  isSuperAdmin Boolean @default(false)
 
   memberships Membership[]
   auditLogs   AuditLog[]

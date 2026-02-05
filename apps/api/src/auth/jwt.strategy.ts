@@ -6,8 +6,9 @@ import type { JwtSubject } from './auth.types';
 
 type JwtPayload = {
   sub: string;
-  workspaceId: string;
-  role: 'OWNER' | 'STAFF';
+  workspaceId: string | null;
+  role: 'OWNER' | 'STAFF' | null;
+  isSuperAdmin: boolean;
 };
 
 @Injectable()
@@ -25,6 +26,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       userId: payload.sub,
       workspaceId: payload.workspaceId,
       role: payload.role,
+      isSuperAdmin: payload.isSuperAdmin ?? false,
     };
   }
 }

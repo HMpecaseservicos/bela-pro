@@ -55,14 +55,21 @@ export class AuthController {
 
 @Controller('api/v1')
 export class MeController {
+  constructor(private readonly auth: AuthService) {}
+
   @UseGuards(AuthGuard('jwt'))
   @Get('me')
   async me(@Req() req: Request) {
     const user = req.user as JwtSubject;
+    // Fetch full user data including name
+    const userData = await this.auth.getUserById(user.userId);
     return {
       userId: user.userId,
       workspaceId: user.workspaceId,
       role: user.role,
+      isSuperAdmin: user.isSuperAdmin || false,
+      name: userData?.name || null,
+      email: userData?.email || null,
     };
   }
 }

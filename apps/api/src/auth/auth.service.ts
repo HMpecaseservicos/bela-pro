@@ -91,6 +91,7 @@ export class AuthService {
       userId: created.user.id,
       workspaceId: created.workspace.id,
       role: 'OWNER',
+      isSuperAdmin: false,
     });
 
     return {
@@ -119,6 +120,18 @@ export class AuthService {
       throw new UnauthorizedException('Credenciais inválidas.');
     }
 
+    // Super Admin pode logar sem workspace
+    if (user.isSuperAdmin) {
+      const membership = user.memberships[0];
+      const accessToken = await this.signAccessToken({
+        userId: user.id,
+        workspaceId: membership?.workspaceId ?? null,
+        role: membership?.role ?? null,
+        isSuperAdmin: true,
+      });
+      return { accessToken, isSuperAdmin: true };
+    }
+
     const membership = user.memberships[0];
     if (!membership) {
       throw new UnauthorizedException('Usuário sem workspace ativo.');
@@ -128,6 +141,7 @@ export class AuthService {
       userId: user.id,
       workspaceId: membership.workspaceId,
       role: membership.role,
+      isSuperAdmin: false,
     });
 
     return {
@@ -267,6 +281,7 @@ export class AuthService {
       userId: result.userId,
       workspaceId: result.workspaceId,
       role: result.role,
+      isSuperAdmin: false,
     });
 
     return {
@@ -316,10 +331,17 @@ export class AuthService {
       throw new NotFoundException('Você não tem acesso a este workspace');
     }
 
+    // Busca se usuário é super admin
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { isSuperAdmin: true },
+    });
+
     const accessToken = await this.signAccessToken({
       userId,
       workspaceId: membership.workspaceId,
       role: membership.role,
+      isSuperAdmin: user?.isSuperAdmin ?? false,
     });
 
     return {
@@ -333,7 +355,22 @@ export class AuthService {
     };
   }
 
-  private async signAccessToken(payload: { userId: string; workspaceId: string; role: 'OWNER' | 'STAFF' }) {
+  /**
+   * Get user by ID (for /me endpoint)
+   */
+  async getUserById(userId: string) {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, email: true, isSuperAdmin: true },
+    });
+  }
+
+  private async signAccessToken(payload: { 
+    userId: string; 
+    workspaceId: string | null; 
+    role: 'OWNER' | 'STAFF' | null;
+    isSuperAdmin: boolean;
+  }) {
     const secret = this.config.get<string>('JWT_ACCESS_SECRET');
     if (!secret) {
       throw new Error('JWT_ACCESS_SECRET não configurado');
@@ -342,7 +379,7 @@ export class AuthService {
     const ttl = Number(this.config.get<string>('JWT_ACCESS_TTL_SECONDS') ?? '900');
 
     return this.jwt.signAsync(
-      { workspaceId: payload.workspaceId, role: payload.role },
+      { workspaceId: payload.workspaceId, role: payload.role, isSuperAdmin: payload.isSuperAdmin },
       { subject: payload.userId, expiresIn: ttl, secret },
     );
   }

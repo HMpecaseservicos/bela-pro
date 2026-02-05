@@ -17,6 +17,7 @@ import { ClientsModule } from './clients/clients.module';
 import { TeamModule } from './team/team.module';
 import { MessageTemplatesModule } from './message-templates/message-templates.module';
 import { ChatUsageModule } from './chat-usage/chat-usage.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ChatUsageModule } from './chat-usage/chat-usage.module';
     TeamModule,
     MessageTemplatesModule,
     ChatUsageModule,
+    AdminModule,
   ],
   controllers: [HealthController, RootController],
 })

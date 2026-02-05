@@ -5,6 +5,7 @@ import { TeamService } from './team.service';
 import type { JwtSubject } from '../auth/auth.types';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { requireWorkspaceContext } from '../auth/workspace-context.guard';
 
 @Controller('api/v1/team')
 @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -14,6 +15,7 @@ export class TeamController {
   @Get()
   async getTeam(@Req() req: Request) {
     const user = req.user as JwtSubject;
+    requireWorkspaceContext(user);
     return this.teamService.getTeamMembers(user.workspaceId);
   }
 
@@ -21,6 +23,7 @@ export class TeamController {
   @Roles('OWNER')
   async getPendingInvites(@Req() req: Request) {
     const user = req.user as JwtSubject;
+    requireWorkspaceContext(user);
     return this.teamService.getPendingInvites(user.workspaceId);
   }
 
@@ -28,6 +31,7 @@ export class TeamController {
   @Roles('OWNER')
   async inviteMember(@Req() req: Request, @Body() body: unknown) {
     const user = req.user as JwtSubject;
+    requireWorkspaceContext(user);
     return this.teamService.inviteMember(user.workspaceId, user.userId, body);
   }
 
@@ -38,6 +42,7 @@ export class TeamController {
     @Param('inviteId') inviteId: string,
   ) {
     const user = req.user as JwtSubject;
+    requireWorkspaceContext(user);
     return this.teamService.cancelInvite(user.workspaceId, user.userId, inviteId);
   }
 
@@ -49,6 +54,7 @@ export class TeamController {
     @Body() body: unknown,
   ) {
     const user = req.user as JwtSubject;
+    requireWorkspaceContext(user);
     return this.teamService.updateMember(user.workspaceId, user.userId, membershipId, body);
   }
 
@@ -59,6 +65,7 @@ export class TeamController {
     @Param('membershipId') membershipId: string,
   ) {
     const user = req.user as JwtSubject;
+    requireWorkspaceContext(user);
     return this.teamService.removeMember(user.workspaceId, user.userId, membershipId);
   }
 }
