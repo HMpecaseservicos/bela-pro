@@ -14,3 +14,4 @@ export { ConfirmationScreen } from './ConfirmationScreen';
 // Componentes Premium
 export { HeroSection } from './HeroSection';
 export { ServiceCardPremium } from './ServiceCardPremium';
+export { GalleryLightbox, GalleryPreview } from './GalleryLightbox';

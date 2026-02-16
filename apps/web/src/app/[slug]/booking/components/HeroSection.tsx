@@ -1,6 +1,10 @@
+'use client';
+
+import { useState } from 'react';
 import { Workspace, ThemeConfig } from '../types';
 import { SPACING, RADIUS } from '../constants';
 import { getImageUrl } from '@/lib/utils';
+import { GalleryLightbox, GalleryPreview } from './GalleryLightbox';
 
 interface HeroSectionProps {
   workspace: Workspace;
@@ -11,6 +15,15 @@ export function HeroSection({ workspace, theme }: HeroSectionProps) {
   const { colors } = theme;
   const hasCover = !!workspace.coverImageUrl;
   const hasLogo = !!workspace.logoUrl;
+  const hasGallery = workspace.galleryUrls && workspace.galleryUrls.length > 0;
+  
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  
+  const openGallery = (index: number) => {
+    setLightboxIndex(index);
+    setLightboxOpen(true);
+  };
   
   const brandName = workspace.brandName || workspace.name;
   const welcomeText = workspace.welcomeText || 'Agende seu horário';
@@ -165,60 +178,22 @@ export function HeroSection({ workspace, theme }: HeroSectionProps) {
         )}
       </div>
 
-      {/* Galeria preview (se houver) */}
-      {workspace.galleryUrls && workspace.galleryUrls.length > 0 && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: SPACING.md,
-            right: SPACING.md,
-            display: 'flex',
-            gap: SPACING.xs,
-            zIndex: 2,
-          }}
-        >
-          {workspace.galleryUrls.slice(0, 3).map((url, i) => (
-            <div
-              key={i}
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: RADIUS.sm,
-                overflow: 'hidden',
-                border: '2px solid rgba(255,255,255,0.8)',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-              }}
-            >
-              <img
-                src={url}
-                alt={`Galeria ${i + 1}`}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                }}
-              />
-            </div>
-          ))}
-          {workspace.galleryUrls.length > 3 && (
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: RADIUS.sm,
-                background: 'rgba(0,0,0,0.6)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 12,
-                color: '#fff',
-                fontWeight: 600,
-              }}
-            >
-              +{workspace.galleryUrls.length - 3}
-            </div>
-          )}
-        </div>
+      {/* Galeria preview - Nova versão com Lightbox */}
+      {hasGallery && (
+        <GalleryPreview
+          images={workspace.galleryUrls!}
+          onOpen={openGallery}
+          primaryColor={colors.primary}
+        />
+      )}
+      
+      {/* Lightbox Modal */}
+      {lightboxOpen && hasGallery && (
+        <GalleryLightbox
+          images={workspace.galleryUrls!}
+          initialIndex={lightboxIndex}
+          onClose={() => setLightboxOpen(false)}
+        />
       )}
     </div>
   );
