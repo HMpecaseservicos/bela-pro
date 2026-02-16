@@ -99,9 +99,23 @@ export interface BookingState {
   loading: boolean;
   error: string | null;
   success: boolean;
+  
+  // Payment (quando pagamento PIX é exigido)
+  paymentInfo: PaymentInfo | null;
 }
 
-export type BookingStep = 1 | 2 | 3 | 4;
+export interface PaymentInfo {
+  paymentId: string;
+  appointmentId: string;
+  amountCents: number;
+  pixCode: string;
+  pixRecipientName: string;
+  pixKeyMasked: string;
+  expiresAt: string;
+  instructions?: string;
+}
+
+export type BookingStep = 1 | 2 | 3 | 4 | 5;
 
 export interface StepConfig {
   number: BookingStep;

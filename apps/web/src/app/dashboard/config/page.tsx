@@ -207,6 +207,46 @@ export default function ConfigPage() {
         </div>
       </Link>
 
+      {/* Quick Actions - Pagamentos */}
+      <Link href="/dashboard/config/pagamentos" style={{ textDecoration: 'none' }}>
+        <div style={{
+          background: 'white',
+          borderRadius: isMobile ? 12 : 16,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+          padding: isMobile ? 16 : 24,
+          marginBottom: isMobile ? 16 : 24,
+          border: '1px solid #e2e8f0',
+          cursor: 'pointer',
+          transition: 'all 0.15s',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{
+                width: 48,
+                height: 48,
+                borderRadius: 12,
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 24,
+              }}>
+                💳
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 16, color: '#1e293b' }}>
+                  Pagamentos
+                </div>
+                <div style={{ fontSize: 14, color: '#64748b' }}>
+                  Configure pagamento PIX para confirmação de agendamentos
+                </div>
+              </div>
+            </div>
+            <span style={{ fontSize: 20, color: '#94a3b8' }}>→</span>
+          </div>
+        </div>
+      </Link>
+
       {/* Link Público de Agendamento */}
       {config.slug && (
         <div style={{

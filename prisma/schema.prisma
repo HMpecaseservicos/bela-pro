@@ -15,6 +15,7 @@ enum UserRole {
 
 enum AppointmentStatus {
   PENDING
+  PENDING_PAYMENT  // Aguardando pagamento PIX
   CONFIRMED
   CANCELLED
   COMPLETED
@@ -64,6 +65,30 @@ enum MessageEventType {
   APPOINTMENT_CANCELLED     // Agendamento cancelado
 }
 
+// ==================== PAGAMENTO PIX ====================
+
+enum PaymentType {
+  NONE             // Sem exigência de pagamento
+  FULL             // Valor total do serviço
+  PARTIAL_PERCENT  // Percentual do valor (sinal)
+  PARTIAL_FIXED    // Valor fixo (sinal)
+}
+
+enum PixKeyType {
+  CPF
+  CNPJ
+  EMAIL
+  PHONE
+  RANDOM
+}
+
+enum PaymentStatus {
+  PENDING    // Aguardando pagamento
+  PAID       // Pago (confirmado manualmente)
+  CANCELLED  // Cancelado (expirado ou cancelamento)
+  REFUNDED   // Reembolsado (futuro)
+}
+
 model Workspace {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
@@ -102,6 +127,20 @@ model Workspace {
   whatsappLastConnectionState   String?
   whatsappLastConnectedAt       DateTime?
   whatsappWebhookUrl            String?
+
+  // ==================== PAGAMENTO PIX ====================
+  // Configurações de cobrança para confirmação de agendamento
+  requirePayment       Boolean      @default(false)  // Exigir pagamento para confirmar
+  paymentType          PaymentType  @default(NONE)   // Tipo de cobrança
+  partialPercent       Int?                          // Percentual do sinal (10-100)
+  partialFixedAmount   Decimal?     @db.Decimal(10,2) // Valor fixo do sinal
+  paymentExpiryMinutes Int          @default(30)     // Minutos para expirar o pagamento
+
+  // Dados do PIX do estabelecimento
+  pixKeyType           PixKeyType?                   // Tipo da chave PIX
+  pixKey               String?                       // Chave PIX
+  pixHolderName        String?                       // Nome do titular
+  pixCity              String?                       // Cidade (para QR Code)
 
   memberships  Membership[]
   inviteTokens InviteToken[]
@@ -308,6 +347,7 @@ model Appointment {
 
   services   AppointmentService[]
   notifications NotificationJob[]
+  payment    Payment?  // Pagamento associado (quando requirePayment = true)
 
   @@index([workspaceId, startAt])
   @@index([workspaceId, status])
@@ -327,6 +367,41 @@ model AppointmentService {
 
   @@index([appointmentId])
   @@index([serviceId])
+}
+
+// ==================== PAGAMENTO PIX ====================
+// Registro de pagamento para confirmação de agendamento
+model Payment {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointmentId String      @unique
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  // Valores
+  amountCents     Int                // Valor a pagar em centavos
+  serviceTotalCents Int              // Valor total do serviço (referência)
+
+  // Status do pagamento
+  status      PaymentStatus @default(PENDING)
+
+  // PIX (cópia e cola gerado)
+  pixCode     String?       @db.Text  // Código PIX "copia e cola" ou payload BR Code
+  pixQrBase64 String?       @db.Text  // QR Code em base64 (opcional)
+
+  // Controle de expiração
+  expiresAt   DateTime               // Quando o pagamento expira
+
+  // Confirmação manual
+  paidAt      DateTime?              // Quando foi confirmado
+  confirmedBy String?                // ID do usuário que confirmou
+
+  // Notas
+  notes       String?                // Observações (ex: "comprovante recebido via WhatsApp")
+
+  @@index([status])
+  @@index([expiresAt])
 }
 
 model ScheduleRule {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Workspace, Service, TimeSlot, BookingStep, BookingState, ThemeConfig } from '../types';
+import { Workspace, Service, TimeSlot, BookingStep, BookingState, ThemeConfig, PaymentInfo } from '../types';
 import { API_URL, DEFAULT_COPY, getThemeFromWorkspace } from '../constants';
 import { cleanPhone } from '../utils';
 
@@ -44,6 +44,7 @@ const initialState: BookingState = {
   loading: true,
   error: null,
   success: false,
+  paymentInfo: null,
 };
 
 export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
@@ -224,11 +225,24 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
         throw new Error(data.message || DEFAULT_COPY.genericError);
       }
       
-      setState(prev => ({
-        ...prev,
-        success: true,
-        loading: false,
-      }));
+      const data = await res.json();
+      
+      // Se tem informações de pagamento, ir para step 5 (pagamento PIX)
+      if (data.paymentInfo) {
+        setState(prev => ({
+          ...prev,
+          paymentInfo: data.paymentInfo,
+          step: 5,
+          loading: false,
+        }));
+      } else {
+        // Sem pagamento, ir direto para sucesso
+        setState(prev => ({
+          ...prev,
+          success: true,
+          loading: false,
+        }));
+      }
     } catch (error: any) {
       setState(prev => ({
         ...prev,

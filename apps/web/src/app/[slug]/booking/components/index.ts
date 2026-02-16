@@ -10,6 +10,7 @@ export { DatePicker } from './DatePicker';
 export { TimeSlots } from './TimeSlots';
 export { ClientForm } from './ClientForm';
 export { ConfirmationScreen } from './ConfirmationScreen';
+export { PixPaymentScreen } from './PixPaymentScreen';
 
 // Componentes Premium
 export { HeroSection } from './HeroSection';

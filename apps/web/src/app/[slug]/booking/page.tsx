@@ -16,6 +16,7 @@ import {
   TimeSlots,
   ClientForm,
   ConfirmationScreen,
+  PixPaymentScreen,
   StickyFooter,
   Spinner,
   skeletonStyles,
@@ -116,6 +117,23 @@ export default function BookingPage() {
           <p style={{ color: COLORS.textSecondary }}>{booking.error}</p>
         </div>
       </div>
+    );
+  }
+
+  // Step 5 - Tela de pagamento PIX
+  if (booking.step === 5 && booking.paymentInfo && booking.workspace && booking.selectedService && booking.selectedDate && booking.selectedSlot) {
+    return (
+      <>
+        <style>{globalStyles}</style>
+        <PixPaymentScreen
+          workspace={booking.workspace}
+          service={booking.selectedService}
+          selectedDate={booking.selectedDate}
+          selectedSlot={booking.selectedSlot}
+          paymentInfo={booking.paymentInfo}
+          primaryColor={booking.primaryColor}
+        />
+      </>
     );
   }
 

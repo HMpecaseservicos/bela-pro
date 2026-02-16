@@ -117,6 +117,7 @@ export class AppointmentsService {
             service: true,
           },
         },
+        payment: true,
       },
     });
 
@@ -147,6 +148,7 @@ export class AppointmentsService {
             service: true,
           },
         },
+        payment: true,
       },
       orderBy: {
         createdAt: 'desc',
@@ -183,6 +185,7 @@ export class AppointmentsService {
             service: true,
           },
         },
+        payment: true,
       },
       orderBy: {
         startAt: 'asc',
@@ -201,6 +204,7 @@ export class AppointmentsService {
             service: true,
           },
         },
+        payment: true,
       },
     });
 

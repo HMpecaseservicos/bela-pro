@@ -9,14 +9,25 @@ interface Service {
   priceCents: number;
 }
 
+interface Payment {
+  id: string;
+  amountCents: number;
+  status: string;
+  pixCode?: string;
+  expiresAt?: string;
+  paidAt?: string;
+}
+
 interface Appointment {
   id: string;
   startAt: string;
   endAt: string;
   status: string;
   notes?: string;
+  totalPriceCents?: number;
   client: { id: string; name: string; phoneE164: string };
   services: Array<{ service: Service }>;
+  payment?: Payment;
 }
 
 interface MessageEvent {
@@ -27,6 +38,7 @@ interface MessageEvent {
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
   PENDING: { bg: '#fef3c7', text: '#d97706', label: 'Pendente' },
+  PENDING_PAYMENT: { bg: '#fef3c7', text: '#f59e0b', label: 'Aguardando Pagamento' },
   CONFIRMED: { bg: '#dbeafe', text: '#2563eb', label: 'Confirmado' },
   COMPLETED: { bg: '#d1fae5', text: '#059669', label: 'Concluído' },
   CANCELLED: { bg: '#fee2e2', text: '#dc2626', label: 'Cancelado' },
@@ -204,6 +216,81 @@ export default function AgendaPage() {
       fetchAppointments();
     } catch (err) {
       console.error(err);
+    }
+  }
+
+  async function confirmPayment(appointmentId: string, paymentId: string) {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${API_URL}/payments/${paymentId}/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      });
+      
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.message || 'Erro ao confirmar pagamento');
+        return;
+      }
+
+      // Atualiza appointment local - status muda para CONFIRMED
+      const apt = appointments.find(a => a.id === appointmentId);
+      if (apt) {
+        apt.status = 'CONFIRMED';
+        if (apt.payment) {
+          apt.payment.status = 'PAID';
+          apt.payment.paidAt = new Date().toISOString();
+        }
+        setAppointments([...appointments]);
+        if (selectedAppointment?.id === appointmentId) {
+          setSelectedAppointment({ ...apt });
+        }
+      }
+
+      // Envia mensagem de confirmação
+      if (apt) {
+        await sendWhatsAppMessage(apt, 'APPOINTMENT_CONFIRMED');
+      }
+
+      fetchAppointments();
+    } catch (err) {
+      console.error('Erro ao confirmar pagamento:', err);
+      alert('Erro ao confirmar pagamento');
+    }
+  }
+
+  async function cancelPayment(appointmentId: string, paymentId: string) {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${API_URL}/payments/${paymentId}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      });
+      
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.message || 'Erro ao cancelar pagamento');
+        return;
+      }
+
+      // Atualiza appointment local - status muda para CANCELLED
+      const apt = appointments.find(a => a.id === appointmentId);
+      if (apt) {
+        apt.status = 'CANCELLED';
+        if (apt.payment) {
+          apt.payment.status = 'CANCELLED';
+        }
+        setAppointments([...appointments]);
+        if (selectedAppointment?.id === appointmentId) {
+          setSelectedAppointment({ ...apt });
+        }
+      }
+
+      fetchAppointments();
+      setSelectedAppointment(null);
+    } catch (err) {
+      console.error('Erro ao cancelar pagamento:', err);
+      alert('Erro ao cancelar pagamento');
     }
   }
 
@@ -900,12 +987,56 @@ export default function AgendaPage() {
                     </div>
                   </div>
 
+                  {/* Payment Info for PENDING_PAYMENT */}
+                  {selectedAppointment.status === 'PENDING_PAYMENT' && selectedAppointment.payment && (
+                    <div style={{
+                      background: '#fffbeb',
+                      border: '1px solid #fde68a',
+                      borderRadius: 12,
+                      padding: 16,
+                      marginBottom: 16,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                        <span style={{ fontSize: 20 }}>💳</span>
+                        <span style={{ fontWeight: 600, color: '#d97706' }}>Aguardando Pagamento PIX</span>
+                      </div>
+                      <div style={{ display: 'grid', gap: 8, fontSize: 14 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ color: '#64748b' }}>Valor a pagar:</span>
+                          <span style={{ fontWeight: 600, color: '#1e293b' }}>
+                            {formatPrice(selectedAppointment.payment.amountCents)}
+                          </span>
+                        </div>
+                        {selectedAppointment.payment.expiresAt && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ color: '#64748b' }}>Expira em:</span>
+                            <span style={{ fontWeight: 500, color: new Date(selectedAppointment.payment.expiresAt) < new Date() ? '#dc2626' : '#1e293b' }}>
+                              {new Date(selectedAppointment.payment.expiresAt).toLocaleString('pt-BR')}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Status Actions */}
                   <div style={{ marginBottom: 24 }}>
                     <div style={{ fontSize: 14, fontWeight: 600, color: '#1e293b', marginBottom: 12 }}>
                       Ações
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {selectedAppointment.status === 'PENDING_PAYMENT' && selectedAppointment.payment && (
+                        <>
+                          <button onClick={() => confirmPayment(selectedAppointment.id, selectedAppointment.payment!.id)}
+                            style={{ flex: 1, padding: '10px 16px', background: '#10b981', color: 'white', border: 'none', borderRadius: 8, fontWeight: 500, cursor: 'pointer', minWidth: 140 }}>
+                            💰 Confirmar Pagamento
+                          </button>
+                          <button onClick={() => cancelPayment(selectedAppointment.id, selectedAppointment.payment!.id)}
+                            style={{ flex: 1, padding: '10px 16px', background: '#ef4444', color: 'white', border: 'none', borderRadius: 8, fontWeight: 500, cursor: 'pointer', minWidth: 120 }}>
+                            ✗ Cancelar
+                          </button>
+                        </>
+                      )}
                       {selectedAppointment.status === 'PENDING' && (
                         <>
                           <button onClick={() => updateStatus(selectedAppointment.id, 'CONFIRMED')}

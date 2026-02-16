@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PaymentsService } from '../payments/payments.service';
 import { z } from 'zod';
 
 const createPublicBookingSchema = z.object({
@@ -16,6 +17,7 @@ export class PublicBookingService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly paymentsService: PaymentsService,
   ) {}
 
   async createBooking(input: unknown) {
@@ -93,15 +95,20 @@ export class PublicBookingService {
       });
     }
 
-    // Cria agendamento como PENDING (público requer confirmação)
+    // Verifica se workspace exige pagamento
+    const requiresPayment = workspace.requirePayment && workspace.paymentType !== 'NONE';
+    const appointmentStatus = requiresPayment ? 'PENDING_PAYMENT' : 'PENDING';
+
+    // Cria agendamento
     const appointment = await this.prisma.appointment.create({
       data: {
         workspaceId: data.workspaceId,
         clientId: client.id,
         startAt,
         endAt,
-        status: 'PENDING',
+        status: appointmentStatus,
         bookedVia: 'public',
+        totalPriceCents: service.priceCents,
         services: {
           create: {
             serviceId: service.id,
@@ -120,11 +127,26 @@ export class PublicBookingService {
       },
     });
 
+    // Se requer pagamento, cria registro de Payment
+    let payment = null;
+    if (requiresPayment) {
+      payment = await this.paymentsService.createPaymentForAppointment(
+        appointment.id,
+        data.workspaceId,
+        service.priceCents
+      );
+    }
+
     this.logger.log(
       `✅ [${data.workspaceId}] Agendamento público criado: ${appointment.id} | ` +
-      `cliente=${appointment.client.name} phone=${appointment.client.phoneE164}`
+      `cliente=${appointment.client.name} phone=${appointment.client.phoneE164} | ` +
+      `status=${appointmentStatus}${payment ? ` | payment=${payment.id}` : ''}`
     );
 
-    return appointment;
+    return {
+      ...appointment,
+      payment,
+      requiresPayment,
+    };
   }
 }
