@@ -128,25 +128,67 @@ export class PublicBookingService {
     });
 
     // Se requer pagamento, cria registro de Payment
-    let payment = null;
+    let paymentInfo = null;
     if (requiresPayment) {
-      payment = await this.paymentsService.createPaymentForAppointment(
+      const payment = await this.paymentsService.createPaymentForAppointment(
         appointment.id,
         data.workspaceId,
         service.priceCents
       );
+      
+      if (payment) {
+        // Formatar resposta no formato esperado pelo frontend
+        paymentInfo = {
+          paymentId: payment.id,
+          appointmentId: appointment.id,
+          amountCents: payment.amountCents,
+          pixCode: payment.pixCode || '',
+          pixRecipientName: payment.workspace?.pixHolderName || '',
+          pixKeyMasked: this.maskPixKey(payment.workspace?.pixKey, payment.workspace?.pixKeyType),
+          expiresAt: payment.expiresAt.toISOString(),
+        };
+      }
     }
 
     this.logger.log(
       `✅ [${data.workspaceId}] Agendamento público criado: ${appointment.id} | ` +
       `cliente=${appointment.client.name} phone=${appointment.client.phoneE164} | ` +
-      `status=${appointmentStatus}${payment ? ` | payment=${payment.id}` : ''}`
+      `status=${appointmentStatus}${paymentInfo ? ` | payment=${paymentInfo.paymentId}` : ''}`
     );
 
     return {
       ...appointment,
-      payment,
+      paymentInfo,
       requiresPayment,
     };
+  }
+
+  /**
+   * Mascara a chave PIX para exibição pública
+   */
+  private maskPixKey(pixKey?: string | null, pixKeyType?: string | null): string {
+    if (!pixKey) return '';
+    
+    switch (pixKeyType) {
+      case 'CPF':
+        // 123.456.789-00 -> ***.***.789-**
+        return pixKey.replace(/(\d{3})\.?(\d{3})\.?(\d{3})-?(\d{2})/, '***.***.***-**').slice(0, 14);
+      case 'CNPJ':
+        // 12.345.678/0001-00 -> **.***.***/****-**
+        return '**.***.***/****-**';
+      case 'EMAIL':
+        // email@domain.com -> em***@do***.com
+        const [local, domain] = pixKey.split('@');
+        if (!domain) return '***@***.***';
+        return `${local.slice(0, 2)}***@${domain.slice(0, 2)}***.${domain.split('.').pop()}`;
+      case 'PHONE':
+        // +5511999999999 -> +55 ** *****-9999
+        return `+55 ** *****-${pixKey.slice(-4)}`;
+      case 'RANDOM':
+        // Chave aleatória -> mostra só início e fim
+        return `${pixKey.slice(0, 4)}...${pixKey.slice(-4)}`;
+      default:
+        return '***';
+    }
   }
 }
