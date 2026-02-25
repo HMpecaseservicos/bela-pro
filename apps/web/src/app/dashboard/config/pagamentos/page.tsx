@@ -12,12 +12,11 @@ interface PaymentSettings {
   requirePayment: boolean;
   paymentType: PaymentType;
   partialPercent: number | null;
-  partialFixedCents: number | null;
+  partialFixedAmount: number | null;
   pixKeyType: PixKeyType | null;
   pixKey: string;
-  pixRecipientName: string;
-  paymentExpirationMinutes: number;
-  paymentInstructions: string;
+  pixHolderName: string;
+  paymentExpiryMinutes: number;
 }
 
 const paymentTypeLabels: Record<PaymentType, string> = {
@@ -41,12 +40,11 @@ export default function PagamentosPage() {
     requirePayment: false,
     paymentType: 'NONE',
     partialPercent: null,
-    partialFixedCents: null,
+    partialFixedAmount: null,
     pixKeyType: null,
     pixKey: '',
-    pixRecipientName: '',
-    paymentExpirationMinutes: 30,
-    paymentInstructions: '',
+    pixHolderName: '',
+    paymentExpiryMinutes: 30,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -93,17 +91,16 @@ export default function PagamentosPage() {
         requirePayment: data.requirePayment ?? false,
         paymentType: data.paymentType ?? 'NONE',
         partialPercent: data.partialPercent ?? null,
-        partialFixedCents: data.partialFixedCents ?? null,
+        partialFixedAmount: data.partialFixedAmount ?? null,
         pixKeyType: data.pixKeyType ?? null,
         pixKey: data.pixKey ?? '',
-        pixRecipientName: data.pixRecipientName ?? '',
-        paymentExpirationMinutes: data.paymentExpirationMinutes ?? 30,
-        paymentInstructions: data.paymentInstructions ?? '',
+        pixHolderName: data.pixHolderName ?? '',
+        paymentExpiryMinutes: data.paymentExpiryMinutes ?? 30,
       });
 
-      // Convert cents to reais for display
-      if (data.partialFixedCents) {
-        setPartialFixedReais((data.partialFixedCents / 100).toFixed(2).replace('.', ','));
+      // Convert to reais for display
+      if (data.partialFixedAmount) {
+        setPartialFixedReais(data.partialFixedAmount.toFixed(2).replace('.', ','));
       }
     } catch (err) {
       console.error('Erro ao carregar configurações:', err);
@@ -138,7 +135,7 @@ export default function PagamentosPage() {
           return;
         }
 
-        if (settings.paymentType === 'PARTIAL_FIXED' && !settings.partialFixedCents) {
+        if (settings.paymentType === 'PARTIAL_FIXED' && !settings.partialFixedAmount) {
           setError('Informe o valor fixo');
           setSaving(false);
           return;
@@ -150,8 +147,8 @@ export default function PagamentosPage() {
           return;
         }
 
-        if (!settings.pixRecipientName) {
-          setError('Informe o nome do recebedor PIX');
+        if (!settings.pixHolderName) {
+          setError('Informe o nome do titular PIX');
           setSaving(false);
           return;
         }
@@ -186,13 +183,13 @@ export default function PagamentosPage() {
     const cleaned = value.replace(/[^\d,\.]/g, '').replace('.', ',');
     setPartialFixedReais(cleaned);
 
-    // Convert to cents
+    // Convert to number (reais)
     const parts = cleaned.split(',');
     const reais = parseInt(parts[0] || '0');
     const centavos = parseInt((parts[1] || '0').padEnd(2, '0').slice(0, 2));
-    const totalCents = reais * 100 + centavos;
+    const totalReais = reais + (centavos / 100);
 
-    setSettings(prev => ({ ...prev, partialFixedCents: totalCents || null }));
+    setSettings(prev => ({ ...prev, partialFixedAmount: totalReais || null }));
   }
 
   if (loading) {
@@ -440,12 +437,12 @@ export default function PagamentosPage() {
 
               <div>
                 <label style={{ display: 'block', marginBottom: 8, fontWeight: 500, color: '#374151', fontSize: 14 }}>
-                  Nome do Recebedor (aparece na tela de pagamento)
+                  Nome do Titular PIX (aparece na tela de pagamento)
                 </label>
                 <input
                   type="text"
-                  value={settings.pixRecipientName}
-                  onChange={e => setSettings(prev => ({ ...prev, pixRecipientName: e.target.value }))}
+                  value={settings.pixHolderName}
+                  onChange={e => setSettings(prev => ({ ...prev, pixHolderName: e.target.value }))}
                   placeholder="Ex: Maria Silva ou Studio Maria"
                   style={inputStyle}
                 />
@@ -453,7 +450,7 @@ export default function PagamentosPage() {
             </div>
           </div>
 
-          {/* Expiration and Instructions */}
+          {/* Expiration */}
           <div style={{
             background: 'white',
             borderRadius: isMobile ? 12 : 16,
@@ -462,7 +459,7 @@ export default function PagamentosPage() {
             marginBottom: isMobile ? 16 : 24,
           }}>
             <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 600, color: '#1e293b' }}>
-              Prazo e Instruções
+              Prazo de Pagamento
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -472,29 +469,16 @@ export default function PagamentosPage() {
                 </label>
                 <input
                   type="number"
-                  min="5"
+                  min="10"
                   max="1440"
-                  value={settings.paymentExpirationMinutes}
-                  onChange={e => setSettings(prev => ({ ...prev, paymentExpirationMinutes: parseInt(e.target.value) || 30 }))}
+                  value={settings.paymentExpiryMinutes}
+                  onChange={e => setSettings(prev => ({ ...prev, paymentExpiryMinutes: parseInt(e.target.value) || 30 }))}
                   style={inputStyle}
                 />
                 <p style={{ margin: '8px 0 0', fontSize: 12, color: '#64748b' }}>
                   Após este tempo sem pagamento, o agendamento será cancelado automaticamente.
-                  Recomendado: 30-60 minutos.
+                  Mínimo: 10 minutos. Recomendado: 30-60 minutos.
                 </p>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: 8, fontWeight: 500, color: '#374151', fontSize: 14 }}>
-                  Instruções Adicionais (opcional)
-                </label>
-                <textarea
-                  value={settings.paymentInstructions}
-                  onChange={e => setSettings(prev => ({ ...prev, paymentInstructions: e.target.value }))}
-                  placeholder="Ex: Após o pagamento, envie o comprovante pelo WhatsApp para confirmação mais rápida."
-                  rows={3}
-                  style={{ ...inputStyle, resize: 'vertical' }}
-                />
               </div>
             </div>
           </div>
