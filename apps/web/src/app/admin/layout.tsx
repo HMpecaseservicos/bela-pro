@@ -8,6 +8,9 @@ const MENU_ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: '📊', exact: true },
   { href: '/admin/workspaces', label: 'Empresas', icon: '🏢' },
   { href: '/admin/users', label: 'Usuários', icon: '👥' },
+  { href: '/admin/plans', label: 'Planos', icon: '📋' },
+  { href: '/admin/subscriptions', label: 'Assinaturas', icon: '💳' },
+  { href: '/admin/billing', label: 'Billing', icon: '💰' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

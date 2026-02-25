@@ -20,6 +20,7 @@ import { ChatUsageModule } from './chat-usage/chat-usage.module';
 import { AdminModule } from './admin/admin.module';
 import { PaymentsModule } from './payments/payments.module';
 import { FinancialModule } from './financial/financial.module';
+import { BillingModule } from './billing/billing.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { FinancialModule } from './financial/financial.module';
     AdminModule,
     PaymentsModule,
     FinancialModule,
+    BillingModule,
   ],
   controllers: [HealthController, RootController],
 })

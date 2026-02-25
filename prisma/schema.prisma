@@ -162,6 +162,9 @@ model Workspace {
   // Módulo financeiro
   financialCategories  FinancialCategory[]
   financialTransactions FinancialTransaction[]
+  
+  // Sistema de planos e billing
+  subscription WorkspaceSubscription?
 }
 
 model User {
@@ -724,3 +727,184 @@ model FinancialTransaction {
   @@index([categoryId])
   @@index([appointmentId])
 }
+
+// ==================== SISTEMA DE PLANOS E BILLING (Super Admin) ====================
+
+enum SubscriptionStatus {
+  ACTIVE        // Assinatura ativa
+  TRIAL         // Período de teste
+  PAST_DUE      // Pagamento atrasado
+  CANCELLED     // Cancelada
+  SUSPENDED     // Suspensa (inadimplência)
+}
+
+enum InvoiceStatus {
+  DRAFT         // Rascunho (não enviada)
+  PENDING       // Aguardando pagamento
+  PAID          // Paga
+  OVERDUE       // Vencida
+  CANCELLED     // Cancelada
+}
+
+enum BillingCycle {
+  MONTHLY       // Mensal
+  QUARTERLY     // Trimestral
+  SEMIANNUAL    // Semestral
+  ANNUAL        // Anual
+}
+
+// Planos de assinatura configurados pelo Super Admin
+model SubscriptionPlan {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name          String              // Ex: "Básico", "Profissional", "Premium"
+  description   String?             // Descrição do plano
+  
+  // Preços por ciclo (em centavos)
+  priceMonthly    Int               // Preço mensal
+  priceQuarterly  Int?              // Preço trimestral
+  priceSemiannual Int?              // Preço semestral
+  priceAnnual     Int?              // Preço anual
+  
+  // Limites e recursos
+  maxAppointments Int?              // Limite de agendamentos/mês (null = ilimitado)
+  maxClients      Int?              // Limite de clientes
+  maxTeamMembers  Int?              // Limite de membros da equipe
+  chatbotEnabled  Boolean @default(true)  // Chatbot incluso?
+  whatsappEnabled Boolean @default(true)  // WhatsApp incluso?
+  financialEnabled Boolean @default(true) // Módulo financeiro incluso?
+  pixPaymentEnabled Boolean @default(true) // Pagamento PIX incluso?
+  
+  // Recursos extras (JSON flexível)
+  features        String[]          // Lista de recursos ("Suporte prioritário", etc.)
+  
+  // Ordenação e visibilidade
+  sortOrder       Int      @default(0)    // Ordem de exibição
+  isActive        Boolean  @default(true) // Plano ativo para venda?
+  isHighlighted   Boolean  @default(false) // Destacar como "recomendado"?
+  
+  // Trial
+  trialDays       Int      @default(7)    // Dias de teste grátis
+  
+  // Relações
+  subscriptions   WorkspaceSubscription[]
+
+  @@index([isActive, sortOrder])
+}
+
+// Assinatura de um workspace
+model WorkspaceSubscription {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String   @unique
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  planId      String
+  plan        SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  status      SubscriptionStatus @default(TRIAL)
+  billingCycle BillingCycle @default(MONTHLY)
+
+  // Datas
+  trialEndsAt     DateTime?         // Quando o trial termina
+  currentPeriodStart DateTime       // Início do período atual
+  currentPeriodEnd   DateTime       // Fim do período atual
+  cancelledAt     DateTime?         // Data do cancelamento
+  
+  // Desconto (cupom, negociação)
+  discountPercent Int?              // Desconto em percentual
+  discountNote    String?           // Motivo do desconto
+  
+  // Notas internas
+  notes           String?           // Observações do admin
+
+  invoices        SubscriptionInvoice[]
+
+  @@index([status])
+  @@index([currentPeriodEnd])
+}
+
+// Faturas de assinatura
+model SubscriptionInvoice {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptionId String
+  subscription   WorkspaceSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  // Identificador único da fatura
+  invoiceNumber   String   @unique   // Ex: "INV-2026-00001"
+  
+  // Valores
+  amountCents     Int               // Valor da fatura
+  discountCents   Int      @default(0) // Desconto aplicado
+  totalCents      Int               // Total a pagar (amount - discount)
+  
+  // Datas
+  dueDate         DateTime          // Data de vencimento
+  paidAt          DateTime?         // Data do pagamento
+  
+  // Status
+  status          InvoiceStatus @default(PENDING)
+  
+  // Período de referência
+  periodStart     DateTime          // Início do período
+  periodEnd       DateTime          // Fim do período
+  
+  // Descrição
+  description     String?           // Descrição da cobrança
+  
+  // Pagamentos
+  payments        InvoicePayment[]
+
+  @@index([subscriptionId])
+  @@index([status, dueDate])
+}
+
+// Pagamentos recebidos
+model InvoicePayment {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  invoiceId String
+  invoice   SubscriptionInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  amountCents     Int               // Valor pago
+  paymentMethod   String            // "PIX", "CREDIT_CARD", "BOLETO", etc.
+  
+  // Dados do pagamento
+  transactionId   String?           // ID da transação no gateway
+  gatewayResponse String?           // Resposta do gateway (JSON)
+  
+  // Comprovante
+  receiptUrl      String?           // URL do comprovante
+  notes           String?           // Observações
+
+  @@index([invoiceId])
+}
+
+// Configurações globais do sistema de pagamento (Super Admin)
+model SystemSettings {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  key       String   @unique        // Chave da configuração
+  value     String                  // Valor (pode ser JSON)
+  
+  // Categorias de configuração:
+  // "payment.pix_key" - Chave PIX do sistema
+  // "payment.pix_key_type" - Tipo da chave PIX
+  // "payment.pix_holder_name" - Nome do titular
+  // "payment.pix_city" - Cidade
+  // "payment.gateway" - Gateway ativo (manual, stripe, pagseguro)
+  // "payment.gateway_config" - Configuração do gateway (JSON criptografado)
+  // "billing.grace_period_days" - Dias de carência
+  // "billing.auto_suspend" - Suspender automaticamente após X dias
+}
+
