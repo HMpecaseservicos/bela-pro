@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
@@ -47,7 +47,7 @@ const PAYMENT_METHODS: Record<string, string> = {
   OTHER: 'Outro',
 };
 
-export default function TransacoesPage() {
+function TransacoesContent() {
   const searchParams = useSearchParams();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [total, setTotal] = useState(0);
@@ -477,5 +477,22 @@ export default function TransacoesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div style={{ padding: 32, textAlign: 'center' }}>
+      <div style={{ fontSize: 24, marginBottom: 12 }}>⏳</div>
+      <p style={{ color: '#64748b' }}>Carregando transações...</p>
+    </div>
+  );
+}
+
+export default function TransacoesPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <TransacoesContent />
+    </Suspense>
   );
 }
