@@ -36,13 +36,13 @@ interface MessageEvent {
   description: string;
 }
 
-const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  PENDING: { bg: '#fef3c7', text: '#d97706', label: 'Pendente' },
-  PENDING_PAYMENT: { bg: '#fef3c7', text: '#f59e0b', label: 'Aguardando Pagamento' },
-  CONFIRMED: { bg: '#dbeafe', text: '#2563eb', label: 'Confirmado' },
-  COMPLETED: { bg: '#d1fae5', text: '#059669', label: 'Concluído' },
-  CANCELLED: { bg: '#fee2e2', text: '#dc2626', label: 'Cancelado' },
-  NO_SHOW: { bg: '#f3f4f6', text: '#6b7280', label: 'Não compareceu' },
+const STATUS_COLORS: Record<string, { bg: string; text: string; label: string; icon: string; gradient?: string }> = {
+  PENDING: { bg: '#fef3c7', text: '#d97706', label: 'Pendente', icon: '⏳', gradient: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' },
+  PENDING_PAYMENT: { bg: '#fff7ed', text: '#ea580c', label: 'Aguardando Pix', icon: '💳', gradient: 'linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%)' },
+  CONFIRMED: { bg: '#dbeafe', text: '#2563eb', label: 'Confirmado', icon: '✓', gradient: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)' },
+  COMPLETED: { bg: '#d1fae5', text: '#059669', label: 'Concluído', icon: '✔', gradient: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)' },
+  CANCELLED: { bg: '#fee2e2', text: '#dc2626', label: 'Cancelado', icon: '✗', gradient: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)' },
+  NO_SHOW: { bg: '#f3f4f6', text: '#6b7280', label: 'Não compareceu', icon: '○', gradient: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)' },
 };
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 8);
@@ -91,7 +91,10 @@ export default function AgendaPage() {
   const [existingClients, setExistingClients] = useState<{ id: string; name: string; phoneE164: string }[]>([]);
   const [showClientSuggestions, setShowClientSuggestions] = useState(false);
   const [filteredClients, setFilteredClients] = useState<{ id: string; name: string; phoneE164: string }[]>([]);
-
+  
+  // Filtros
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [showLegend, setShowLegend] = useState(false);
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
   useEffect(() => {
@@ -635,9 +638,37 @@ export default function AgendaPage() {
     return days;
   }
 
-  const dayAppointments = appointments.filter(
+  // Agendamentos do dia (todos)
+  const allDayAppointments = appointments.filter(
     a => new Date(a.startAt).toDateString() === selectedDate.toDateString()
   );
+  
+  // Aplicar filtro de status
+  const dayAppointments = statusFilter === 'ALL' 
+    ? allDayAppointments 
+    : allDayAppointments.filter(a => a.status === statusFilter);
+  
+  // Métricas do dia
+  const todayStats = {
+    total: allDayAppointments.length,
+    confirmed: allDayAppointments.filter(a => a.status === 'CONFIRMED').length,
+    pending: allDayAppointments.filter(a => a.status === 'PENDING' || a.status === 'PENDING_PAYMENT').length,
+    completed: allDayAppointments.filter(a => a.status === 'COMPLETED').length,
+    cancelled: allDayAppointments.filter(a => a.status === 'CANCELLED' || a.status === 'NO_SHOW').length,
+    revenue: allDayAppointments
+      .filter(a => a.status === 'COMPLETED' || a.status === 'CONFIRMED')
+      .reduce((sum, a) => sum + (a.services[0]?.service?.priceCents || 0), 0),
+  };
+  
+  // Próximo agendamento
+  const now = new Date();
+  const nextAppointment = appointments
+    .filter(a => new Date(a.startAt) > now && (a.status === 'CONFIRMED' || a.status === 'PENDING'))
+    .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime())[0];
+  
+  // Hora atual para indicador
+  const currentHour = now.getHours();
+  const isToday = selectedDate.toDateString() === now.toDateString();
 
   if (loading) {
     return (
@@ -728,6 +759,184 @@ export default function AgendaPage() {
         </div>
       </div>
 
+      {/* Dashboard Stats */}
+      {!isMobile && (
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(4, 1fr)', 
+          gap: 16, 
+          marginBottom: 20,
+        }}>
+          {/* Card: Total do Dia */}
+          <div style={{
+            background: 'linear-gradient(135deg, #667eea 0%, #5a67d8 100%)',
+            borderRadius: 16,
+            padding: '20px 24px',
+            color: 'white',
+            boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+          }}>
+            <div style={{ fontSize: 13, opacity: 0.9, marginBottom: 8 }}>📅 Agendamentos Hoje</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <span style={{ fontSize: 32, fontWeight: 700 }}>{todayStats.total}</span>
+              <span style={{ fontSize: 14, opacity: 0.8 }}>
+                {todayStats.confirmed} confirmados
+              </span>
+            </div>
+          </div>
+          
+          {/* Card: Próximo */}
+          <div style={{
+            background: 'white',
+            borderRadius: 16,
+            padding: '20px 24px',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          }}>
+            <div style={{ fontSize: 13, color: '#64748b', marginBottom: 8 }}>⏰ Próximo Atendimento</div>
+            {nextAppointment ? (
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#1e293b' }}>
+                  {new Date(nextAppointment.startAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                </div>
+                <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>
+                  {nextAppointment.client.name} • {nextAppointment.services[0]?.service?.name}
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 15, color: '#94a3b8' }}>Nenhum agendado</div>
+            )}
+          </div>
+          
+          {/* Card: Pendentes */}
+          <div style={{
+            background: todayStats.pending > 0 ? 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' : 'white',
+            borderRadius: 16,
+            padding: '20px 24px',
+            border: todayStats.pending > 0 ? 'none' : '1px solid #e2e8f0',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          }}>
+            <div style={{ fontSize: 13, color: '#92400e', marginBottom: 8 }}>⏳ Pendentes</div>
+            <div style={{ fontSize: 32, fontWeight: 700, color: '#d97706' }}>{todayStats.pending}</div>
+            <div style={{ fontSize: 12, color: '#b45309', marginTop: 4 }}>
+              {todayStats.pending > 0 ? 'Aguardando confirmação' : 'Tudo em dia!'}
+            </div>
+          </div>
+          
+          {/* Card: Faturamento */}
+          <div style={{
+            background: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)',
+            borderRadius: 16,
+            padding: '20px 24px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+          }}>
+            <div style={{ fontSize: 13, color: '#065f46', marginBottom: 8 }}>💰 Faturamento do Dia</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: '#047857' }}>
+              {formatPrice(todayStats.revenue)}
+            </div>
+            <div style={{ fontSize: 12, color: '#059669', marginTop: 4 }}>
+              {todayStats.completed} concluídos + {todayStats.confirmed} confirmados
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filtros e Legenda */}
+      <div style={{ 
+        display: 'flex', 
+        flexWrap: 'wrap',
+        alignItems: 'center', 
+        gap: 12, 
+        marginBottom: 16,
+      }}>
+        {/* Filtros por status */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {[
+            { value: 'ALL', label: 'Todos', count: allDayAppointments.length },
+            { value: 'PENDING', label: '⏳ Pendentes', count: allDayAppointments.filter(a => a.status === 'PENDING').length },
+            { value: 'PENDING_PAYMENT', label: '💳 Aguardando Pix', count: allDayAppointments.filter(a => a.status === 'PENDING_PAYMENT').length },
+            { value: 'CONFIRMED', label: '✓ Confirmados', count: allDayAppointments.filter(a => a.status === 'CONFIRMED').length },
+            { value: 'COMPLETED', label: '✔ Concluídos', count: allDayAppointments.filter(a => a.status === 'COMPLETED').length },
+          ].filter(f => f.count > 0 || f.value === 'ALL').map(filter => (
+            <button
+              key={filter.value}
+              onClick={() => setStatusFilter(filter.value)}
+              style={{
+                padding: '6px 12px',
+                border: statusFilter === filter.value ? 'none' : '1px solid #e2e8f0',
+                borderRadius: 20,
+                background: statusFilter === filter.value 
+                  ? (filter.value === 'ALL' ? '#667eea' : STATUS_COLORS[filter.value]?.text || '#667eea')
+                  : 'white',
+                color: statusFilter === filter.value ? 'white' : '#64748b',
+                fontSize: 12,
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              {filter.label}
+              <span style={{ 
+                background: statusFilter === filter.value ? 'rgba(255,255,255,0.3)' : '#f1f5f9',
+                padding: '2px 6px',
+                borderRadius: 10,
+                fontSize: 11,
+              }}>
+                {filter.count}
+              </span>
+            </button>
+          ))}
+        </div>
+        
+        {/* Botão Legenda */}
+        <button 
+          onClick={() => setShowLegend(!showLegend)}
+          style={{
+            marginLeft: 'auto',
+            padding: '6px 12px',
+            border: '1px solid #e2e8f0',
+            borderRadius: 8,
+            background: showLegend ? '#f1f5f9' : 'white',
+            color: '#64748b',
+            fontSize: 12,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+          }}
+        >
+          🎨 Legenda
+        </button>
+      </div>
+      
+      {/* Legenda expandida */}
+      {showLegend && (
+        <div style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 12,
+          padding: '12px 16px',
+          background: '#f8fafc',
+          borderRadius: 10,
+          marginBottom: 16,
+          border: '1px solid #e2e8f0',
+        }}>
+          {Object.entries(STATUS_COLORS).map(([key, value]) => (
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+              <div style={{
+                width: 12,
+                height: 12,
+                borderRadius: 3,
+                background: value.text,
+              }} />
+              <span style={{ color: '#64748b' }}>{value.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Date Navigation */}
       <div style={{ 
         display: 'flex', 
@@ -774,66 +983,188 @@ export default function AgendaPage() {
 
       {/* Calendar View */}
       {view === 'day' ? (
-        <div style={{ flex: 1, background: 'white', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.08)', overflow: 'auto' }}>
+        <div style={{ flex: 1, background: 'white', borderRadius: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'auto' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {HOURS.map(hour => {
               const hourAppointments = dayAppointments.filter(a => new Date(a.startAt).getHours() === hour);
+              const isCurrentHour = isToday && currentHour === hour;
+              const isPastHour = isToday && currentHour > hour;
 
               return (
-                <div key={hour} style={{ display: 'flex', borderBottom: '1px solid #f1f5f9', minHeight: 80 }}>
-                  <div style={{ width: 80, padding: '12px 16px', borderRight: '1px solid #f1f5f9', color: '#94a3b8', fontSize: 13, fontWeight: 500, flexShrink: 0 }}>
-                    {`${hour.toString().padStart(2, '0')}:00`}
+                <div 
+                  key={hour} 
+                  style={{ 
+                    display: 'flex', 
+                    borderBottom: '1px solid #f1f5f9', 
+                    minHeight: 90,
+                    position: 'relative',
+                    background: isCurrentHour ? 'linear-gradient(90deg, #f0f4ff 0%, transparent 30%)' : (isPastHour ? '#fafafa' : 'white'),
+                  }}
+                >
+                  {/* Indicador de hora atual */}
+                  {isCurrentHour && (
+                    <div style={{
+                      position: 'absolute',
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: 4,
+                      background: 'linear-gradient(180deg, #667eea 0%, #5a67d8 100%)',
+                      borderRadius: '0 4px 4px 0',
+                    }} />
+                  )}
+                  
+                  <div style={{ 
+                    width: 80, 
+                    padding: '14px 16px', 
+                    borderRight: '1px solid #f1f5f9', 
+                    color: isCurrentHour ? '#667eea' : '#94a3b8', 
+                    fontSize: 14, 
+                    fontWeight: isCurrentHour ? 700 : 500, 
+                    flexShrink: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                  }}>
+                    <span>{`${hour.toString().padStart(2, '0')}:00`}</span>
+                    {isCurrentHour && <span style={{ fontSize: 10, color: '#667eea', marginTop: 2 }}>● Agora</span>}
                   </div>
 
-                  <div style={{ flex: 1, padding: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <div style={{ flex: 1, padding: 10, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-start' }}>
+                    {hourAppointments.length === 0 && !isPastHour && (
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        color: '#cbd5e1', 
+                        fontSize: 13,
+                        fontStyle: 'italic',
+                        padding: '8px 0',
+                      }}>
+                        {/* Sem agendamentos */}
+                      </div>
+                    )}
                     {hourAppointments.map(apt => {
                       const statusInfo = STATUS_COLORS[apt.status] || STATUS_COLORS.PENDING;
                       const service = apt.services[0]?.service;
+                      const isPendingPayment = apt.status === 'PENDING_PAYMENT';
+                      const initial = apt.client.name.charAt(0).toUpperCase();
+                      
                       return (
                         <div 
                           key={apt.id}
                           onClick={() => openAppointmentModal(apt)}
                           style={{
-                            background: statusInfo.bg,
-                            borderLeft: `4px solid ${statusInfo.text}`,
-                            borderRadius: 8,
-                            padding: 12,
-                            minWidth: 200,
-                            flex: '1 1 250px',
-                            maxWidth: 350,
+                            background: statusInfo.gradient || statusInfo.bg,
+                            borderRadius: 12,
+                            padding: '14px 16px',
+                            minWidth: 220,
+                            flex: '1 1 280px',
+                            maxWidth: 400,
                             cursor: 'pointer',
-                            transition: 'transform 0.1s, box-shadow 0.1s',
+                            transition: 'all 0.2s ease',
+                            border: `1px solid ${statusInfo.text}20`,
+                            position: 'relative',
+                            overflow: 'hidden',
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'scale(1.02)';
-                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = `0 8px 20px ${statusInfo.text}30`;
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.transform = 'translateY(0)';
                             e.currentTarget.style.boxShadow = 'none';
                           }}
                         >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                            <div>
-                              <div style={{ fontWeight: 600, color: '#1e293b', fontSize: 14 }}>{apt.client.name}</div>
-                              <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                                {formatTime(apt.startAt)} - {formatTime(apt.endAt)}
-                              </div>
-                            </div>
-                            <span style={{
-                              background: 'rgba(255,255,255,0.8)', color: statusInfo.text,
-                              padding: '2px 8px', borderRadius: 4, fontSize: 10, fontWeight: 600,
+                          {/* Barra de status no topo */}
+                          <div style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            height: 3,
+                            background: statusInfo.text,
+                          }} />
+                          
+                          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                            {/* Avatar */}
+                            <div style={{
+                              width: 42,
+                              height: 42,
+                              borderRadius: '50%',
+                              background: statusInfo.text,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: 'white',
+                              fontWeight: 700,
+                              fontSize: 16,
+                              flexShrink: 0,
                             }}>
-                              {statusInfo.label}
-                            </span>
-                          </div>
-                          
-                          <div style={{ fontSize: 12, color: '#64748b' }}>
-                            {service?.name} • {service && formatPrice(service.priceCents)}
-                          </div>
-                          
-                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 6 }}>
-                            📱 Clique para ver opções
+                              {initial}
+                            </div>
+                            
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              {/* Nome e horário */}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                                <div style={{ 
+                                  fontWeight: 700, 
+                                  color: '#1e293b', 
+                                  fontSize: 15,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                }}>
+                                  {apt.client.name}
+                                </div>
+                                <span style={{
+                                  background: statusInfo.text,
+                                  color: 'white',
+                                  padding: '3px 8px',
+                                  borderRadius: 6,
+                                  fontSize: 10,
+                                  fontWeight: 600,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 3,
+                                  flexShrink: 0,
+                                  marginLeft: 8,
+                                }}>
+                                  {statusInfo.icon} {statusInfo.label}
+                                </span>
+                              </div>
+                              
+                              {/* Horário */}
+                              <div style={{ fontSize: 13, color: '#64748b', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <span>🕐</span> {formatTime(apt.startAt)} - {formatTime(apt.endAt)}
+                              </div>
+                              
+                              {/* Serviço e valor */}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ fontSize: 13, color: '#475569', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                  <span>💅</span> {service?.name}
+                                </div>
+                                <div style={{ fontWeight: 700, color: statusInfo.text, fontSize: 14 }}>
+                                  {service && formatPrice(service.priceCents)}
+                                </div>
+                              </div>
+                              
+                              {/* Alerta de pagamento PIX pendente */}
+                              {isPendingPayment && (
+                                <div style={{
+                                  marginTop: 8,
+                                  padding: '6px 10px',
+                                  background: 'rgba(234, 88, 12, 0.1)',
+                                  borderRadius: 6,
+                                  fontSize: 11,
+                                  color: '#ea580c',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                }}>
+                                  💳 Aguardando pagamento PIX
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );

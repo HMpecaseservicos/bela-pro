@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException, ConflictException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymentsService } from '../payments/payments.service';
+import { normalizePhoneE164 } from '../utils/phone.util';
 import { z } from 'zod';
 
 const createPublicBookingSchema = z.object({
@@ -66,8 +67,8 @@ export class PublicBookingService {
       throw new ConflictException('Horário indisponível.');
     }
 
-    // Normaliza telefone
-    const phoneE164 = data.clientPhone.replace(/\D/g, '');
+    // Normaliza telefone para formato E.164 consistente
+    const phoneE164 = normalizePhoneE164(data.clientPhone);
 
     // Busca ou cria cliente
     let client = await this.prisma.client.findUnique({
