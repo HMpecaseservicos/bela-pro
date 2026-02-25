@@ -158,6 +158,10 @@ model Workspace {
   auditLogs    AuditLog[]
   messageTemplates MessageTemplate[]
   chatUsages   ChatUsage[]  // Histórico de uso mensal
+  
+  // Módulo financeiro
+  financialCategories  FinancialCategory[]
+  financialTransactions FinancialTransaction[]
 }
 
 model User {
@@ -311,6 +315,7 @@ model Client {
   status      ClientStatus @default(NORMAL)
 
   appointments Appointment[]
+  financialTransactions FinancialTransaction[]
 
   @@unique([workspaceId, phoneE164])
   @@index([workspaceId])
@@ -348,6 +353,7 @@ model Appointment {
   services   AppointmentService[]
   notifications NotificationJob[]
   payment    Payment?  // Pagamento associado (quando requirePayment = true)
+  financialTransaction FinancialTransaction?  // Transação financeira associada
 
   @@index([workspaceId, startAt])
   @@index([workspaceId, status])
@@ -621,4 +627,100 @@ model ConversationBillingEvent {
   @@index([workspaceId, yearMonth])
   @@index([conversationId])
   @@index([windowEndAt])  // Para queries de janelas ativas
+}
+
+// ==================== MÓDULO FINANCEIRO ====================
+
+enum TransactionType {
+  INCOME    // Receita (entrada)
+  EXPENSE   // Despesa (saída)
+}
+
+enum TransactionStatus {
+  PENDING   // Pendente (a receber ou a pagar)
+  COMPLETED // Concluído (recebido ou pago)
+  CANCELLED // Cancelado
+}
+
+enum PaymentMethod {
+  PIX
+  CASH        // Dinheiro
+  CREDIT_CARD // Cartão de crédito
+  DEBIT_CARD  // Cartão de débito
+  TRANSFER    // Transferência bancária
+  OTHER
+}
+
+// Categorias financeiras (receitas e despesas)
+model FinancialCategory {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name        String             // Nome da categoria
+  type        TransactionType    // INCOME ou EXPENSE
+  icon        String?            // Emoji ou ícone
+  color       String?            // Cor hex para visualização
+  isSystem    Boolean @default(false)  // Categorias do sistema não podem ser excluídas
+  isActive    Boolean @default(true)
+
+  transactions FinancialTransaction[]
+
+  @@index([workspaceId, type])
+  @@unique([workspaceId, name, type])
+}
+
+// Transações financeiras (receitas e despesas)
+model FinancialTransaction {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  // Tipo e status
+  type          TransactionType     // INCOME ou EXPENSE
+  status        TransactionStatus   @default(PENDING)
+  
+  // Valores
+  amountCents   Int                 // Valor em centavos
+  description   String              // Descrição da transação
+  notes         String?             // Observações adicionais
+
+  // Data da transação
+  transactionDate DateTime          // Data efetiva da transação
+  dueDate         DateTime?         // Data de vencimento (para pendentes)
+  completedAt     DateTime?         // Data de conclusão do pagamento
+
+  // Método de pagamento
+  paymentMethod PaymentMethod?
+
+  // Categoria
+  categoryId  String?
+  category    FinancialCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  // Vínculo com agendamento (para receitas de serviços)
+  appointmentId String? @unique
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  // Vínculo com cliente (opcional)
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  // Recorrência
+  isRecurring     Boolean @default(false)  // É uma transação recorrente?
+  recurringParentId String?                // ID da transação pai (para recorrentes)
+  
+  // Comprovante/anexo
+  attachmentUrl String?
+
+  @@index([workspaceId, type])
+  @@index([workspaceId, transactionDate])
+  @@index([workspaceId, status])
+  @@index([categoryId])
+  @@index([appointmentId])
 }

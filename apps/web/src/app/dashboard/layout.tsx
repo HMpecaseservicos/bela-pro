@@ -11,6 +11,7 @@ const menuItems = [
   { href: '/dashboard/agenda', icon: '📅', label: 'Agenda' },
   { href: '/dashboard/clientes', icon: '👥', label: 'Clientes' },
   { href: '/dashboard/servicos', icon: '💇', label: 'Serviços' },
+  { href: '/dashboard/financeiro', icon: '💰', label: 'Financeiro' },
   { href: '/dashboard/horarios', icon: '⏰', label: 'Horários' },
   { href: '/dashboard/equipe', icon: '👔', label: 'Equipe' },
   { href: '/dashboard/aparencia', icon: '🎨', label: 'Aparência' },

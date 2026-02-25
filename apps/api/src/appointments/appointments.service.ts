@@ -1,6 +1,7 @@
-import { Injectable, Logger, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, ConflictException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { normalizePhoneE164 } from '../utils/phone.util';
+import { FinancialService } from '../financial/financial.service';
 import { z } from 'zod';
 
 const createAppointmentSchema = z.object({
@@ -17,6 +18,8 @@ export class AppointmentsService {
 
   constructor(
     private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => FinancialService))
+    private readonly financialService: FinancialService,
   ) {}
 
   async create(workspaceId: string, input: unknown) {
@@ -275,6 +278,16 @@ export class AppointmentsService {
     }
 
     this.logger.log(`✅ [${workspaceId}] Status do agendamento ${id} alterado para ${status}`);
+
+    // Se concluído, criar transação financeira automaticamente
+    if (typedStatus === 'COMPLETED') {
+      try {
+        await this.financialService.createTransactionFromAppointment(workspaceId, id);
+        this.logger.log(`💰 [${workspaceId}] Transação financeira criada para agendamento ${id}`);
+      } catch (err: any) {
+        this.logger.warn(`⚠️ [${workspaceId}] Falha ao criar transação: ${err.message}`);
+      }
+    }
 
     return this.findOne(workspaceId, id);
   }
