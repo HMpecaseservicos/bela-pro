@@ -158,28 +158,48 @@ export function PixPaymentScreen({
 
         {!expired && (
           <>
-            {/* Valor */}
-            <div
-              style={{
-                background: '#f0fdf4',
-                borderRadius: 12,
-                padding: 16,
-                marginBottom: 20,
-              }}
-            >
-              <div style={{ fontSize: 13, color: '#64748b', marginBottom: 4 }}>
-                Valor a pagar
-              </div>
+            {/* QR Code PIX */}
+            {paymentInfo.pixCode && (
               <div
                 style={{
-                  fontSize: 32,
-                  fontWeight: 700,
-                  color: '#10b981',
+                  background: 'white',
+                  borderRadius: 16,
+                  padding: 20,
+                  marginBottom: 20,
+                  border: '2px solid #e2e8f0',
                 }}
               >
-                {formatPrice(paymentInfo.amountCents)}
+                <div style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>
+                  Escaneie o QR Code com seu app de banco
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    marginBottom: 12,
+                  }}
+                >
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(paymentInfo.pixCode)}`}
+                    alt="QR Code PIX"
+                    style={{
+                      width: 200,
+                      height: 200,
+                      borderRadius: 8,
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    fontSize: 32,
+                    fontWeight: 700,
+                    color: '#10b981',
+                  }}
+                >
+                  {formatPrice(paymentInfo.amountCents)}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Detalhes do agendamento */}
             <div
