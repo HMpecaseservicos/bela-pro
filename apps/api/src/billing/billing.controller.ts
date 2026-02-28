@@ -25,7 +25,23 @@ function requireSuperAdmin(req: any) {
 export class BillingController {
   constructor(private readonly billingService: BillingService) {}
 
-  // ==================== PLANOS ====================
+  // ==================== ENDPOINTS PARA USUÁRIOS COMUNS ====================
+
+  // Lista planos disponíveis (para qualquer usuário autenticado)
+  @Get('available-plans')
+  async getAvailablePlans() {
+    // Retorna apenas planos ativos, ordenados por sortOrder
+    return this.billingService.findAllPlans(false);
+  }
+
+  // Retorna assinatura do workspace do usuário
+  @Get('my-subscription')
+  async getMySubscription(@Req() req: any) {
+    const workspaceId = req.user.workspaceId;
+    return this.billingService.findSubscriptionByWorkspace(workspaceId);
+  }
+
+  // ==================== PLANOS (Super Admin) ====================
 
   @Get('plans')
   async getAllPlans(
