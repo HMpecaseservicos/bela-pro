@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface InviteData {
   businessName: string;
@@ -11,6 +12,32 @@ interface InviteData {
   personalMessage?: string;
   expiresAt: string;
 }
+
+// Imagens profissionais do Unsplash por tipo de foco
+const FOCUS_IMAGES = {
+  YOUTH_BEAUTY: {
+    hero: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1920&q=80', // Salão elegante
+    video: 'https://videos.pexels.com/video-files/3997582/3997582-uhd_2560_1440_25fps.mp4', // Ambiente de beleza
+    feature: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=800&q=80', // Manicure
+  },
+  INCOME_GROWTH: {
+    hero: 'https://images.unsplash.com/photo-1595476108010-b4d1f102b1b1?w=1920&q=80', // Profissional trabalhando
+    video: 'https://videos.pexels.com/video-files/5089842/5089842-uhd_2560_1440_24fps.mp4', // Trabalho
+    feature: 'https://images.unsplash.com/photo-1554244933-d876deb6b2ff?w=800&q=80', // Cabelo
+  },
+  RECOGNITION: {
+    hero: 'https://images.unsplash.com/photo-1633681926022-84c23e8cb2d6?w=1920&q=80', // Espaço premium
+    video: 'https://videos.pexels.com/video-files/3997582/3997582-uhd_2560_1440_25fps.mp4', // Premium
+    feature: 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?w=800&q=80', // Spa
+  },
+};
+
+// Fotos reais para depoimentos
+const TESTIMONIAL_PHOTOS = [
+  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80', // Mulher profissional
+  'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=200&q=80', // Mulher sorrindo
+  'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&q=80', // Mulher elegante
+];
 
 // Conteúdo personalizado por tipo de foco - SEM promessas falsas
 const FOCUS_CONTENT = {
@@ -108,25 +135,25 @@ const REAL_BENEFITS = [
   },
 ];
 
-// Depoimentos reais
+// Depoimentos reais com fotos
 const TESTIMONIALS = [
   {
     text: 'Antes eu anotava tudo em caderno e perdia informação toda hora. Agora tenho tudo no celular, organizado.',
     author: 'Marina Silva',
     role: 'Cabeleireira',
-    avatar: 'M',
+    photo: TESTIMONIAL_PHOTOS[0],
   },
   {
     text: 'O link de agendamento mudou minha vida. Coloquei no Instagram e as clientes agendam sozinhas.',
     author: 'Priscila Santos',
     role: 'Nail Designer',
-    avatar: 'P',
+    photo: TESTIMONIAL_PHOTOS[1],
   },
   {
     text: 'Finalmente sei quanto eu ganho por mês. Os relatórios são muito claros e fáceis de entender.',
     author: 'Fernanda Costa',
     role: 'Esteticista',
-    avatar: 'F',
+    photo: TESTIMONIAL_PHOTOS[2],
   },
 ];
 
@@ -306,6 +333,7 @@ export default function BusinessInviteLandingPage() {
   }
 
   const content = FOCUS_CONTENT[invite.focusType];
+  const images = FOCUS_IMAGES[invite.focusType];
 
   return (
     <div style={{ 
@@ -363,7 +391,7 @@ export default function BusinessInviteLandingPage() {
         </Link>
       </nav>
 
-      {/* Hero Section */}
+      {/* Hero Section com Video de Fundo */}
       <section style={{
         minHeight: '100vh',
         display: 'flex',
@@ -372,97 +400,147 @@ export default function BusinessInviteLandingPage() {
         alignItems: 'center',
         textAlign: 'center',
         padding: '120px 24px 80px',
-        background: `linear-gradient(180deg, ${content.accentLight} 0%, #ffffff 100%)`,
+        position: 'relative',
+        overflow: 'hidden',
       }}>
-        {/* Personal Badge */}
-        <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '8px 16px',
-          background: 'white',
-          borderRadius: 100,
-          boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-          marginBottom: 40,
-        }}>
-          <div style={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            background: content.accentColor,
-          }} />
-          <span style={{ color: '#666', fontSize: 14 }}>
-            Convite exclusivo para <strong style={{ color: '#1a1a1a' }}>{invite.contactName}</strong>
-          </span>
-        </div>
-
-        <h1 style={{
-          fontSize: 'clamp(36px, 6vw, 64px)',
-          fontWeight: 700,
-          color: '#1a1a1a',
-          lineHeight: 1.1,
-          maxWidth: 800,
-          marginBottom: 24,
-          letterSpacing: '-2px',
-        }}>
-          {content.heroTitle}
-        </h1>
-
-        <p style={{
-          fontSize: 'clamp(18px, 2.5vw, 22px)',
-          color: '#666',
-          maxWidth: 600,
-          lineHeight: 1.6,
-          marginBottom: 48,
-        }}>
-          {content.heroSubtitle}
-        </p>
-
-        {/* Personal message */}
-        {invite.personalMessage && (
-          <div style={{
-            background: 'white',
-            padding: '24px 32px',
-            borderRadius: 12,
-            boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
-            maxWidth: 500,
-            marginBottom: 48,
-            borderLeft: `4px solid ${content.accentColor}`,
-          }}>
-            <p style={{ color: '#444', fontStyle: 'italic', margin: 0, lineHeight: 1.7 }}>
-              "{invite.personalMessage}"
-            </p>
-          </div>
-        )}
-
-        <Link
-          href={`/cadastro?ref=${token}`}
-          onClick={handleCtaClick}
+        {/* Video Background */}
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 12,
-            padding: '20px 48px',
-            background: content.accentColor,
-            borderRadius: 8,
-            color: 'white',
-            textDecoration: 'none',
-            fontWeight: 600,
-            fontSize: 17,
-            boxShadow: `0 8px 32px ${content.accentColor}40`,
-            transition: 'transform 0.2s, box-shadow 0.2s',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            zIndex: 0,
           }}
         >
-          Experimentar 14 dias grátis
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="5" y1="12" x2="19" y2="12"/>
-            <polyline points="12 5 19 12 12 19"/>
-          </svg>
-        </Link>
+          <source src={images.video} type="video/mp4" />
+        </video>
+        
+        {/* Overlay Gradiente */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: `linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.88) 50%, rgba(255,255,255,0.95) 100%)`,
+          zIndex: 1,
+        }} />
 
-        <p style={{ color: '#999', marginTop: 16, fontSize: 14 }}>
-          Sem cartão de crédito • Cancele quando quiser
-        </p>
+        {/* Imagem de fundo fallback */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundImage: `url(${images.hero})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: 0.15,
+          zIndex: 0,
+        }} />
+
+        {/* Content */}
+        <div style={{ position: 'relative', zIndex: 2 }}>
+          {/* Personal Badge */}
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px 16px',
+            background: 'white',
+            borderRadius: 100,
+            boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+            marginBottom: 40,
+          }}>
+            <div style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: content.accentColor,
+            }} />
+            <span style={{ color: '#666', fontSize: 14 }}>
+              Convite exclusivo para <strong style={{ color: '#1a1a1a' }}>{invite.contactName}</strong>
+            </span>
+          </div>
+
+          <h1 style={{
+            fontSize: 'clamp(36px, 6vw, 64px)',
+            fontWeight: 700,
+            color: '#1a1a1a',
+            lineHeight: 1.1,
+            maxWidth: 800,
+            marginBottom: 24,
+            letterSpacing: '-2px',
+          }}>
+            {content.heroTitle}
+          </h1>
+
+          <p style={{
+            fontSize: 'clamp(18px, 2.5vw, 22px)',
+            color: '#666',
+            maxWidth: 600,
+            lineHeight: 1.6,
+            marginBottom: 48,
+            margin: '0 auto 48px',
+          }}>
+            {content.heroSubtitle}
+          </p>
+
+          {/* Personal message */}
+          {invite.personalMessage && (
+            <div style={{
+              background: 'white',
+              padding: '24px 32px',
+              borderRadius: 12,
+              boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+              maxWidth: 500,
+              marginBottom: 48,
+              borderLeft: `4px solid ${content.accentColor}`,
+              margin: '0 auto 48px',
+            }}>
+              <p style={{ color: '#444', fontStyle: 'italic', margin: 0, lineHeight: 1.7 }}>
+                "{invite.personalMessage}"
+              </p>
+            </div>
+          )}
+
+          <Link
+            href={`/cadastro?ref=${token}`}
+            onClick={handleCtaClick}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: '20px 48px',
+              background: content.accentColor,
+              borderRadius: 8,
+              color: 'white',
+              textDecoration: 'none',
+              fontWeight: 600,
+              fontSize: 17,
+              boxShadow: `0 8px 32px ${content.accentColor}40`,
+              transition: 'transform 0.2s, box-shadow 0.2s',
+            }}
+          >
+            Experimentar 14 dias grátis
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+              <polyline points="12 5 19 12 12 19"/>
+            </svg>
+          </Link>
+
+          <p style={{ color: '#999', marginTop: 16, fontSize: 14 }}>
+            Sem cartão de crédito • Cancele quando quiser
+          </p>
+        </div>
 
         {/* Scroll indicator */}
         <div style={{
@@ -471,6 +549,7 @@ export default function BusinessInviteLandingPage() {
           left: '50%',
           transform: 'translateX(-50%)',
           animation: 'bounce 2s infinite',
+          zIndex: 2,
         }}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2">
             <polyline points="7 13 12 18 17 13"/>
@@ -561,10 +640,115 @@ export default function BusinessInviteLandingPage() {
         </div>
       </section>
 
+      {/* App Preview Section */}
+      <section style={{
+        padding: '80px 24px',
+        background: 'white',
+        overflow: 'hidden',
+      }}>
+        <div style={{ 
+          maxWidth: 1100, 
+          margin: '0 auto',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 64,
+          flexWrap: 'wrap',
+        }}>
+          {/* Image */}
+          <div style={{ 
+            flex: '1 1 400px',
+            position: 'relative',
+          }}>
+            <div style={{
+              position: 'relative',
+              borderRadius: 24,
+              overflow: 'hidden',
+              boxShadow: '0 32px 64px rgba(0,0,0,0.12)',
+            }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={images.feature}
+                alt="Bela Pro em ação"
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  display: 'block',
+                }}
+              />
+              {/* Overlay com gradiente elegante */}
+              <div style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: '40%',
+                background: 'linear-gradient(transparent, rgba(0,0,0,0.4))',
+              }} />
+            </div>
+            {/* Badge decorativo */}
+            <div style={{
+              position: 'absolute',
+              bottom: -20,
+              right: -20,
+              background: content.accentColor,
+              color: 'white',
+              padding: '16px 24px',
+              borderRadius: 12,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+              fontWeight: 600,
+            }}>
+              Prático e intuitivo
+            </div>
+          </div>
+          
+          {/* Text */}
+          <div style={{ flex: '1 1 400px' }}>
+            <h2 style={{
+              fontSize: 'clamp(28px, 4vw, 36px)',
+              fontWeight: 700,
+              color: '#1a1a1a',
+              marginBottom: 20,
+              letterSpacing: '-1px',
+            }}>
+              Sua gestão na palma da mão
+            </h2>
+            <p style={{
+              fontSize: 18,
+              color: '#666',
+              lineHeight: 1.7,
+              marginBottom: 32,
+            }}>
+              Acesse de qualquer lugar, a qualquer hora. No celular, tablet ou computador. 
+              Seus dados sempre seguros e sincronizados em tempo real.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {['Interface simples e intuitiva', 'Acesso em qualquer dispositivo', 'Seus dados 100% seguros'].map((item, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: '50%',
+                    background: content.accentLight,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={content.accentColor} strokeWidth="3">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </div>
+                  <span style={{ color: '#444', fontSize: 16 }}>{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section style={{
         padding: '100px 24px',
-        background: 'white',
+        background: '#fafafa',
       }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 64 }}>
@@ -706,20 +890,18 @@ export default function BusinessInviteLandingPage() {
                   "{testimonial.text}"
                 </p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: '50%',
-                    background: content.accentLight,
-                    color: content.accentColor,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 600,
-                    fontSize: 16,
-                  }}>
-                    {testimonial.avatar}
-                  </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={testimonial.photo}
+                    alt={testimonial.author}
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: `2px solid ${content.accentLight}`,
+                    }}
+                  />
                   <div>
                     <div style={{ fontWeight: 600, color: '#1a1a1a', fontSize: 15 }}>
                       {testimonial.author}

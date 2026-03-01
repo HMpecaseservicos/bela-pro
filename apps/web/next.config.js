@@ -39,6 +39,14 @@ const nextConfig = {
         protocol: 'http',
         hostname: 'localhost',
       },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'videos.pexels.com',
+      },
     ],
     // Netlify usa loader externo para otimização de imagens
     unoptimized: process.env.NETLIFY === 'true',
