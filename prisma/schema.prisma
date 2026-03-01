@@ -165,6 +165,9 @@ model Workspace {
   
   // Sistema de planos e billing
   subscription WorkspaceSubscription?
+  
+  // Origem do convite (se veio de um convite)
+  inviteSource BusinessInvite? @relation("InviteToWorkspace")
 }
 
 model User {
@@ -183,6 +186,9 @@ model User {
 
   memberships Membership[]
   auditLogs   AuditLog[]
+  
+  // Convites enviados (Super Admin)
+  invitesSent BusinessInvite[] @relation("InviteSentBy")
 
   @@unique([email])
 }
@@ -906,5 +912,77 @@ model SystemSettings {
   // "payment.gateway_config" - Configuração do gateway (JSON criptografado)
   // "billing.grace_period_days" - Dias de carência
   // "billing.auto_suspend" - Suspender automaticamente após X dias
+}
+
+// ==================== CONVITES DE EMPRESAS (Super Admin) ====================
+
+enum BusinessInviteStatus {
+  PENDING       // Enviado, aguardando ação
+  VIEWED        // Link foi acessado
+  CLICKED_CTA   // Clicou em "Começar Grátis"
+  REGISTERED    // Se cadastrou
+  ACTIVATED     // Ativou a conta (completou onboarding)
+  EXPIRED       // Expirou sem ação
+  CANCELLED     // Cancelado pelo admin
+}
+
+enum InviteFocusType {
+  YOUTH_BEAUTY  // Foco em juventude/beleza para mulheres
+  INCOME_GROWTH // Foco em aumento de renda
+  RECOGNITION   // Foco em reconhecimento profissional
+}
+
+model BusinessInvite {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Dados do convidado
+  businessName      String              // Nome do salão/profissional
+  contactName       String              // Nome do contato
+  email             String?             // Email (opcional)
+  phone             String              // WhatsApp (obrigatório)
+  city              String?             // Cidade
+  
+  // Token único para o convite
+  token             String   @unique @default(cuid())
+  
+  // Personalização
+  focusType         InviteFocusType @default(RECOGNITION)  // Qual dor focar
+  personalMessage   String?             // Mensagem personalizada do admin
+  
+  // Rastreamento
+  status            BusinessInviteStatus @default(PENDING)
+  viewCount         Int      @default(0)  // Quantas vezes acessou o link
+  lastViewedAt      DateTime?             // Última visualização
+  ctaClickedAt      DateTime?             // Quando clicou no CTA
+  registeredAt      DateTime?             // Quando se cadastrou
+  activatedAt       DateTime?             // Quando ativou
+  
+  // Expiração
+  expiresAt         DateTime              // Data de expiração
+  
+  // Se converteu, qual workspace criou
+  convertedWorkspaceId String? @unique
+  convertedWorkspace   Workspace? @relation("InviteToWorkspace", fields: [convertedWorkspaceId], references: [id])
+  
+  // Quem enviou o convite
+  sentById          String
+  sentBy            User @relation("InviteSentBy", fields: [sentById], references: [id])
+  
+  // Métricas de envio
+  sentViaWhatsApp   Boolean  @default(false)
+  sentViaEmail      Boolean  @default(false)
+  whatsappSentAt    DateTime?
+  emailSentAt       DateTime?
+  
+  // Notas do admin
+  notes             String?
+
+  @@index([status])
+  @@index([phone])
+  @@index([email])
+  @@index([expiresAt])
+  @@index([token])
 }
 

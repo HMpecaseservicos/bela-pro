@@ -7,6 +7,7 @@ import Link from 'next/link';
 const MENU_ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: '📊', exact: true },
   { href: '/admin/workspaces', label: 'Empresas', icon: '🏢' },
+  { href: '/admin/convites', label: 'Convites', icon: '✉️' },
   { href: '/admin/users', label: 'Usuários', icon: '👥' },
   { href: '/admin/plans', label: 'Planos', icon: '📋' },
   { href: '/admin/subscriptions', label: 'Assinaturas', icon: '💳' },
