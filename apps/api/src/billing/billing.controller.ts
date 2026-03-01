@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   Req,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BillingService } from './billing.service';
@@ -16,7 +17,7 @@ import { BillingService } from './billing.service';
 // Guard para verificar se é Super Admin
 function requireSuperAdmin(req: any) {
   if (!req.user?.isSuperAdmin) {
-    throw new Error('Acesso negado: requer Super Admin');
+    throw new ForbiddenException('Acesso negado: requer Super Admin');
   }
 }
 

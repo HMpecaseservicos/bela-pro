@@ -4,6 +4,8 @@ import {
   Param,
   Query,
   UseGuards,
+  Req,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ChatUsageService } from './chat-usage.service';
@@ -22,13 +24,30 @@ export class ChatUsageController {
   constructor(private readonly chatUsageService: ChatUsageService) {}
 
   /**
+   * Valida se o usuário tem acesso ao workspace
+   */
+  private validateWorkspaceAccess(req: any, workspaceId: string) {
+    // Super Admin pode acessar qualquer workspace
+    if (req.user?.isSuperAdmin) return;
+    
+    // Usuário comum só pode acessar seu próprio workspace
+    if (req.user?.workspaceId !== workspaceId) {
+      throw new ForbiddenException('Acesso negado a este workspace');
+    }
+  }
+
+  /**
    * GET /chat-usage/:workspaceId/current
    * 
    * Retorna o uso do mês atual para um workspace.
    * Útil para exibir no dashboard do admin.
    */
   @Get(':workspaceId/current')
-  async getCurrentUsage(@Param('workspaceId') workspaceId: string) {
+  async getCurrentUsage(
+    @Req() req: any,
+    @Param('workspaceId') workspaceId: string,
+  ) {
+    this.validateWorkspaceAccess(req, workspaceId);
     const usage = await this.chatUsageService.getOrCreateMonthlyUsage(workspaceId);
     
     return {
@@ -51,9 +70,11 @@ export class ChatUsageController {
    */
   @Get(':workspaceId/history')
   async getUsageHistory(
+    @Req() req: any,
     @Param('workspaceId') workspaceId: string,
     @Query('months') months?: string,
   ) {
+    this.validateWorkspaceAccess(req, workspaceId);
     const monthsNum = months ? parseInt(months, 10) : 6;
     const history = await this.chatUsageService.getUsageHistory(workspaceId, monthsNum);
 
@@ -71,9 +92,11 @@ export class ChatUsageController {
    */
   @Get(':workspaceId/summary')
   async getMonthlySummary(
+    @Req() req: any,
     @Param('workspaceId') workspaceId: string,
     @Query('yearMonth') yearMonth?: string,
   ) {
+    this.validateWorkspaceAccess(req, workspaceId);
     const targetMonth = yearMonth ?? getCurrentYearMonth();
     const summary = await this.chatUsageService.getMonthlyBillingSummary(
       workspaceId,
@@ -94,9 +117,11 @@ export class ChatUsageController {
    */
   @Get(':workspaceId/conversation/:conversationId/events')
   async getConversationEvents(
+    @Req() req: any,
     @Param('workspaceId') workspaceId: string,
     @Param('conversationId') conversationId: string,
   ) {
+    this.validateWorkspaceAccess(req, workspaceId);
     const events = await this.chatUsageService.getConversationBillingEvents(
       conversationId,
     );
