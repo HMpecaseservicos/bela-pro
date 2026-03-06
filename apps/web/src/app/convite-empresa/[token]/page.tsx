@@ -39,7 +39,7 @@ function BelaProLogo({ size = 'md', variant = 'color', circular = false }: { siz
           src={src}
           alt="Bela Pro"
           style={{
-            height: height * 0.7,
+            height: height * 0.85,
             width: 'auto',
             objectFit: 'contain',
           }}
@@ -611,14 +611,19 @@ export default function BusinessInviteLandingPage() {
         right: 0,
         padding: '12px 24px',
         display: 'flex',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         alignItems: 'center',
         background: 'rgba(255,255,255,0.98)',
         backdropFilter: 'blur(20px)',
         zIndex: 100,
         borderBottom: '1px solid rgba(0,0,0,0.06)',
       }}>
-        <BelaProLogo size="lg" variant="color" circular />
+        {/* Container para centralizar a logo */}
+        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
+          <BelaProLogo size="lg" variant="color" circular />
+        </div>
+        {/* Espaçador invisível */}
+        <div style={{ flex: 1 }} />
         <Link
           href={`/cadastro?ref=${token}`}
           onClick={handleCtaClick}
@@ -631,6 +636,7 @@ export default function BusinessInviteLandingPage() {
             fontWeight: 600,
             fontSize: 14,
             boxShadow: `0 4px 12px ${content.accentColor}30`,
+            marginLeft: 'auto',
           }}
         >
           Começar grátis
