@@ -9,11 +9,12 @@ import Image from 'next/image';
 // LOGO PROFISSIONAL DO BELA PRO
 // =============================================================================
 
-function BelaProLogo({ size = 'md', variant = 'color' }: { size?: 'sm' | 'md' | 'lg'; variant?: 'color' | 'white' }) {
+function BelaProLogo({ size = 'md', variant = 'color' }: { size?: 'sm' | 'md' | 'lg' | 'xl'; variant?: 'color' | 'white' }) {
   const sizes = {
-    sm: { height: 36 },
-    md: { height: 50 },
-    lg: { height: 70 },
+    sm: { height: 45 },
+    md: { height: 60 },
+    lg: { height: 80 },
+    xl: { height: 100 },
   };
   
   const { height } = sizes[size];
@@ -580,7 +581,7 @@ export default function BusinessInviteLandingPage() {
         top: 0,
         left: 0,
         right: 0,
-        padding: '12px 24px',
+        padding: '8px 24px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -589,7 +590,7 @@ export default function BusinessInviteLandingPage() {
         zIndex: 100,
         borderBottom: '1px solid rgba(0,0,0,0.06)',
       }}>
-        <BelaProLogo size="sm" variant="color" />
+        <BelaProLogo size="md" variant="color" />
         <Link
           href={`/cadastro?ref=${token}`}
           onClick={handleCtaClick}
@@ -1076,7 +1077,7 @@ export default function BusinessInviteLandingPage() {
         textAlign: 'center',
       }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-          <BelaProLogo size="md" variant="white" />
+          <BelaProLogo size="lg" variant="white" />
         </div>
         <p style={{ color: '#888', fontSize: 14 }}>
           A plataforma de gestão para profissionais de beleza
