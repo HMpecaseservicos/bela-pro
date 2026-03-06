@@ -9,16 +9,44 @@ import Image from 'next/image';
 // LOGO PROFISSIONAL DO BELA PRO
 // =============================================================================
 
-function BelaProLogo({ size = 'md', variant = 'color' }: { size?: 'sm' | 'md' | 'lg' | 'xl'; variant?: 'color' | 'white' }) {
+function BelaProLogo({ size = 'md', variant = 'color', circular = false }: { size?: 'sm' | 'md' | 'lg' | 'xl' | 'xxl'; variant?: 'color' | 'white'; circular?: boolean }) {
   const sizes = {
-    sm: { height: 45 },
-    md: { height: 60 },
-    lg: { height: 80 },
-    xl: { height: 100 },
+    sm: { height: 50, circleSize: 60 },
+    md: { height: 70, circleSize: 85 },
+    lg: { height: 100, circleSize: 120 },
+    xl: { height: 130, circleSize: 160 },
+    xxl: { height: 160, circleSize: 200 },
   };
   
-  const { height } = sizes[size];
+  const { height, circleSize } = sizes[size];
   const src = variant === 'white' ? '/logo-white.png' : '/logo.png';
+  
+  if (circular) {
+    return (
+      <div style={{
+        width: circleSize,
+        height: circleSize,
+        borderRadius: '50%',
+        background: variant === 'white' ? 'rgba(255,255,255,0.1)' : '#faf8f5',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxShadow: variant === 'white' ? 'none' : '0 4px 20px rgba(0,0,0,0.08)',
+        border: variant === 'white' ? '2px solid rgba(255,255,255,0.2)' : '2px solid rgba(154, 125, 94, 0.15)',
+      }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img 
+          src={src}
+          alt="Bela Pro"
+          style={{
+            height: height * 0.7,
+            width: 'auto',
+            objectFit: 'contain',
+          }}
+        />
+      </div>
+    );
+  }
   
   return (
     // eslint-disable-next-line @next/next/no-img-element
@@ -581,7 +609,7 @@ export default function BusinessInviteLandingPage() {
         top: 0,
         left: 0,
         right: 0,
-        padding: '8px 24px',
+        padding: '12px 24px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -590,7 +618,7 @@ export default function BusinessInviteLandingPage() {
         zIndex: 100,
         borderBottom: '1px solid rgba(0,0,0,0.06)',
       }}>
-        <BelaProLogo size="md" variant="color" />
+        <BelaProLogo size="lg" variant="color" circular />
         <Link
           href={`/cadastro?ref=${token}`}
           onClick={handleCtaClick}
@@ -1072,14 +1100,14 @@ export default function BusinessInviteLandingPage() {
 
       {/* Footer */}
       <footer style={{
-        padding: '48px 24px',
+        padding: '60px 24px',
         background: '#1a1a1a',
         textAlign: 'center',
       }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-          <BelaProLogo size="lg" variant="white" />
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
+          <BelaProLogo size="xl" variant="white" circular />
         </div>
-        <p style={{ color: '#888', fontSize: 14 }}>
+        <p style={{ color: '#888', fontSize: 16, marginBottom: 8 }}>
           A plataforma de gestão para profissionais de beleza
         </p>
         <p style={{ color: '#555', fontSize: 12, marginTop: 24 }}>
