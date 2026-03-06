@@ -22,6 +22,7 @@ const createPlanSchema = z.object({
   features: z.array(z.string()).default([]),
   trialDays: z.number().int().min(0).default(7),
   isHighlighted: z.boolean().default(false),
+  isActive: z.boolean().default(true),
 });
 
 const updatePlanSchema = createPlanSchema.partial();
