@@ -15,7 +15,6 @@ const menuItems = [
   { href: '/dashboard/horarios', icon: '⏰', label: 'Horários' },
   { href: '/dashboard/equipe', icon: '👔', label: 'Equipe' },
   { href: '/dashboard/aparencia', icon: '🎨', label: 'Aparência' },
-  { href: '/dashboard/plano', icon: '📋', label: 'Meu Plano' },
   { href: '/dashboard/config', icon: '⚙️', label: 'Configurações' },
 ];
 
