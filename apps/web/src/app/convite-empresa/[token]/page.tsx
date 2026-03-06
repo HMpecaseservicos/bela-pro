@@ -609,7 +609,7 @@ export default function BusinessInviteLandingPage() {
         top: 0,
         left: 0,
         right: 0,
-        padding: '12px 24px',
+        padding: '20px 24px',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
@@ -617,10 +617,11 @@ export default function BusinessInviteLandingPage() {
         backdropFilter: 'blur(20px)',
         zIndex: 100,
         borderBottom: '1px solid rgba(0,0,0,0.06)',
+        minHeight: 100,
       }}>
         {/* Container para centralizar a logo */}
         <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
-          <BelaProLogo size="lg" variant="color" circular />
+          <BelaProLogo size="md" variant="color" circular />
         </div>
         {/* Espaçador invisível */}
         <div style={{ flex: 1 }} />
