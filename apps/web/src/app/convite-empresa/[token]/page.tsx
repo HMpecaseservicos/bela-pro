@@ -603,28 +603,20 @@ export default function BusinessInviteLandingPage() {
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     }}>
       
-      {/* Navigation */}
+      {/* Navigation - Fina e discreta */}
       <nav style={{
         position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
-        padding: '20px 24px',
+        padding: '16px 24px',
         display: 'flex',
-        justifyContent: 'center',
+        justifyContent: 'flex-end',
         alignItems: 'center',
-        background: 'rgba(255,255,255,0.98)',
+        background: 'rgba(255,255,255,0.95)',
         backdropFilter: 'blur(20px)',
         zIndex: 100,
-        borderBottom: '1px solid rgba(0,0,0,0.06)',
-        minHeight: 100,
       }}>
-        {/* Container para centralizar a logo */}
-        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
-          <BelaProLogo size="md" variant="color" circular />
-        </div>
-        {/* Espaçador invisível */}
-        <div style={{ flex: 1 }} />
         <Link
           href={`/cadastro?ref=${token}`}
           onClick={handleCtaClick}
@@ -637,7 +629,6 @@ export default function BusinessInviteLandingPage() {
             fontWeight: 600,
             fontSize: 14,
             boxShadow: `0 4px 12px ${content.accentColor}30`,
-            marginLeft: 'auto',
           }}
         >
           Começar grátis
@@ -648,10 +639,19 @@ export default function BusinessInviteLandingPage() {
       <section style={{
         minHeight: '100vh',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        padding: '120px 24px 80px',
+        padding: '100px 24px 80px',
         background: `linear-gradient(180deg, ${content.accentLight} 0%, #ffffff 60%)`,
       }}>
+        {/* Logo Circular Grande - Centralizada no Topo */}
+        <div style={{
+          marginBottom: 48,
+          marginTop: 20,
+        }}>
+          <BelaProLogo size="xxl" variant="color" circular />
+        </div>
+
         <div style={{
           maxWidth: 1200,
           margin: '0 auto',
