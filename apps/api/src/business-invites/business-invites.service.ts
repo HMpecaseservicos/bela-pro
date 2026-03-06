@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { BusinessInviteStatus, InviteFocusType } from '@prisma/client';
+import { BusinessInviteStatus, InviteFocusType, InviteType } from '@prisma/client';
 
 export interface CreateInviteDto {
   businessName: string;
@@ -8,6 +8,15 @@ export interface CreateInviteDto {
   phone: string;
   email?: string;
   city?: string;
+  focusType?: InviteFocusType;
+  personalMessage?: string;
+  notes?: string;
+  expiresInDays?: number;
+}
+
+export interface CreatePublicInviteDto {
+  campaignName: string;
+  slug?: string;
   focusType?: InviteFocusType;
   personalMessage?: string;
   notes?: string;
@@ -24,11 +33,14 @@ export interface UpdateInviteDto {
   personalMessage?: string;
   notes?: string;
   status?: BusinessInviteStatus;
+  campaignName?: string;
+  slug?: string;
 }
 
 export interface InviteFilters {
   status?: BusinessInviteStatus;
   focusType?: InviteFocusType;
+  inviteType?: InviteType;
   search?: string;
   page?: number;
   limit?: number;
@@ -71,6 +83,7 @@ export class BusinessInvitesService {
 
     const invite = await this.prisma.businessInvite.create({
       data: {
+        inviteType: 'PERSONAL',
         businessName: data.businessName,
         contactName: data.contactName,
         phone,
@@ -97,6 +110,67 @@ export class BusinessInvitesService {
   }
 
   /**
+   * Cria um convite público para divulgação em redes sociais
+   */
+  async createPublicInvite(sentById: string, data: CreatePublicInviteDto) {
+    // Valida e normaliza o slug
+    let slug = data.slug;
+    if (slug) {
+      slug = this.normalizeSlug(slug);
+      
+      // Verifica se já existe esse slug
+      const existingSlug = await this.prisma.businessInvite.findUnique({
+        where: { slug },
+      });
+      
+      if (existingSlug) {
+        throw new BadRequestException(`O slug "${slug}" já está em uso. Escolha outro.`);
+      }
+    }
+
+    // Define data de expiração (padrão: 30 dias para campanhas)
+    const expiresInDays = data.expiresInDays || 30;
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+
+    const invite = await this.prisma.businessInvite.create({
+      data: {
+        inviteType: 'PUBLIC',
+        campaignName: data.campaignName,
+        slug,
+        focusType: data.focusType || 'RECOGNITION',
+        personalMessage: data.personalMessage,
+        notes: data.notes,
+        expiresAt,
+        sentById,
+      },
+      include: {
+        sentBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    return invite;
+  }
+
+  /**
+   * Normaliza slug para URL amigável
+   */
+  private normalizeSlug(slug: string): string {
+    return slug
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      .replace(/[^a-z0-9]+/g, '-') // Substitui caracteres especiais por hífen
+      .replace(/^-|-$/g, ''); // Remove hífens no início/fim
+  }
+
+  /**
    * Lista convites com filtros e paginação
    */
   async findAll(filters: InviteFilters) {
@@ -114,6 +188,10 @@ export class BusinessInvitesService {
       where.focusType = filters.focusType;
     }
 
+    if (filters.inviteType) {
+      where.inviteType = filters.inviteType;
+    }
+
     if (filters.search) {
       where.OR = [
         { businessName: { contains: filters.search, mode: 'insensitive' } },
@@ -121,6 +199,8 @@ export class BusinessInvitesService {
         { phone: { contains: filters.search } },
         { email: { contains: filters.search, mode: 'insensitive' } },
         { city: { contains: filters.search, mode: 'insensitive' } },
+        { campaignName: { contains: filters.search, mode: 'insensitive' } },
+        { slug: { contains: filters.search, mode: 'insensitive' } },
       ];
     }
 
@@ -192,12 +272,19 @@ export class BusinessInvitesService {
   }
 
   /**
-   * Busca convite por token (para landing page pública)
+   * Busca convite por token ou slug (para landing page pública)
    */
-  async findByToken(token: string) {
-    const invite = await this.prisma.businessInvite.findUnique({
-      where: { token },
+  async findByToken(tokenOrSlug: string) {
+    // Tenta encontrar por token primeiro, depois por slug
+    let invite = await this.prisma.businessInvite.findUnique({
+      where: { token: tokenOrSlug },
     });
+
+    if (!invite) {
+      invite = await this.prisma.businessInvite.findUnique({
+        where: { slug: tokenOrSlug },
+      });
+    }
 
     if (!invite) {
       return null;
@@ -219,10 +306,17 @@ export class BusinessInvitesService {
   /**
    * Registra clique no CTA
    */
-  async registerCtaClick(token: string) {
-    const invite = await this.prisma.businessInvite.findUnique({
-      where: { token },
+  async registerCtaClick(tokenOrSlug: string) {
+    // Tenta encontrar por token primeiro, depois por slug
+    let invite = await this.prisma.businessInvite.findUnique({
+      where: { token: tokenOrSlug },
     });
+
+    if (!invite) {
+      invite = await this.prisma.businessInvite.findUnique({
+        where: { slug: tokenOrSlug },
+      });
+    }
 
     if (!invite) {
       throw new NotFoundException('Convite não encontrado');
@@ -232,13 +326,24 @@ export class BusinessInvitesService {
       throw new BadRequestException('Este convite não é mais válido');
     }
 
-    await this.prisma.businessInvite.update({
-      where: { id: invite.id },
-      data: {
-        ctaClickedAt: new Date(),
-        status: 'CLICKED_CTA',
-      },
-    });
+    // Para convites públicos, incrementa o contador de cliques
+    if (invite.inviteType === 'PUBLIC') {
+      await this.prisma.businessInvite.update({
+        where: { id: invite.id },
+        data: {
+          totalClicks: { increment: 1 },
+          ctaClickedAt: new Date(),
+        },
+      });
+    } else {
+      await this.prisma.businessInvite.update({
+        where: { id: invite.id },
+        data: {
+          ctaClickedAt: new Date(),
+          status: 'CLICKED_CTA',
+        },
+      });
+    }
 
     return { success: true };
   }

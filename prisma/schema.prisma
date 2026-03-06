@@ -15,7 +15,7 @@ enum UserRole {
 
 enum AppointmentStatus {
   PENDING
-  PENDING_PAYMENT  // Aguardando pagamento PIX
+  PENDING_PAYMENT // Aguardando pagamento PIX
   CONFIRMED
   CANCELLED
   COMPLETED
@@ -57,21 +57,21 @@ enum NotificationType {
 
 // Eventos de mensagem configuráveis (sistema de templates manuais)
 enum MessageEventType {
-  APPOINTMENT_CREATED       // Agendamento criado (aguardando confirmação)
-  APPOINTMENT_CONFIRMED     // Agendamento confirmado
-  APPOINTMENT_COMPLETED     // Serviço concluído
-  APPOINTMENT_REMINDER_24H  // Lembrete 24h antes
-  APPOINTMENT_REMINDER_2H   // Lembrete 2h antes
-  APPOINTMENT_CANCELLED     // Agendamento cancelado
+  APPOINTMENT_CREATED // Agendamento criado (aguardando confirmação)
+  APPOINTMENT_CONFIRMED // Agendamento confirmado
+  APPOINTMENT_COMPLETED // Serviço concluído
+  APPOINTMENT_REMINDER_24H // Lembrete 24h antes
+  APPOINTMENT_REMINDER_2H // Lembrete 2h antes
+  APPOINTMENT_CANCELLED // Agendamento cancelado
 }
 
 // ==================== PAGAMENTO PIX ====================
 
 enum PaymentType {
-  NONE             // Sem exigência de pagamento
-  FULL             // Valor total do serviço
-  PARTIAL_PERCENT  // Percentual do valor (sinal)
-  PARTIAL_FIXED    // Valor fixo (sinal)
+  NONE // Sem exigência de pagamento
+  FULL // Valor total do serviço
+  PARTIAL_PERCENT // Percentual do valor (sinal)
+  PARTIAL_FIXED // Valor fixo (sinal)
 }
 
 enum PixKeyType {
@@ -83,10 +83,10 @@ enum PixKeyType {
 }
 
 enum PaymentStatus {
-  PENDING    // Aguardando pagamento
-  PAID       // Pago (confirmado manualmente)
-  CANCELLED  // Cancelado (expirado ou cancelamento)
-  REFUNDED   // Reembolsado (futuro)
+  PENDING // Aguardando pagamento
+  PAID // Pago (confirmado manualmente)
+  CANCELLED // Cancelado (expirado ou cancelamento)
+  REFUNDED // Reembolsado (futuro)
 }
 
 model Workspace {
@@ -94,78 +94,78 @@ model Workspace {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name      String
-  slug      String   @unique
-  timezone  String   @default("America/Sao_Paulo")
+  name     String
+  slug     String @unique
+  timezone String @default("America/Sao_Paulo")
 
   // Identidade visual básica
-  brandName String?  // ex.: "Studio da Ana"
+  brandName       String? // ex.: "Studio da Ana"
   primaryColorHex String? // ex.: #A855F7
-  accentColorHex String?  // Cor secundária/destaque
-  logoUrl String?  // URL do logo
-  coverImageUrl String?  // Imagem de capa (hero)
-  galleryUrls String[]  // Array de URLs do portfólio
-  themePreset String?  // Preset: rose_gold, burgundy, olive_green, classic_dark, ocean_blue, custom
+  accentColorHex  String? // Cor secundária/destaque
+  logoUrl         String? // URL do logo
+  coverImageUrl   String? // Imagem de capa (hero)
+  galleryUrls     String[] // Array de URLs do portfólio
+  themePreset     String? // Preset: rose_gold, burgundy, olive_green, classic_dark, ocean_blue, custom
 
   // Textos customizáveis da página pública
-  welcomeText String?  // "Agende seu horário conosco!"
-  description String?  // Descrição do negócio
+  welcomeText String? // "Agende seu horário conosco!"
+  description String? // Descrição do negócio
 
   // Regras globais (MVP)
   minLeadTimeMinutes  Int @default(120)
   bufferMinutes       Int @default(10)
   maxBookingDaysAhead Int @default(60)
   cancelMinMinutes    Int @default(120)
-  slotIntervalMinutes Int @default(15)  // Intervalo entre slots: 15, 30, 60
+  slotIntervalMinutes Int @default(15) // Intervalo entre slots: 15, 30, 60
 
   // Plano e billing
-  plan WorkspacePlan @default(BASIC)  // Plano do workspace
-  chatbotEnabled Boolean @default(true)  // Chatbot ativo/inativo
+  plan           WorkspacePlan @default(BASIC) // Plano do workspace
+  chatbotEnabled Boolean       @default(true) // Chatbot ativo/inativo
 
   // WhatsApp (conexão simplificada via Evolution API)
-  whatsappEvolutionInstanceName String? @unique
+  whatsappEvolutionInstanceName String?   @unique
   whatsappLastConnectionState   String?
   whatsappLastConnectedAt       DateTime?
   whatsappWebhookUrl            String?
 
   // ==================== PAGAMENTO PIX ====================
   // Configurações de cobrança para confirmação de agendamento
-  requirePayment       Boolean      @default(false)  // Exigir pagamento para confirmar
-  paymentType          PaymentType  @default(NONE)   // Tipo de cobrança
-  partialPercent       Int?                          // Percentual do sinal (10-100)
-  partialFixedAmount   Decimal?     @db.Decimal(10,2) // Valor fixo do sinal
-  paymentExpiryMinutes Int          @default(30)     // Minutos para expirar o pagamento
+  requirePayment       Boolean     @default(false) // Exigir pagamento para confirmar
+  paymentType          PaymentType @default(NONE) // Tipo de cobrança
+  partialPercent       Int? // Percentual do sinal (10-100)
+  partialFixedAmount   Decimal?    @db.Decimal(10, 2) // Valor fixo do sinal
+  paymentExpiryMinutes Int         @default(30) // Minutos para expirar o pagamento
 
   // Dados do PIX do estabelecimento
-  pixKeyType           PixKeyType?                   // Tipo da chave PIX
-  pixKey               String?                       // Chave PIX
-  pixHolderName        String?                       // Nome do titular
-  pixCity              String?                       // Cidade (para QR Code)
+  pixKeyType    PixKeyType? // Tipo da chave PIX
+  pixKey        String? // Chave PIX
+  pixHolderName String? // Nome do titular
+  pixCity       String? // Cidade (para QR Code)
 
-  memberships  Membership[]
-  inviteTokens InviteToken[]
-  profile      ProfessionalProfile?
-  services     Service[]
-  bundles      ServiceBundle[]
-  clients      Client[]
-  appointments Appointment[]
-  scheduleRules ScheduleRule[]
-  timeOffs     TimeOff[]
-  manualBlocks ManualBlock[]
-  chatTemplates ChatbotTemplate[]
-  conversations ChatbotConversation[]
+  memberships      Membership[]
+  inviteTokens     InviteToken[]
+  profile          ProfessionalProfile?
+  services         Service[]
+  bundles          ServiceBundle[]
+  clients          Client[]
+  appointments     Appointment[]
+  scheduleRules    ScheduleRule[]
+  timeOffs         TimeOff[]
+  manualBlocks     ManualBlock[]
+  chatTemplates    ChatbotTemplate[]
+  conversations    ChatbotConversation[]
   notificationJobs NotificationJob[]
-  auditLogs    AuditLog[]
+  auditLogs        AuditLog[]
   messageTemplates MessageTemplate[]
-  chatUsages   ChatUsage[]  // Histórico de uso mensal
-  
+  chatUsages       ChatUsage[] // Histórico de uso mensal
+
   // Módulo financeiro
-  financialCategories  FinancialCategory[]
+  financialCategories   FinancialCategory[]
   financialTransactions FinancialTransaction[]
-  
+
   // Sistema de planos e billing
   subscription WorkspaceSubscription?
-  
+
   // Origem do convite (se veio de um convite)
   inviteSource BusinessInvite? @relation("InviteToWorkspace")
 }
@@ -175,18 +175,18 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name      String
-  email     String
+  name         String
+  email        String
   passwordHash String
 
-  isActive  Boolean @default(true)
-  
+  isActive Boolean @default(true)
+
   // Super Admin: acesso global a todos os workspaces
   isSuperAdmin Boolean @default(false)
 
   memberships Membership[]
   auditLogs   AuditLog[]
-  
+
   // Convites enviados (Super Admin)
   invitesSent BusinessInvite[] @relation("InviteSentBy")
 
@@ -202,7 +202,7 @@ model Membership {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   userId String
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   role     UserRole @default(OWNER)
   isActive Boolean  @default(true)
@@ -217,7 +217,7 @@ model ProfessionalProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  workspaceId String @unique
+  workspaceId String    @unique
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   displayName String
@@ -231,18 +231,18 @@ model InviteToken {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
 
-  token     String   @unique  // Token único para URL
-  email     String             // Email do convidado
-  name      String             // Nome do convidado
-  role      UserRole @default(STAFF)
+  token String   @unique // Token único para URL
+  email String // Email do convidado
+  name  String // Nome do convidado
+  role  UserRole @default(STAFF)
 
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  invitedById String            // Quem enviou o convite
-  
-  expiresAt DateTime            // Expira em 7 dias
-  usedAt    DateTime?           // Quando foi aceito (null = pendente)
+  invitedById String // Quem enviou o convite
+
+  expiresAt DateTime // Expira em 7 dias
+  usedAt    DateTime? // Quando foi aceito (null = pendente)
 
   @@index([token])
   @@index([workspaceId])
@@ -257,26 +257,26 @@ model Service {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  name        String
-  description String?
+  name            String
+  description     String?
   durationMinutes Int
-  priceCents  Int
+  priceCents      Int
 
   isActive      Boolean @default(true)
-  showInBooking Boolean @default(true)  // Exibir na página pública?
-  sortOrder     Int     @default(0)     // Ordem de exibição
-  
+  showInBooking Boolean @default(true) // Exibir na página pública?
+  sortOrder     Int     @default(0) // Ordem de exibição
+
   // Campos premium para exibição
-  imageUrl    String?  // Foto real do serviço
-  badgeText   String?  // Badge ("Mais pedido", "Novidade")
-  categoryTag String?  // Categoria ("sobrancelha", "unhas")
+  imageUrl    String? // Foto real do serviço
+  badgeText   String? // Badge ("Mais pedido", "Novidade")
+  categoryTag String? // Categoria ("sobrancelha", "unhas")
 
   appointmentServices AppointmentService[]
-  bundleItems ServiceBundleItem[]
+  bundleItems         ServiceBundleItem[]
 
+  @@unique([workspaceId, name])
   @@index([workspaceId, isActive])
   @@index([workspaceId, showInBooking, sortOrder])
-  @@unique([workspaceId, name])
 }
 
 model ServiceBundle {
@@ -291,16 +291,16 @@ model ServiceBundle {
   description String?
   isActive    Boolean @default(true)
 
-  items       ServiceBundleItem[]
+  items ServiceBundleItem[]
 
   @@unique([workspaceId, name])
 }
 
 model ServiceBundleItem {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  bundleId  String
-  bundle    ServiceBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  bundleId String
+  bundle   ServiceBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
 
   serviceId String
   service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
@@ -318,12 +318,12 @@ model Client {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  name        String
-  phoneE164   String
+  name          String
+  phoneE164     String
   notesInternal String?
-  status      ClientStatus @default(NORMAL)
+  status        ClientStatus @default(NORMAL)
 
-  appointments Appointment[]
+  appointments          Appointment[]
   financialTransactions FinancialTransaction[]
 
   @@unique([workspaceId, phoneE164])
@@ -338,19 +338,19 @@ model Appointment {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  clientId   String
-  client     Client @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Restrict)
 
-  startAt    DateTime
-  endAt      DateTime
+  startAt DateTime
+  endAt   DateTime
 
-  status     AppointmentStatus @default(PENDING)
+  status AppointmentStatus @default(PENDING)
 
   // origem do agendamento
-  bookedVia  String @default("admin") // admin | public | whatsapp
+  bookedVia String @default("admin") // admin | public | whatsapp
 
-  cancelledAt DateTime?
-  cancelledBy CancelledBy?
+  cancelledAt  DateTime?
+  cancelledBy  CancelledBy?
   cancelReason String?
 
   // Lembrete automático
@@ -359,23 +359,23 @@ model Appointment {
   // Financeiro MVP: snapshot
   totalPriceCents Int @default(0)
 
-  services   AppointmentService[]
-  notifications NotificationJob[]
-  payment    Payment?  // Pagamento associado (quando requirePayment = true)
-  financialTransaction FinancialTransaction?  // Transação financeira associada
+  services             AppointmentService[]
+  notifications        NotificationJob[]
+  payment              Payment? // Pagamento associado (quando requirePayment = true)
+  financialTransaction FinancialTransaction? // Transação financeira associada
 
   @@index([workspaceId, startAt])
   @@index([workspaceId, status])
 }
 
 model AppointmentService {
-  id            String @id @default(cuid())
+  id String @id @default(cuid())
 
   appointmentId String
   appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
 
-  serviceId     String
-  service       Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
 
   durationMinutes Int
   priceCents      Int
@@ -395,25 +395,25 @@ model Payment {
   appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
 
   // Valores
-  amountCents     Int                // Valor a pagar em centavos
-  serviceTotalCents Int              // Valor total do serviço (referência)
+  amountCents       Int // Valor a pagar em centavos
+  serviceTotalCents Int // Valor total do serviço (referência)
 
   // Status do pagamento
-  status      PaymentStatus @default(PENDING)
+  status PaymentStatus @default(PENDING)
 
   // PIX (cópia e cola gerado)
-  pixCode     String?       @db.Text  // Código PIX "copia e cola" ou payload BR Code
-  pixQrBase64 String?       @db.Text  // QR Code em base64 (opcional)
+  pixCode     String? @db.Text // Código PIX "copia e cola" ou payload BR Code
+  pixQrBase64 String? @db.Text // QR Code em base64 (opcional)
 
   // Controle de expiração
-  expiresAt   DateTime               // Quando o pagamento expira
+  expiresAt DateTime // Quando o pagamento expira
 
   // Confirmação manual
-  paidAt      DateTime?              // Quando foi confirmado
-  confirmedBy String?                // ID do usuário que confirmou
+  paidAt      DateTime? // Quando foi confirmado
+  confirmedBy String? // ID do usuário que confirmou
 
   // Notas
-  notes       String?                // Observações (ex: "comprovante recebido via WhatsApp")
+  notes String? // Observações (ex: "comprovante recebido via WhatsApp")
 
   @@index([status])
   @@index([expiresAt])
@@ -476,8 +476,8 @@ model ChatbotTemplate {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  key     String // ex.: CONFIRMATION, REMINDER_24H
-  content String
+  key      String // ex.: CONFIRMATION, REMINDER_24H
+  content  String
   isActive Boolean @default(true)
 
   @@unique([workspaceId, key])
@@ -491,10 +491,10 @@ model ChatbotConversation {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  channel  ChatChannel @default(WHATSAPP)
+  channel   ChatChannel @default(WHATSAPP)
   phoneE164 String
 
-  state    ChatConversationState @default(START)
+  state       ChatConversationState @default(START)
   contextJson Json?
 
   isHumanHandoff Boolean @default(false)
@@ -530,11 +530,11 @@ model NotificationJob {
   appointmentId String?
   appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
 
-  type      NotificationType
-  runAt     DateTime
+  type  NotificationType
+  runAt DateTime
 
-  status    String @default("SCHEDULED") // scheduled|processing|sent|failed|cancelled
-  attempts  Int @default(0)
+  status    String  @default("SCHEDULED") // scheduled|processing|sent|failed|cancelled
+  attempts  Int     @default(0)
   lastError String?
 
   @@index([workspaceId, runAt])
@@ -549,7 +549,7 @@ model AuditLog {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   actorUserId String?
-  actorUser   User? @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorUser   User?   @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
 
   action   String
   entity   String
@@ -568,11 +568,11 @@ model MessageTemplate {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  eventType   MessageEventType  // Tipo do evento (APPOINTMENT_CREATED, etc.)
-  enabled     Boolean @default(true)  // Ativo/Inativo
-  message     String  // Texto do template com variáveis {{clientName}}, etc.
-  
-  allowClientReply Boolean @default(false)  // Espera resposta do cliente?
+  eventType MessageEventType // Tipo do evento (APPOINTMENT_CREATED, etc.)
+  enabled   Boolean          @default(true) // Ativo/Inativo
+  message   String // Texto do template com variáveis {{clientName}}, etc.
+
+  allowClientReply Boolean @default(false) // Espera resposta do cliente?
 
   @@unique([workspaceId, eventType])
   @@index([workspaceId])
@@ -584,10 +584,10 @@ model MessageTemplate {
 // ============================================================================
 
 enum WorkspacePlan {
-  FREE        // Teste gratuito
-  BASIC       // Plano básico
-  PRO         // Plano profissional
-  ENTERPRISE  // Plano enterprise
+  FREE // Teste gratuito
+  BASIC // Plano básico
+  PRO // Plano profissional
+  ENTERPRISE // Plano enterprise
 }
 
 model ChatUsage {
@@ -599,16 +599,16 @@ model ChatUsage {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   // Período de faturamento (YYYY-MM)
-  yearMonth String  // ex: "2026-01"
+  yearMonth String // ex: "2026-01"
 
   // Contadores de conversas
-  conversationsUsed   Int @default(0)  // Conversas dentro do limite
-  conversationsLimit  Int              // Limite do mês (vem do plano)
-  excessConversations Int @default(0)  // Conversas excedentes (para cobrança)
+  conversationsUsed   Int @default(0) // Conversas dentro do limite
+  conversationsLimit  Int // Limite do mês (vem do plano)
+  excessConversations Int @default(0) // Conversas excedentes (para cobrança)
 
   // Metadados para auditoria
-  lastConversationAt DateTime?  // Última conversa registrada
-  
+  lastConversationAt DateTime? // Última conversa registrada
+
   @@unique([workspaceId, yearMonth])
   @@index([workspaceId])
   @@index([yearMonth])
@@ -620,43 +620,43 @@ model ConversationBillingEvent {
   createdAt DateTime @default(now())
 
   workspaceId String
-  
+
   // Referência à conversa
   conversationId String
   phoneE164      String
-  
+
   // Janela de 24h
-  windowStartAt DateTime  // Início da janela de 24h
-  windowEndAt   DateTime  // Fim da janela de 24h
-  
+  windowStartAt DateTime // Início da janela de 24h
+  windowEndAt   DateTime // Fim da janela de 24h
+
   // Status do billing
-  isExcess      Boolean @default(false)  // Se foi contabilizado como excedente
-  yearMonth     String  // Mês de referência
+  isExcess  Boolean @default(false) // Se foi contabilizado como excedente
+  yearMonth String // Mês de referência
 
   @@index([workspaceId, yearMonth])
   @@index([conversationId])
-  @@index([windowEndAt])  // Para queries de janelas ativas
+  @@index([windowEndAt]) // Para queries de janelas ativas
 }
 
 // ==================== MÓDULO FINANCEIRO ====================
 
 enum TransactionType {
-  INCOME    // Receita (entrada)
-  EXPENSE   // Despesa (saída)
+  INCOME // Receita (entrada)
+  EXPENSE // Despesa (saída)
 }
 
 enum TransactionStatus {
-  PENDING   // Pendente (a receber ou a pagar)
+  PENDING // Pendente (a receber ou a pagar)
   COMPLETED // Concluído (recebido ou pago)
   CANCELLED // Cancelado
 }
 
 enum PaymentMethod {
   PIX
-  CASH        // Dinheiro
+  CASH // Dinheiro
   CREDIT_CARD // Cartão de crédito
-  DEBIT_CARD  // Cartão de débito
-  TRANSFER    // Transferência bancária
+  DEBIT_CARD // Cartão de débito
+  TRANSFER // Transferência bancária
   OTHER
 }
 
@@ -669,17 +669,17 @@ model FinancialCategory {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  name        String             // Nome da categoria
-  type        TransactionType    // INCOME ou EXPENSE
-  icon        String?            // Emoji ou ícone
-  color       String?            // Cor hex para visualização
-  isSystem    Boolean @default(false)  // Categorias do sistema não podem ser excluídas
-  isActive    Boolean @default(true)
+  name     String // Nome da categoria
+  type     TransactionType // INCOME ou EXPENSE
+  icon     String? // Emoji ou ícone
+  color    String? // Cor hex para visualização
+  isSystem Boolean         @default(false) // Categorias do sistema não podem ser excluídas
+  isActive Boolean         @default(true)
 
   transactions FinancialTransaction[]
 
-  @@index([workspaceId, type])
   @@unique([workspaceId, name, type])
+  @@index([workspaceId, type])
 }
 
 // Transações financeiras (receitas e despesas)
@@ -692,28 +692,28 @@ model FinancialTransaction {
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   // Tipo e status
-  type          TransactionType     // INCOME ou EXPENSE
-  status        TransactionStatus   @default(PENDING)
-  
+  type   TransactionType // INCOME ou EXPENSE
+  status TransactionStatus @default(PENDING)
+
   // Valores
-  amountCents   Int                 // Valor em centavos
-  description   String              // Descrição da transação
-  notes         String?             // Observações adicionais
+  amountCents Int // Valor em centavos
+  description String // Descrição da transação
+  notes       String? // Observações adicionais
 
   // Data da transação
-  transactionDate DateTime          // Data efetiva da transação
-  dueDate         DateTime?         // Data de vencimento (para pendentes)
-  completedAt     DateTime?         // Data de conclusão do pagamento
+  transactionDate DateTime // Data efetiva da transação
+  dueDate         DateTime? // Data de vencimento (para pendentes)
+  completedAt     DateTime? // Data de conclusão do pagamento
 
   // Método de pagamento
   paymentMethod PaymentMethod?
 
   // Categoria
-  categoryId  String?
-  category    FinancialCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryId String?
+  category   FinancialCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   // Vínculo com agendamento (para receitas de serviços)
-  appointmentId String? @unique
+  appointmentId String?      @unique
   appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
 
   // Vínculo com cliente (opcional)
@@ -721,9 +721,9 @@ model FinancialTransaction {
   client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
   // Recorrência
-  isRecurring     Boolean @default(false)  // É uma transação recorrente?
-  recurringParentId String?                // ID da transação pai (para recorrentes)
-  
+  isRecurring       Boolean @default(false) // É uma transação recorrente?
+  recurringParentId String? // ID da transação pai (para recorrentes)
+
   // Comprovante/anexo
   attachmentUrl String?
 
@@ -737,26 +737,26 @@ model FinancialTransaction {
 // ==================== SISTEMA DE PLANOS E BILLING (Super Admin) ====================
 
 enum SubscriptionStatus {
-  ACTIVE        // Assinatura ativa
-  TRIAL         // Período de teste
-  PAST_DUE      // Pagamento atrasado
-  CANCELLED     // Cancelada
-  SUSPENDED     // Suspensa (inadimplência)
+  ACTIVE // Assinatura ativa
+  TRIAL // Período de teste
+  PAST_DUE // Pagamento atrasado
+  CANCELLED // Cancelada
+  SUSPENDED // Suspensa (inadimplência)
 }
 
 enum InvoiceStatus {
-  DRAFT         // Rascunho (não enviada)
-  PENDING       // Aguardando pagamento
-  PAID          // Paga
-  OVERDUE       // Vencida
-  CANCELLED     // Cancelada
+  DRAFT // Rascunho (não enviada)
+  PENDING // Aguardando pagamento
+  PAID // Paga
+  OVERDUE // Vencida
+  CANCELLED // Cancelada
 }
 
 enum BillingCycle {
-  MONTHLY       // Mensal
-  QUARTERLY     // Trimestral
-  SEMIANNUAL    // Semestral
-  ANNUAL        // Anual
+  MONTHLY // Mensal
+  QUARTERLY // Trimestral
+  SEMIANNUAL // Semestral
+  ANNUAL // Anual
 }
 
 // Planos de assinatura configurados pelo Super Admin
@@ -765,37 +765,37 @@ model SubscriptionPlan {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name          String              // Ex: "Básico", "Profissional", "Premium"
-  description   String?             // Descrição do plano
-  
+  name        String // Ex: "Básico", "Profissional", "Premium"
+  description String? // Descrição do plano
+
   // Preços por ciclo (em centavos)
-  priceMonthly    Int               // Preço mensal
-  priceQuarterly  Int?              // Preço trimestral
-  priceSemiannual Int?              // Preço semestral
-  priceAnnual     Int?              // Preço anual
-  
+  priceMonthly    Int // Preço mensal
+  priceQuarterly  Int? // Preço trimestral
+  priceSemiannual Int? // Preço semestral
+  priceAnnual     Int? // Preço anual
+
   // Limites e recursos
-  maxAppointments Int?              // Limite de agendamentos/mês (null = ilimitado)
-  maxClients      Int?              // Limite de clientes
-  maxTeamMembers  Int?              // Limite de membros da equipe
-  chatbotEnabled  Boolean @default(true)  // Chatbot incluso?
-  whatsappEnabled Boolean @default(true)  // WhatsApp incluso?
-  financialEnabled Boolean @default(true) // Módulo financeiro incluso?
+  maxAppointments   Int? // Limite de agendamentos/mês (null = ilimitado)
+  maxClients        Int? // Limite de clientes
+  maxTeamMembers    Int? // Limite de membros da equipe
+  chatbotEnabled    Boolean @default(true) // Chatbot incluso?
+  whatsappEnabled   Boolean @default(true) // WhatsApp incluso?
+  financialEnabled  Boolean @default(true) // Módulo financeiro incluso?
   pixPaymentEnabled Boolean @default(true) // Pagamento PIX incluso?
-  
+
   // Recursos extras (JSON flexível)
-  features        String[]          // Lista de recursos ("Suporte prioritário", etc.)
-  
+  features String[] // Lista de recursos ("Suporte prioritário", etc.)
+
   // Ordenação e visibilidade
-  sortOrder       Int      @default(0)    // Ordem de exibição
-  isActive        Boolean  @default(true) // Plano ativo para venda?
-  isHighlighted   Boolean  @default(false) // Destacar como "recomendado"?
-  
+  sortOrder     Int     @default(0) // Ordem de exibição
+  isActive      Boolean @default(true) // Plano ativo para venda?
+  isHighlighted Boolean @default(false) // Destacar como "recomendado"?
+
   // Trial
-  trialDays       Int      @default(7)    // Dias de teste grátis
-  
+  trialDays Int @default(7) // Dias de teste grátis
+
   // Relações
-  subscriptions   WorkspaceSubscription[]
+  subscriptions WorkspaceSubscription[]
 
   @@index([isActive, sortOrder])
 }
@@ -806,29 +806,29 @@ model WorkspaceSubscription {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  workspaceId String   @unique
+  workspaceId String    @unique
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  planId      String
-  plan        SubscriptionPlan @relation(fields: [planId], references: [id])
+  planId String
+  plan   SubscriptionPlan @relation(fields: [planId], references: [id])
 
-  status      SubscriptionStatus @default(TRIAL)
-  billingCycle BillingCycle @default(MONTHLY)
+  status       SubscriptionStatus @default(TRIAL)
+  billingCycle BillingCycle       @default(MONTHLY)
 
   // Datas
-  trialEndsAt     DateTime?         // Quando o trial termina
-  currentPeriodStart DateTime       // Início do período atual
-  currentPeriodEnd   DateTime       // Fim do período atual
-  cancelledAt     DateTime?         // Data do cancelamento
-  
-  // Desconto (cupom, negociação)
-  discountPercent Int?              // Desconto em percentual
-  discountNote    String?           // Motivo do desconto
-  
-  // Notas internas
-  notes           String?           // Observações do admin
+  trialEndsAt        DateTime? // Quando o trial termina
+  currentPeriodStart DateTime // Início do período atual
+  currentPeriodEnd   DateTime // Fim do período atual
+  cancelledAt        DateTime? // Data do cancelamento
 
-  invoices        SubscriptionInvoice[]
+  // Desconto (cupom, negociação)
+  discountPercent Int? // Desconto em percentual
+  discountNote    String? // Motivo do desconto
+
+  // Notas internas
+  notes String? // Observações do admin
+
+  invoices SubscriptionInvoice[]
 
   @@index([status])
   @@index([currentPeriodEnd])
@@ -844,29 +844,29 @@ model SubscriptionInvoice {
   subscription   WorkspaceSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
   // Identificador único da fatura
-  invoiceNumber   String   @unique   // Ex: "INV-2026-00001"
-  
+  invoiceNumber String @unique // Ex: "INV-2026-00001"
+
   // Valores
-  amountCents     Int               // Valor da fatura
-  discountCents   Int      @default(0) // Desconto aplicado
-  totalCents      Int               // Total a pagar (amount - discount)
-  
+  amountCents   Int // Valor da fatura
+  discountCents Int @default(0) // Desconto aplicado
+  totalCents    Int // Total a pagar (amount - discount)
+
   // Datas
-  dueDate         DateTime          // Data de vencimento
-  paidAt          DateTime?         // Data do pagamento
-  
+  dueDate DateTime // Data de vencimento
+  paidAt  DateTime? // Data do pagamento
+
   // Status
-  status          InvoiceStatus @default(PENDING)
-  
+  status InvoiceStatus @default(PENDING)
+
   // Período de referência
-  periodStart     DateTime          // Início do período
-  periodEnd       DateTime          // Fim do período
-  
+  periodStart DateTime // Início do período
+  periodEnd   DateTime // Fim do período
+
   // Descrição
-  description     String?           // Descrição da cobrança
-  
+  description String? // Descrição da cobrança
+
   // Pagamentos
-  payments        InvoicePayment[]
+  payments InvoicePayment[]
 
   @@index([subscriptionId])
   @@index([status, dueDate])
@@ -880,16 +880,16 @@ model InvoicePayment {
   invoiceId String
   invoice   SubscriptionInvoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
-  amountCents     Int               // Valor pago
-  paymentMethod   String            // "PIX", "CREDIT_CARD", "BOLETO", etc.
-  
+  amountCents   Int // Valor pago
+  paymentMethod String // "PIX", "CREDIT_CARD", "BOLETO", etc.
+
   // Dados do pagamento
-  transactionId   String?           // ID da transação no gateway
-  gatewayResponse String?           // Resposta do gateway (JSON)
-  
+  transactionId   String? // ID da transação no gateway
+  gatewayResponse String? // Resposta do gateway (JSON)
+
   // Comprovante
-  receiptUrl      String?           // URL do comprovante
-  notes           String?           // Observações
+  receiptUrl String? // URL do comprovante
+  notes      String? // Observações
 
   @@index([invoiceId])
 }
@@ -900,9 +900,9 @@ model SystemSettings {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  key       String   @unique        // Chave da configuração
-  value     String                  // Valor (pode ser JSON)
-  
+  key   String @unique // Chave da configuração
+  value String // Valor (pode ser JSON)
+
   // Categorias de configuração:
   // "payment.pix_key" - Chave PIX do sistema
   // "payment.pix_key_type" - Tipo da chave PIX
@@ -917,19 +917,24 @@ model SystemSettings {
 // ==================== CONVITES DE EMPRESAS (Super Admin) ====================
 
 enum BusinessInviteStatus {
-  PENDING       // Enviado, aguardando ação
-  VIEWED        // Link foi acessado
-  CLICKED_CTA   // Clicou em "Começar Grátis"
-  REGISTERED    // Se cadastrou
-  ACTIVATED     // Ativou a conta (completou onboarding)
-  EXPIRED       // Expirou sem ação
-  CANCELLED     // Cancelado pelo admin
+  PENDING // Enviado, aguardando ação
+  VIEWED // Link foi acessado
+  CLICKED_CTA // Clicou em "Começar Grátis"
+  REGISTERED // Se cadastrou
+  ACTIVATED // Ativou a conta (completou onboarding)
+  EXPIRED // Expirou sem ação
+  CANCELLED // Cancelado pelo admin
 }
 
 enum InviteFocusType {
-  YOUTH_BEAUTY  // Foco em juventude/beleza para mulheres
+  YOUTH_BEAUTY // Foco em juventude/beleza para mulheres
   INCOME_GROWTH // Foco em aumento de renda
-  RECOGNITION   // Foco em reconhecimento profissional
+  RECOGNITION // Foco em reconhecimento profissional
+}
+
+enum InviteType {
+  PERSONAL // Convite para pessoa específica
+  PUBLIC // Convite público para divulgação em redes sociais
 }
 
 model BusinessInvite {
@@ -937,52 +942,64 @@ model BusinessInvite {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Dados do convidado
-  businessName      String              // Nome do salão/profissional
-  contactName       String              // Nome do contato
-  email             String?             // Email (opcional)
-  phone             String              // WhatsApp (obrigatório)
-  city              String?             // Cidade
-  
+  // Tipo do convite
+  inviteType InviteType @default(PERSONAL)
+
+  // Para convites PERSONAL
+  businessName String? // Nome do salão/profissional (opcional para PUBLIC)
+  contactName  String? // Nome do contato (opcional para PUBLIC)
+  email        String? // Email (opcional)
+  phone        String? // WhatsApp (opcional para PUBLIC)
+  city         String? // Cidade
+
+  // Para convites PUBLIC (campanhas)
+  campaignName String? // Nome da campanha (ex: "Instagram Março 2026")
+  slug         String? @unique // Slug customizado (ex: "instagram-marco" → /convite/instagram-marco)
+
   // Token único para o convite
-  token             String   @unique @default(cuid())
-  
+  token String @unique @default(cuid())
+
   // Personalização
-  focusType         InviteFocusType @default(RECOGNITION)  // Qual dor focar
-  personalMessage   String?             // Mensagem personalizada do admin
-  
+  focusType       InviteFocusType @default(RECOGNITION) // Qual dor focar
+  personalMessage String? // Mensagem personalizada do admin
+
   // Rastreamento
-  status            BusinessInviteStatus @default(PENDING)
-  viewCount         Int      @default(0)  // Quantas vezes acessou o link
-  lastViewedAt      DateTime?             // Última visualização
-  ctaClickedAt      DateTime?             // Quando clicou no CTA
-  registeredAt      DateTime?             // Quando se cadastrou
-  activatedAt       DateTime?             // Quando ativou
-  
+  status       BusinessInviteStatus @default(PENDING)
+  viewCount    Int                  @default(0) // Quantas vezes acessou o link
+  lastViewedAt DateTime? // Última visualização
+  ctaClickedAt DateTime? // Quando clicou no CTA
+  registeredAt DateTime? // Quando se cadastrou
+  activatedAt  DateTime? // Quando ativou
+
+  // Contadores para convites públicos
+  totalClicks        Int @default(0) // Total de cliques no CTA
+  totalRegistrations Int @default(0) // Total de cadastros vindos deste convite
+
   // Expiração
-  expiresAt         DateTime              // Data de expiração
-  
-  // Se converteu, qual workspace criou
-  convertedWorkspaceId String? @unique
+  expiresAt DateTime // Data de expiração
+
+  // Se converteu, qual workspace criou (para PERSONAL)
+  convertedWorkspaceId String?    @unique
   convertedWorkspace   Workspace? @relation("InviteToWorkspace", fields: [convertedWorkspaceId], references: [id])
-  
+
   // Quem enviou o convite
-  sentById          String
-  sentBy            User @relation("InviteSentBy", fields: [sentById], references: [id])
-  
-  // Métricas de envio
-  sentViaWhatsApp   Boolean  @default(false)
-  sentViaEmail      Boolean  @default(false)
-  whatsappSentAt    DateTime?
-  emailSentAt       DateTime?
-  
+  sentById String
+  sentBy   User   @relation("InviteSentBy", fields: [sentById], references: [id])
+
+  // Métricas de envio (para PERSONAL)
+  sentViaWhatsApp Boolean   @default(false)
+  sentViaEmail    Boolean   @default(false)
+  whatsappSentAt  DateTime?
+  emailSentAt     DateTime?
+
   // Notas do admin
-  notes             String?
+  notes String?
 
   @@index([status])
   @@index([phone])
   @@index([email])
   @@index([expiresAt])
   @@index([token])
+  @@index([inviteType])
+  @@index([slug])
 }
-

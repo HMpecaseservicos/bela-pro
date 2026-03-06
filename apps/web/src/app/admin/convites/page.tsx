@@ -4,15 +4,20 @@ import { useEffect, useState } from 'react';
 
 interface BusinessInvite {
   id: string;
-  businessName: string;
-  contactName: string;
-  phone: string;
+  inviteType: 'PERSONAL' | 'PUBLIC';
+  businessName?: string;
+  contactName?: string;
+  campaignName?: string;
+  slug?: string;
+  phone?: string;
   email?: string;
   city?: string;
   focusType: 'YOUTH_BEAUTY' | 'INCOME_GROWTH' | 'RECOGNITION';
   personalMessage?: string;
   status: 'PENDING' | 'VIEWED' | 'CLICKED_CTA' | 'REGISTERED' | 'ACTIVATED' | 'EXPIRED' | 'CANCELLED';
   viewCount: number;
+  totalClicks?: number;
+  totalRegistrations?: number;
   lastViewedAt?: string;
   ctaClickedAt?: string;
   registeredAt?: string;
@@ -67,18 +72,22 @@ export default function AdminConvitesPage() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [inviteType, setInviteType] = useState<'PERSONAL' | 'PUBLIC'>('PERSONAL');
   const [selectedInvite, setSelectedInvite] = useState<BusinessInvite | null>(null);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareData, setShareData] = useState<any>(null);
   const [whatsappData, setWhatsappData] = useState<any>(null);
   const [filters, setFilters] = useState({
     status: '',
     focusType: '',
+    inviteType: '',
     search: '',
   });
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Form state
+  // Form state for PERSONAL invites
   const [form, setForm] = useState({
     businessName: '',
     contactName: '',
@@ -89,6 +98,16 @@ export default function AdminConvitesPage() {
     personalMessage: '',
     notes: '',
     expiresInDays: 7,
+  });
+
+  // Form state for PUBLIC invites (campaigns)
+  const [publicForm, setPublicForm] = useState({
+    campaignName: '',
+    slug: '',
+    focusType: 'RECOGNITION' as const,
+    personalMessage: '',
+    notes: '',
+    expiresInDays: 30,
   });
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
@@ -124,6 +143,7 @@ export default function AdminConvitesPage() {
         limit: '10',
         ...(filters.status && { status: filters.status }),
         ...(filters.focusType && { focusType: filters.focusType }),
+        ...(filters.inviteType && { inviteType: filters.inviteType }),
         ...(filters.search && { search: filters.search }),
       });
 
@@ -175,6 +195,42 @@ export default function AdminConvitesPage() {
         whatsappLink: `https://wa.me/55${data.phone}?text=${encodeURIComponent(data.whatsappMessage)}`,
       });
       setShowWhatsAppModal(true);
+    } catch (err: any) {
+      alert(err.message);
+    }
+  }
+
+  async function handleCreatePublicInvite(e: React.FormEvent) {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/business-invites/public-campaign`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(publicForm),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Erro ao criar campanha');
+      }
+
+      const data = await res.json();
+      setShowModal(false);
+      resetPublicForm();
+      fetchInvites();
+      fetchMetrics();
+
+      // Show share modal with links
+      setShareData({
+        campaignName: data.campaignName,
+        inviteLink: data.inviteLink,
+        shareLinks: data.shareLinks,
+      });
+      setShowShareModal(true);
     } catch (err: any) {
       alert(err.message);
     }
@@ -260,6 +316,17 @@ export default function AdminConvitesPage() {
     });
   }
 
+  function resetPublicForm() {
+    setPublicForm({
+      campaignName: '',
+      slug: '',
+      focusType: 'RECOGNITION',
+      personalMessage: '',
+      notes: '',
+      expiresInDays: 30,
+    });
+  }
+
   function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString('pt-BR', {
       day: '2-digit',
@@ -319,19 +386,35 @@ export default function AdminConvitesPage() {
             Convide profissionais de beleza para fazer parte do Bela Pro
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          style={{
-            ...buttonStyle('primary'),
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            fontSize: 16,
-            padding: '14px 28px',
-          }}
-        >
-          <span>✉️</span> Novo Convite
-        </button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button
+            onClick={() => { setInviteType('PUBLIC'); setShowModal(true); }}
+            style={{
+              ...buttonStyle('secondary'),
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: 14,
+              padding: '12px 20px',
+              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+            }}
+          >
+            <span>📢</span> Nova Campanha
+          </button>
+          <button
+            onClick={() => { setInviteType('PERSONAL'); setShowModal(true); }}
+            style={{
+              ...buttonStyle('primary'),
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: 14,
+              padding: '12px 20px',
+            }}
+          >
+            <span>✉️</span> Convite Pessoal
+          </button>
+        </div>
       </div>
 
       {/* Metrics Dashboard */}
@@ -416,6 +499,18 @@ export default function AdminConvitesPage() {
               ))}
             </select>
           </div>
+          <div>
+            <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4, display: 'block' }}>Tipo de Convite</label>
+            <select
+              value={filters.inviteType}
+              onChange={(e) => setFilters({ ...filters, inviteType: e.target.value })}
+              style={inputStyle}
+            >
+              <option value="">Todos</option>
+              <option value="PERSONAL">👤 Personalizados</option>
+              <option value="PUBLIC">📢 Campanhas Públicas</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -435,12 +530,11 @@ export default function AdminConvitesPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #334155' }}>
-                    <th style={{ padding: 12, textAlign: 'left', color: '#94a3b8', fontWeight: 500 }}>Empresa</th>
-                    <th style={{ padding: 12, textAlign: 'left', color: '#94a3b8', fontWeight: 500 }}>Contato</th>
+                    <th style={{ padding: 12, textAlign: 'left', color: '#94a3b8', fontWeight: 500 }}>Tipo</th>
+                    <th style={{ padding: 12, textAlign: 'left', color: '#94a3b8', fontWeight: 500 }}>Nome</th>
                     <th style={{ padding: 12, textAlign: 'left', color: '#94a3b8', fontWeight: 500 }}>Foco</th>
                     <th style={{ padding: 12, textAlign: 'center', color: '#94a3b8', fontWeight: 500 }}>Status</th>
-                    <th style={{ padding: 12, textAlign: 'center', color: '#94a3b8', fontWeight: 500 }}>Views</th>
-                    <th style={{ padding: 12, textAlign: 'center', color: '#94a3b8', fontWeight: 500 }}>Enviado</th>
+                    <th style={{ padding: 12, textAlign: 'center', color: '#94a3b8', fontWeight: 500 }}>Métricas</th>
                     <th style={{ padding: 12, textAlign: 'right', color: '#94a3b8', fontWeight: 500 }}>Ações</th>
                   </tr>
                 </thead>
@@ -448,12 +542,29 @@ export default function AdminConvitesPage() {
                   {invites.map((invite) => (
                     <tr key={invite.id} style={{ borderBottom: '1px solid #1e293b' }}>
                       <td style={{ padding: 12 }}>
-                        <div style={{ fontWeight: 600, color: '#f8fafc' }}>{invite.businessName}</div>
-                        <div style={{ fontSize: 12, color: '#94a3b8' }}>{invite.city || '-'}</div>
+                        <span style={{
+                          padding: '4px 8px',
+                          borderRadius: 8,
+                          fontSize: 11,
+                          fontWeight: 600,
+                          background: invite.inviteType === 'PUBLIC' ? '#1e3a5f' : '#2e1065',
+                          color: invite.inviteType === 'PUBLIC' ? '#3b82f6' : '#8b5cf6',
+                        }}>
+                          {invite.inviteType === 'PUBLIC' ? '📢 Campanha' : '👤 Pessoal'}
+                        </span>
                       </td>
                       <td style={{ padding: 12 }}>
-                        <div style={{ color: '#f8fafc' }}>{invite.contactName}</div>
-                        <div style={{ fontSize: 12, color: '#94a3b8' }}>{invite.phone}</div>
+                        {invite.inviteType === 'PUBLIC' ? (
+                          <>
+                            <div style={{ fontWeight: 600, color: '#f8fafc' }}>{invite.campaignName}</div>
+                            <div style={{ fontSize: 12, color: '#64748b' }}>/{invite.slug || invite.token.slice(0, 8)}</div>
+                          </>
+                        ) : (
+                          <>
+                            <div style={{ fontWeight: 600, color: '#f8fafc' }}>{invite.businessName}</div>
+                            <div style={{ fontSize: 12, color: '#94a3b8' }}>{invite.contactName} • {invite.phone}</div>
+                          </>
+                        )}
                       </td>
                       <td style={{ padding: 12 }}>
                         <span style={{ color: FOCUS_TYPES[invite.focusType].color }}>
@@ -472,17 +583,51 @@ export default function AdminConvitesPage() {
                           {STATUS_LABELS[invite.status].label}
                         </span>
                       </td>
-                      <td style={{ padding: 12, textAlign: 'center', color: '#f8fafc' }}>
-                        {invite.viewCount}
-                      </td>
                       <td style={{ padding: 12, textAlign: 'center' }}>
-                        {invite.sentViaWhatsApp && <span title="WhatsApp" style={{ marginRight: 4 }}>💬</span>}
-                        {invite.sentViaEmail && <span title="Email">📧</span>}
-                        {!invite.sentViaWhatsApp && !invite.sentViaEmail && <span style={{ color: '#64748b' }}>-</span>}
+                        {invite.inviteType === 'PUBLIC' ? (
+                          <div style={{ color: '#f8fafc', fontSize: 13 }}>
+                            <span title="Visualizações">👁️ {invite.viewCount}</span>
+                            <span style={{ margin: '0 6px', color: '#475569' }}>•</span>
+                            <span title="Cliques">🖱️ {invite.totalClicks || 0}</span>
+                          </div>
+                        ) : (
+                          <div style={{ color: '#f8fafc', fontSize: 13 }}>
+                            <span title="Visualizações">👁️ {invite.viewCount}</span>
+                            {invite.sentViaWhatsApp && <span style={{ marginLeft: 8 }}>💬</span>}
+                          </div>
+                        )}
                       </td>
                       <td style={{ padding: 12, textAlign: 'right' }}>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                          {invite.status !== 'CANCELLED' && invite.status !== 'REGISTERED' && invite.status !== 'ACTIVATED' && (
+                          {invite.inviteType === 'PUBLIC' && (
+                            <button
+                              onClick={() => {
+                                const link = `${window.location.origin}/convite-empresa/${invite.slug || invite.token}`;
+                                setShareData({
+                                  campaignName: invite.campaignName,
+                                  inviteLink: link,
+                                  shareLinks: {
+                                    whatsapp: `https://wa.me/?text=${encodeURIComponent(`Transforme seu salão! Acesse: ${link}`)}`,
+                                    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`,
+                                  },
+                                });
+                                setShowShareModal(true);
+                              }}
+                              style={{
+                                padding: '6px 12px',
+                                background: '#3b82f6',
+                                border: 'none',
+                                borderRadius: 6,
+                                color: 'white',
+                                cursor: 'pointer',
+                                fontSize: 13,
+                              }}
+                              title="Compartilhar"
+                            >
+                              🔗
+                            </button>
+                          )}
+                          {invite.inviteType === 'PERSONAL' && invite.status !== 'CANCELLED' && invite.status !== 'REGISTERED' && invite.status !== 'ACTIVATED' && (
                             <button
                               onClick={() => handleSendWhatsApp(invite.id)}
                               style={{
@@ -574,15 +719,132 @@ export default function AdminConvitesPage() {
 
       {/* Create Invite Modal */}
       {showModal && (
-        <Modal onClose={() => setShowModal(false)}>
-          <h2 style={{ color: '#f8fafc', marginBottom: 8 }}>✉️ Novo Convite</h2>
-          <p style={{ color: '#94a3b8', marginBottom: 24, fontSize: 14 }}>
-            Crie um convite personalizado para um profissional de beleza
-          </p>
+        <Modal onClose={() => { setShowModal(false); setInviteType('PERSONAL'); }}>
+          {inviteType === 'PUBLIC' ? (
+            <>
+              <h2 style={{ color: '#f8fafc', marginBottom: 8 }}>📢 Nova Campanha de Divulgação</h2>
+              <p style={{ color: '#94a3b8', marginBottom: 24, fontSize: 14 }}>
+                Crie um link para compartilhar no Instagram, WhatsApp ou Facebook
+              </p>
 
-          <form onSubmit={handleCreateInvite}>
-            <div style={{ display: 'grid', gap: 16 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <form onSubmit={handleCreatePublicInvite}>
+                <div style={{ display: 'grid', gap: 16 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    <div>
+                      <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4, display: 'block' }}>
+                        Nome da Campanha *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={publicForm.campaignName}
+                        onChange={(e) => setPublicForm({ ...publicForm, campaignName: e.target.value })}
+                        placeholder="Ex: Instagram Março 2026"
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4, display: 'block' }}>
+                        Slug personalizado
+                      </label>
+                      <input
+                        type="text"
+                        value={publicForm.slug}
+                        onChange={(e) => setPublicForm({ ...publicForm, slug: e.target.value })}
+                        placeholder="Ex: instagram-marco"
+                        style={inputStyle}
+                      />
+                      <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                        Link: /convite-empresa/{publicForm.slug || 'auto'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4, display: 'block' }}>
+                      Válido por
+                    </label>
+                    <select
+                      value={publicForm.expiresInDays}
+                      onChange={(e) => setPublicForm({ ...publicForm, expiresInDays: Number(e.target.value) })}
+                      style={inputStyle}
+                    >
+                      <option value={7}>7 dias</option>
+                      <option value={14}>14 dias</option>
+                      <option value={30}>30 dias</option>
+                      <option value={60}>60 dias</option>
+                      <option value={90}>90 dias</option>
+                    </select>
+                  </div>
+
+                  {/* Focus Type Selection */}
+                  <div>
+                    <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 8, display: 'block' }}>
+                      🎯 Qual tema da campanha?
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                      {Object.entries(FOCUS_TYPES).map(([key, val]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setPublicForm({ ...publicForm, focusType: key as any })}
+                          style={{
+                            padding: 16,
+                            background: publicForm.focusType === key ? `${val.color}20` : '#0f172a',
+                            border: `2px solid ${publicForm.focusType === key ? val.color : '#334155'}`,
+                            borderRadius: 12,
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          <div style={{ fontSize: 24, marginBottom: 8 }}>{val.label.split(' ')[0]}</div>
+                          <div style={{ color: '#f8fafc', fontSize: 13, fontWeight: 600 }}>
+                            {val.label.split(' ').slice(1).join(' ')}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4, display: 'block' }}>
+                      Notas Internas
+                    </label>
+                    <input
+                      type="text"
+                      value={publicForm.notes}
+                      onChange={(e) => setPublicForm({ ...publicForm, notes: e.target.value })}
+                      placeholder="Ex: Campanha de Stories do Instagram"
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    style={buttonStyle('secondary')}
+                  >
+                    Cancelar
+                  </button>
+                  <button type="submit" style={{ ...buttonStyle('primary'), background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' }}>
+                    Criar Campanha
+                  </button>
+                </div>
+              </form>
+            </>
+          ) : (
+            <>
+              <h2 style={{ color: '#f8fafc', marginBottom: 8 }}>✉️ Convite Personalizado</h2>
+              <p style={{ color: '#94a3b8', marginBottom: 24, fontSize: 14 }}>
+                Crie um convite exclusivo para um profissional de beleza
+              </p>
+
+              <form onSubmit={handleCreateInvite}>
+                <div style={{ display: 'grid', gap: 16 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div>
                   <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4, display: 'block' }}>
                     Nome do Salão/Profissional *
@@ -742,6 +1004,104 @@ export default function AdminConvitesPage() {
               </button>
             </div>
           </form>
+            </>
+          )}
+        </Modal>
+      )}
+
+      {/* Share Modal for Public Campaigns */}
+      {showShareModal && shareData && (
+        <Modal onClose={() => setShowShareModal(false)}>
+          <h2 style={{ color: '#f8fafc', marginBottom: 8 }}>🔗 Compartilhar Campanha</h2>
+          <p style={{ color: '#94a3b8', marginBottom: 24, fontSize: 14 }}>
+            {shareData.campaignName} - Copie e compartilhe nas redes sociais
+          </p>
+
+          <div style={{
+            background: '#0f172a',
+            borderRadius: 12,
+            padding: 16,
+            marginBottom: 16,
+          }}>
+            <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 8, display: 'block' }}>
+              Link da Campanha
+            </label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="text"
+                readOnly
+                value={shareData.inviteLink}
+                style={{ ...inputStyle, flex: 1 }}
+              />
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(shareData.inviteLink);
+                  alert('Link copiado!');
+                }}
+                style={{
+                  padding: '10px 16px',
+                  background: '#10b981',
+                  border: 'none',
+                  borderRadius: 8,
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                📋 Copiar
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
+            <a
+              href={shareData.shareLinks?.whatsapp}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                padding: '14px 20px',
+                background: '#25d366',
+                borderRadius: 10,
+                color: 'white',
+                textDecoration: 'none',
+                fontWeight: 600,
+              }}
+            >
+              💬 WhatsApp
+            </a>
+            <a
+              href={shareData.shareLinks?.facebook}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                padding: '14px 20px',
+                background: '#1877f2',
+                borderRadius: 10,
+                color: 'white',
+                textDecoration: 'none',
+                fontWeight: 600,
+              }}
+            >
+              📘 Facebook
+            </a>
+          </div>
+
+          <div style={{ textAlign: 'center' }}>
+            <button
+              onClick={() => setShowShareModal(false)}
+              style={buttonStyle('secondary')}
+            >
+              Fechar
+            </button>
+          </div>
         </Modal>
       )}
 

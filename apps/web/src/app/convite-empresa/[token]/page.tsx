@@ -63,8 +63,10 @@ function BelaProLogo({ size = 'md', variant = 'color', circular = false }: { siz
 }
 
 interface InviteData {
-  businessName: string;
-  contactName: string;
+  inviteType: 'PERSONAL' | 'PUBLIC';
+  businessName?: string;
+  contactName?: string;
+  campaignName?: string;
   focusType: 'YOUTH_BEAUTY' | 'INCOME_GROWTH' | 'RECOGNITION';
   personalMessage?: string;
   expiresAt: string;
@@ -681,7 +683,11 @@ export default function BusinessInviteLandingPage() {
                 background: content.accentColor,
               }} />
               <span style={{ color: '#666', fontSize: 14 }}>
-                Convite exclusivo para <strong style={{ color: '#1a1a1a' }}>{invite.contactName}</strong>
+                {invite.inviteType === 'PUBLIC' ? (
+                  <>✨ <strong style={{ color: '#1a1a1a' }}>Oferta Especial</strong> para Profissionais de Beleza</>
+                ) : (
+                  <>Convite exclusivo para <strong style={{ color: '#1a1a1a' }}>{invite.contactName}</strong></>
+                )}
               </span>
             </div>
 

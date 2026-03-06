@@ -12,8 +12,8 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { BusinessInvitesService, CreateInviteDto, UpdateInviteDto, InviteFilters } from './business-invites.service';
-import { BusinessInviteStatus, InviteFocusType } from '@prisma/client';
+import { BusinessInvitesService, CreateInviteDto, CreatePublicInviteDto, UpdateInviteDto, InviteFilters } from './business-invites.service';
+import { BusinessInviteStatus, InviteFocusType, InviteType } from '@prisma/client';
 
 // Guard para verificar se é Super Admin
 function requireSuperAdmin(req: any) {
@@ -56,8 +56,10 @@ export class BusinessInvitesController {
     return {
       success: true,
       data: {
+        inviteType: invite.inviteType,
         businessName: invite.businessName,
         contactName: invite.contactName,
+        campaignName: invite.campaignName,
         focusType: invite.focusType,
         personalMessage: invite.personalMessage,
         expiresAt: invite.expiresAt,
@@ -97,6 +99,7 @@ export class BusinessInvitesController {
     @Req() req: any,
     @Query('status') status?: BusinessInviteStatus,
     @Query('focusType') focusType?: InviteFocusType,
+    @Query('inviteType') inviteType?: InviteType,
     @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
@@ -106,6 +109,7 @@ export class BusinessInvitesController {
     const filters: InviteFilters = {
       status,
       focusType,
+      inviteType,
       search,
       page: page ? parseInt(page, 10) : 1,
       limit: limit ? parseInt(limit, 10) : 20,
@@ -127,7 +131,7 @@ export class BusinessInvitesController {
 
   /**
    * POST /business-invites
-   * Cria novo convite
+   * Cria novo convite personalizado
    */
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -143,6 +147,30 @@ export class BusinessInvitesController {
       ...invite,
       inviteLink,
       whatsappMessage,
+    };
+  }
+
+  /**
+   * POST /business-invites/public-campaign
+   * Cria convite público para divulgação em redes sociais
+   */
+  @Post('public-campaign')
+  @UseGuards(JwtAuthGuard)
+  async createPublicCampaign(@Req() req: any, @Body() body: CreatePublicInviteDto) {
+    requireSuperAdmin(req);
+    const invite = await this.invitesService.createPublicInvite(req.user.userId, body);
+    
+    // Gera links para compartilhar
+    const inviteLink = this.invitesService.getInviteLink(invite.slug || invite.token);
+
+    return {
+      ...invite,
+      inviteLink,
+      shareLinks: {
+        whatsapp: `https://wa.me/?text=${encodeURIComponent(`Transforme seu salão! Acesse: ${inviteLink}`)}`,
+        instagram: inviteLink,
+        facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(inviteLink)}`,
+      },
     };
   }
 
