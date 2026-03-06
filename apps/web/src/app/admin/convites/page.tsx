@@ -72,6 +72,7 @@ export default function AdminConvitesPage() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [inviteType, setInviteType] = useState<'PERSONAL' | 'PUBLIC'>('PERSONAL');
   const [selectedInvite, setSelectedInvite] = useState<BusinessInvite | null>(null);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
@@ -88,23 +89,40 @@ export default function AdminConvitesPage() {
   const [totalPages, setTotalPages] = useState(1);
 
   // Form state for PERSONAL invites
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<{
+    businessName: string;
+    contactName: string;
+    phone: string;
+    email: string;
+    city: string;
+    focusType: 'YOUTH_BEAUTY' | 'INCOME_GROWTH' | 'RECOGNITION';
+    personalMessage: string;
+    notes: string;
+    expiresInDays: number;
+  }>({
     businessName: '',
     contactName: '',
     phone: '',
     email: '',
     city: '',
-    focusType: 'RECOGNITION' as const,
+    focusType: 'RECOGNITION',
     personalMessage: '',
     notes: '',
     expiresInDays: 7,
   });
 
   // Form state for PUBLIC invites (campaigns)
-  const [publicForm, setPublicForm] = useState({
+  const [publicForm, setPublicForm] = useState<{
+    campaignName: string;
+    slug: string;
+    focusType: 'YOUTH_BEAUTY' | 'INCOME_GROWTH' | 'RECOGNITION';
+    personalMessage: string;
+    notes: string;
+    expiresInDays: number;
+  }>({
     campaignName: '',
     slug: '',
-    focusType: 'RECOGNITION' as const,
+    focusType: 'RECOGNITION',
     personalMessage: '',
     notes: '',
     expiresInDays: 30,
@@ -297,6 +315,82 @@ export default function AdminConvitesPage() {
       });
       fetchInvites();
       fetchMetrics();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  }
+
+  function handleEdit(invite: BusinessInvite) {
+    setSelectedInvite(invite);
+    if (invite.inviteType === 'PUBLIC') {
+      setPublicForm({
+        campaignName: invite.campaignName || '',
+        slug: invite.slug || '',
+        focusType: invite.focusType,
+        personalMessage: invite.personalMessage || '',
+        notes: '',
+        expiresInDays: 30,
+      });
+    } else {
+      setForm({
+        businessName: invite.businessName || '',
+        contactName: invite.contactName || '',
+        phone: invite.phone || '',
+        email: invite.email || '',
+        city: invite.city || '',
+        focusType: invite.focusType,
+        personalMessage: invite.personalMessage || '',
+        notes: '',
+        expiresInDays: 7,
+      });
+    }
+    setShowEditModal(true);
+  }
+
+  async function handleUpdateInvite(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedInvite) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const isPublic = selectedInvite.inviteType === 'PUBLIC';
+      const body = isPublic
+        ? {
+            campaignName: publicForm.campaignName,
+            slug: publicForm.slug,
+            focusType: publicForm.focusType,
+            personalMessage: publicForm.personalMessage,
+          }
+        : {
+            businessName: form.businessName,
+            contactName: form.contactName,
+            phone: form.phone,
+            email: form.email,
+            city: form.city,
+            focusType: form.focusType,
+            personalMessage: form.personalMessage,
+          };
+
+      const res = await fetch(`${API_URL}/business-invites/${selectedInvite.id}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Erro ao atualizar');
+      }
+
+      setShowEditModal(false);
+      setSelectedInvite(null);
+      resetForm();
+      resetPublicForm();
+      fetchInvites();
+      alert('Convite atualizado com sucesso!');
     } catch (err: any) {
       alert(err.message);
     }
@@ -599,6 +693,23 @@ export default function AdminConvitesPage() {
                       </td>
                       <td style={{ padding: 12, textAlign: 'right' }}>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                          {invite.status !== 'CANCELLED' && invite.status !== 'REGISTERED' && invite.status !== 'ACTIVATED' && (
+                            <button
+                              onClick={() => handleEdit(invite)}
+                              style={{
+                                padding: '6px 12px',
+                                background: '#f59e0b',
+                                border: 'none',
+                                borderRadius: 6,
+                                color: 'white',
+                                cursor: 'pointer',
+                                fontSize: 13,
+                              }}
+                              title="Editar"
+                            >
+                              ✏️
+                            </button>
+                          )}
                           {invite.inviteType === 'PUBLIC' && (
                             <button
                               onClick={() => {
@@ -1102,6 +1213,217 @@ export default function AdminConvitesPage() {
               Fechar
             </button>
           </div>
+        </Modal>
+      )}
+
+      {/* Edit Invite Modal */}
+      {showEditModal && selectedInvite && (
+        <Modal onClose={() => { setShowEditModal(false); setSelectedInvite(null); }}>
+          {selectedInvite.inviteType === 'PUBLIC' ? (
+            <>
+              <h2 style={{ color: '#f8fafc', marginBottom: 8 }}>✏️ Editar Campanha</h2>
+              <p style={{ color: '#94a3b8', marginBottom: 24, fontSize: 14 }}>
+                Atualize os dados da campanha de divulgação
+              </p>
+
+              <form onSubmit={handleUpdateInvite}>
+                <div style={{ display: 'grid', gap: 16 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    <div>
+                      <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4, display: 'block' }}>
+                        Nome da Campanha *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={publicForm.campaignName}
+                        onChange={(e) => setPublicForm({ ...publicForm, campaignName: e.target.value })}
+                        placeholder="Ex: Instagram Março 2026"
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4, display: 'block' }}>
+                        Slug personalizado
+                      </label>
+                      <input
+                        type="text"
+                        value={publicForm.slug}
+                        onChange={(e) => setPublicForm({ ...publicForm, slug: e.target.value })}
+                        placeholder="Ex: instagram-marco"
+                        style={inputStyle}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 8, display: 'block' }}>
+                      🎯 Tema da campanha
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                      {Object.entries(FOCUS_TYPES).map(([key, val]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setPublicForm({ ...publicForm, focusType: key as any })}
+                          style={{
+                            padding: 16,
+                            background: publicForm.focusType === key ? `${val.color}20` : '#0f172a',
+                            border: `2px solid ${publicForm.focusType === key ? val.color : '#334155'}`,
+                            borderRadius: 12,
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          <div style={{ fontSize: 24, marginBottom: 8 }}>{val.label.split(' ')[0]}</div>
+                          <div style={{ color: '#f8fafc', fontSize: 13, fontWeight: 600 }}>
+                            {val.label.split(' ').slice(1).join(' ')}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
+                  <button
+                    type="button"
+                    onClick={() => { setShowEditModal(false); setSelectedInvite(null); }}
+                    style={buttonStyle('secondary')}
+                  >
+                    Cancelar
+                  </button>
+                  <button type="submit" style={{ ...buttonStyle('primary'), background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
+                    Salvar Alterações
+                  </button>
+                </div>
+              </form>
+            </>
+          ) : (
+            <>
+              <h2 style={{ color: '#f8fafc', marginBottom: 8 }}>✏️ Editar Convite</h2>
+              <p style={{ color: '#94a3b8', marginBottom: 24, fontSize: 14 }}>
+                Atualize os dados do convite personalizado
+              </p>
+
+              <form onSubmit={handleUpdateInvite}>
+                <div style={{ display: 'grid', gap: 16 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    <div>
+                      <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4, display: 'block' }}>
+                        Nome do Salão/Profissional *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={form.businessName}
+                        onChange={(e) => setForm({ ...form, businessName: e.target.value })}
+                        placeholder="Ex: Salão da Maria"
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4, display: 'block' }}>
+                        Nome de Contato *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={form.contactName}
+                        onChange={(e) => setForm({ ...form, contactName: e.target.value })}
+                        placeholder="Ex: Maria Silva"
+                        style={inputStyle}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    <div>
+                      <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4, display: 'block' }}>
+                        WhatsApp *
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        value={form.phone}
+                        onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                        placeholder="11999999999"
+                        style={inputStyle}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4, display: 'block' }}>
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        placeholder="email@exemplo.com"
+                        style={inputStyle}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4, display: 'block' }}>
+                      Cidade
+                    </label>
+                    <input
+                      type="text"
+                      value={form.city}
+                      onChange={(e) => setForm({ ...form, city: e.target.value })}
+                      placeholder="Ex: São Paulo"
+                      style={inputStyle}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ color: '#94a3b8', fontSize: 12, marginBottom: 8, display: 'block' }}>
+                      🎯 Foco do convite
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                      {Object.entries(FOCUS_TYPES).map(([key, val]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setForm({ ...form, focusType: key as any })}
+                          style={{
+                            padding: 16,
+                            background: form.focusType === key ? `${val.color}20` : '#0f172a',
+                            border: `2px solid ${form.focusType === key ? val.color : '#334155'}`,
+                            borderRadius: 12,
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          <div style={{ fontSize: 24, marginBottom: 8 }}>{val.label.split(' ')[0]}</div>
+                          <div style={{ color: '#f8fafc', fontSize: 13, fontWeight: 600 }}>
+                            {val.label.split(' ').slice(1).join(' ')}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 24 }}>
+                  <button
+                    type="button"
+                    onClick={() => { setShowEditModal(false); setSelectedInvite(null); }}
+                    style={buttonStyle('secondary')}
+                  >
+                    Cancelar
+                  </button>
+                  <button type="submit" style={{ ...buttonStyle('primary'), background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}>
+                    Salvar Alterações
+                  </button>
+                </div>
+              </form>
+            </>
+          )}
         </Modal>
       )}
 
