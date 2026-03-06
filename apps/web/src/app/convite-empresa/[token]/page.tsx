@@ -3,6 +3,63 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
+
+// =============================================================================
+// LOGO PROFISSIONAL DO BELA PRO
+// =============================================================================
+
+function BelaProLogo({ size = 'md', variant = 'color' }: { size?: 'sm' | 'md' | 'lg'; variant?: 'color' | 'white' }) {
+  const sizes = {
+    sm: { width: 100, height: 40 },
+    md: { width: 140, height: 56 },
+    lg: { width: 180, height: 72 },
+  };
+  
+  const { width, height } = sizes[size];
+  const color = variant === 'white' ? '#ffffff' : '#9a7d5e';
+  
+  return (
+    <svg width={width} height={height} viewBox="0 0 180 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Ornamento Superior */}
+      <path d="M90 8 C85 8 80 10 75 14 C70 10 65 8 60 8 L60 10 C65 10 70 12 75 16 C72 19 70 22 70 26 L72 26 C72 23 74 20 76 18 C78 20 80 23 80 26 L82 26 C82 22 80 19 77 16 C82 13 87 12 90 12 C93 12 98 13 103 16 C100 19 98 22 98 26 L100 26 C100 23 102 20 104 18 C106 20 108 23 108 26 L110 26 C110 22 108 19 105 16 C110 12 115 10 120 10 L120 8 C115 8 110 10 105 14 C100 10 95 8 90 8Z" fill={color} />
+      {/* Linha decorativa esquerda */}
+      <path d="M45 36 L70 36" stroke={color} strokeWidth="1" />
+      {/* Linha decorativa direita */}
+      <path d="M110 36 L135 36" stroke={color} strokeWidth="1" />
+      {/* Texto BELA */}
+      <text x="90" y="38" textAnchor="middle" fill={color} fontFamily="Georgia, serif" fontSize="20" fontWeight="400" letterSpacing="4">
+        BELA
+      </text>
+      {/* Texto PRO */}
+      <text x="90" y="52" textAnchor="middle" fill={color} fontFamily="Georgia, serif" fontSize="10" fontWeight="400" letterSpacing="6">
+        PRO
+      </text>
+      {/* Linha abaixo de PRO */}
+      <path d="M75 55 L82 55 M98 55 L105 55" stroke={color} strokeWidth="1" />
+      {/* Ornamento Inferior */}
+      <path d="M90 64 C85 64 80 62 75 58 C70 62 65 64 60 64 L60 62 C65 62 70 60 75 56 C72 53 70 50 70 46 L72 46 C72 49 74 52 76 54 C78 52 80 49 80 46 L82 46 C82 50 80 53 77 56 C82 59 87 60 90 60 C93 60 98 59 103 56 C100 53 98 50 98 46 L100 46 C100 49 102 52 104 54 C106 52 108 49 108 46 L110 46 C110 50 108 53 105 56 C110 60 115 62 120 62 L120 64 C115 64 110 62 105 58 C100 62 95 64 90 64Z" fill={color} />
+    </svg>
+  );
+}
+
+// Logo simples para uso em espaços menores
+function BelaProLogoSimple({ accentColor }: { accentColor: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img 
+        src="/logo.png" 
+        alt="Bela Pro" 
+        style={{ 
+          height: 40, 
+          width: 'auto',
+          objectFit: 'contain',
+        }} 
+      />
+    </div>
+  );
+}
 
 interface InviteData {
   businessName: string;
@@ -551,7 +608,7 @@ export default function BusinessInviteLandingPage() {
         top: 0,
         left: 0,
         right: 0,
-        padding: '16px 24px',
+        padding: '12px 24px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -560,23 +617,7 @@ export default function BusinessInviteLandingPage() {
         zIndex: 100,
         borderBottom: '1px solid rgba(0,0,0,0.06)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
-            width: 40,
-            height: 40,
-            borderRadius: 10,
-            background: `linear-gradient(135deg, ${content.accentColor} 0%, ${content.accentDark} 100%)`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: `0 4px 12px ${content.accentColor}40`,
-          }}>
-            <span style={{ color: 'white', fontWeight: 800, fontSize: 18 }}>B</span>
-          </div>
-          <span style={{ fontWeight: 700, fontSize: 20, color: '#1a1a1a', letterSpacing: '-0.5px' }}>
-            Bela Pro
-          </span>
-        </div>
+        <BelaProLogo size="sm" variant="color" />
         <Link
           href={`/cadastro?ref=${token}`}
           onClick={handleCtaClick}
@@ -1062,19 +1103,8 @@ export default function BusinessInviteLandingPage() {
         background: '#1a1a1a',
         textAlign: 'center',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 16 }}>
-          <div style={{
-            width: 36,
-            height: 36,
-            borderRadius: 8,
-            background: content.accentColor,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
-            <span style={{ color: 'white', fontWeight: 700, fontSize: 16 }}>B</span>
-          </div>
-          <span style={{ fontWeight: 700, fontSize: 18, color: 'white' }}>Bela Pro</span>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+          <BelaProLogo size="md" variant="white" />
         </div>
         <p style={{ color: '#888', fontSize: 14 }}>
           A plataforma de gestão para profissionais de beleza
