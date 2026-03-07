@@ -1,2 +1,77 @@
-/* Placeholder: adotar Tailwind/shadcn depois */
-html, body { height: 100%; background: #faf7fb; }
+/* BELA PRO - Tema Elegante Premium */
+/* Paleta: Dourado (#9a7b4f, #c9a66c), Bege (#f5f0e8), Creme (#faf8f5) */
+
+:root {
+  /* Cores principais */
+  --gold-primary: #9a7b4f;
+  --gold-light: #c9a66c;
+  --gold-dark: #7a5f3d;
+  --gold-hover: #b8956b;
+  
+  /* Backgrounds */
+  --bg-cream: #faf8f5;
+  --bg-beige: #f5f0e8;
+  --bg-warm: #ede5d8;
+  --bg-card: #ffffff;
+  
+  /* Textos */
+  --text-primary: #3d3d3d;
+  --text-secondary: #6b5b4f;
+  --text-muted: #9a8b7a;
+  --text-light: #bfad99;
+  
+  /* Bordas e sombras */
+  --border-light: #e8dfd3;
+  --border-gold: rgba(154, 123, 79, 0.2);
+  --shadow-soft: 0 2px 12px rgba(154, 123, 79, 0.08);
+  --shadow-card: 0 4px 20px rgba(154, 123, 79, 0.1);
+  
+  /* Sidebar elegante */
+  --sidebar-bg: linear-gradient(180deg, #2c2620 0%, #1f1b17 100%);
+  --sidebar-text: #e8dfd3;
+  --sidebar-active: rgba(201, 166, 108, 0.15);
+  
+  /* Status colors */
+  --status-pending-bg: #fef7e6;
+  --status-pending-text: #c9a66c;
+  --status-confirmed-bg: #e8f4ec;
+  --status-confirmed-text: #5a9e6f;
+  --status-completed-bg: #e6f0f5;
+  --status-completed-text: #5a8fa8;
+}
+
+html, body { 
+  height: 100%; 
+  background: var(--bg-cream);
+  color: var(--text-primary);
+}
+
+/* Scrollbar elegante */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gold-light);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold-primary);
+}
+
+/* Seleção de texto */
+::selection {
+  background: rgba(201, 166, 108, 0.3);
+  color: var(--text-primary);
+}
+
+/* Transições suaves globais */
+* {
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}

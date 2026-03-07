@@ -6,14 +6,29 @@ import Link from 'next/link';
 import WorkspaceSwitcher from './components/WorkspaceSwitcher';
 import { NotificationToggle } from '@/components/NotificationToggle';
 
+// Paleta elegante
+const THEME = {
+  gold: '#9a7b4f',
+  goldLight: '#c9a66c',
+  goldHover: '#b8956b',
+  bgCream: '#faf8f5',
+  bgBeige: '#f5f0e8',
+  textPrimary: '#3d3d3d',
+  textSecondary: '#6b5b4f',
+  textMuted: '#9a8b7a',
+  borderLight: '#e8dfd3',
+  sidebarBg: 'linear-gradient(180deg, #2c2620 0%, #1f1b17 100%)',
+  sidebarText: '#e8dfd3',
+};
+
 const menuItems = [
   { href: '/dashboard', icon: '📊', label: 'Dashboard', exact: true },
   { href: '/dashboard/agenda', icon: '📅', label: 'Agenda' },
   { href: '/dashboard/clientes', icon: '👥', label: 'Clientes' },
-  { href: '/dashboard/servicos', icon: '💇', label: 'Serviços' },
+  { href: '/dashboard/servicos', icon: '✨', label: 'Serviços' },
   { href: '/dashboard/financeiro', icon: '💰', label: 'Financeiro' },
-  { href: '/dashboard/horarios', icon: '⏰', label: 'Horários' },
-  { href: '/dashboard/equipe', icon: '👔', label: 'Equipe' },
+  { href: '/dashboard/horarios', icon: '🕐', label: 'Horários' },
+  { href: '/dashboard/equipe', icon: '👤', label: 'Equipe' },
   { href: '/dashboard/aparencia', icon: '🎨', label: 'Aparência' },
   { href: '/dashboard/config', icon: '⚙️', label: 'Configurações' },
 ];
@@ -84,7 +99,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div style={{ 
       display: 'flex', 
       minHeight: '100vh', 
-      fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif' 
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      background: THEME.bgCream,
     }}>
       {/* Overlay para mobile */}
       {isMobile && sidebarOpen && (
@@ -93,7 +109,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.5)',
+            background: 'rgba(44, 38, 32, 0.6)',
+            backdropFilter: 'blur(4px)',
             zIndex: 99,
           }}
         />
@@ -102,8 +119,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Sidebar */}
       <aside style={{
         width: 260,
-        background: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)',
-        color: 'white',
+        background: THEME.sidebarBg,
+        color: THEME.sidebarText,
         display: 'flex',
         flexDirection: 'column',
         position: 'fixed',
@@ -111,9 +128,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         zIndex: 100,
         transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
         transition: 'transform 0.3s ease',
+        boxShadow: '4px 0 24px rgba(0, 0, 0, 0.15)',
       }}>
         {/* Logo */}
-        <div style={{ padding: 20, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+        <div style={{ padding: 20, borderBottom: `1px solid rgba(201, 166, 108, 0.15)` }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <img 
               src="/logo.png" 
@@ -127,7 +145,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               }}
             />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>BELA PRO</div>
+              <div style={{ fontWeight: 700, fontSize: 16, color: THEME.goldLight, letterSpacing: '0.5px' }}>BELA PRO</div>
               <WorkspaceSwitcher />
             </div>
           </div>
@@ -146,13 +164,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   padding: '12px 16px',
                   marginBottom: 4,
                   borderRadius: 10,
-                  background: active ? 'rgba(102, 126, 234, 0.2)' : 'transparent',
-                  color: active ? '#a78bfa' : 'rgba(255,255,255,0.7)',
+                  background: active ? 'rgba(201, 166, 108, 0.15)' : 'transparent',
+                  color: active ? THEME.goldLight : 'rgba(232, 223, 211, 0.7)',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
+                  borderLeft: active ? `3px solid ${THEME.goldLight}` : '3px solid transparent',
                 }}>
                   <span style={{ fontSize: 18 }}>{item.icon}</span>
-                  <span style={{ fontSize: 14, fontWeight: active ? 600 : 400 }}>{item.label}</span>
+                  <span style={{ fontSize: 14, fontWeight: active ? 600 : 400, letterSpacing: '0.3px' }}>{item.label}</span>
                 </div>
               </Link>
             );
@@ -160,23 +179,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         {/* User */}
-        <div style={{ padding: 16, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+        <div style={{ padding: 16, borderTop: `1px solid rgba(201, 166, 108, 0.15)` }}>
           {/* Notificações */}
           <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>Notificações:</span>
+            <span style={{ fontSize: 12, color: 'rgba(232, 223, 211, 0.5)' }}>Notificações:</span>
             <NotificationToggle />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             <div style={{
               width: 36,
               height: 36,
-              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+              background: `linear-gradient(135deg, ${THEME.goldLight} 0%, ${THEME.gold} 100%)`,
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: 14,
               fontWeight: 600,
+              color: '#1f1b17',
               flexShrink: 0,
             }}>
               {userName.charAt(0).toUpperCase()}
@@ -191,13 +211,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             style={{
               width: '100%',
               padding: '10px',
-              background: 'rgba(255,255,255,0.1)',
-              border: 'none',
+              background: 'rgba(201, 166, 108, 0.1)',
+              border: `1px solid rgba(201, 166, 108, 0.2)`,
               borderRadius: 8,
-              color: 'rgba(255,255,255,0.7)',
+              color: THEME.goldLight,
               fontSize: 13,
               cursor: 'pointer',
               transition: 'all 0.2s',
+              fontWeight: 500,
             }}
           >
             Sair
@@ -209,7 +230,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main style={{
         flex: 1,
         marginLeft: isMobile ? 0 : 260,
-        background: '#f8fafc',
+        background: THEME.bgCream,
         minHeight: '100vh',
         transition: 'margin-left 0.3s ease',
       }}>
@@ -219,17 +240,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             position: 'sticky',
             top: 0,
             zIndex: 50,
-            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+            background: THEME.sidebarBg,
             padding: '12px 16px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
           }}>
             <button
               onClick={() => setSidebarOpen(true)}
               style={{
-                background: 'rgba(255,255,255,0.1)',
+                background: 'rgba(201, 166, 108, 0.15)',
                 border: 'none',
                 borderRadius: 8,
                 padding: '10px 12px',
@@ -239,7 +260,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 justifyContent: 'center',
               }}
             >
-              <svg width="20" height="20" fill="none" stroke="white" viewBox="0 0 24 24">
+              <svg width="20" height="20" fill="none" stroke={THEME.goldLight} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
@@ -247,28 +268,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div style={{
                 width: 32,
                 height: 32,
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: `linear-gradient(135deg, ${THEME.goldLight} 0%, ${THEME.gold} 100%)`,
                 borderRadius: 8,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: 14,
                 fontWeight: 700,
-                color: 'white',
+                color: '#1f1b17',
               }}>B</div>
-              <span style={{ color: 'white', fontWeight: 600, fontSize: 16 }}>BELA PRO</span>
+              <span style={{ color: THEME.goldLight, fontWeight: 600, fontSize: 16, letterSpacing: '0.5px' }}>BELA PRO</span>
             </div>
             <div style={{
               width: 32,
               height: 32,
-              background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+              background: `linear-gradient(135deg, ${THEME.goldLight} 0%, ${THEME.gold} 100%)`,
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: 12,
               fontWeight: 600,
-              color: 'white',
+              color: '#1f1b17',
             }}>
               {userName.charAt(0).toUpperCase()}
             </div>

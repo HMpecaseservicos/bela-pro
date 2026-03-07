@@ -165,8 +165,8 @@ export default function ServicosPage() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-        <div style={{ width: 40, height: 40, border: '4px solid #e5e7eb', borderTopColor: '#667eea', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#faf8f5' }}>
+        <div style={{ width: 40, height: 40, border: '4px solid #e8dfd3', borderTopColor: '#c9a66c', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -177,8 +177,8 @@ export default function ServicosPage() {
       {/* Header */}
       <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? 16 : 0, marginBottom: isMobile ? 20 : 32 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 28, fontWeight: 700, color: '#1a1a2e' }}>Serviços</h1>
-          <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: isMobile ? 13 : 15 }}>Gerencie os serviços oferecidos</p>
+          <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 28, fontWeight: 600, color: '#3d3d3d', letterSpacing: '-0.3px' }}>Serviços</h1>
+          <p style={{ margin: '8px 0 0', color: '#9a8b7a', fontSize: isMobile ? 13 : 15 }}>Gerencie os serviços oferecidos</p>
         </div>
         <button
           onClick={() => { setShowForm(true); setEditingId(null); setForm(defaultForm); }}
@@ -187,8 +187,8 @@ export default function ServicosPage() {
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
+            background: 'linear-gradient(135deg, #c9a66c 0%, #9a7b4f 100%)',
+            color: '#1f1b17',
             border: 'none',
             padding: isMobile ? '14px 20px' : '12px 24px',
             borderRadius: 10,
@@ -208,11 +208,12 @@ export default function ServicosPage() {
           borderRadius: 16, 
           padding: 60, 
           textAlign: 'center',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+          boxShadow: '0 2px 12px rgba(154, 123, 79, 0.08)',
+          border: '1px solid #e8dfd3',
         }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>💇</div>
-          <h3 style={{ margin: '0 0 8px', color: '#1e293b' }}>Nenhum serviço cadastrado</h3>
-          <p style={{ color: '#94a3b8', margin: 0 }}>Adicione seu primeiro serviço para começar a receber agendamentos</p>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>✨</div>
+          <h3 style={{ margin: '0 0 8px', color: '#3d3d3d' }}>Nenhum serviço cadastrado</h3>
+          <p style={{ color: '#9a8b7a', margin: 0 }}>Adicione seu primeiro serviço para começar a receber agendamentos</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))', gap: isMobile ? 12 : 20 }}>
@@ -223,15 +224,17 @@ export default function ServicosPage() {
                 background: 'white',
                 borderRadius: 16,
                 padding: 24,
-                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-                borderLeft: '4px solid #667eea',
+                boxShadow: '0 2px 12px rgba(154, 123, 79, 0.08)',
+                borderLeft: '4px solid #c9a66c',
+                border: '1px solid #e8dfd3',
+                borderLeftWidth: 4,
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#1e293b' }}>{service.name}</h3>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#3d3d3d' }}>{service.name}</h3>
                 <span style={{
-                  background: service.isActive ? '#d1fae5' : '#fee2e2',
-                  color: service.isActive ? '#059669' : '#dc2626',
+                  background: service.isActive ? '#e8f4ec' : '#fceaea',
+                  color: service.isActive ? '#5a9e6f' : '#c9756c',
                   padding: '4px 10px',
                   borderRadius: 20,
                   fontSize: 11,
@@ -243,12 +246,12 @@ export default function ServicosPage() {
 
               <div style={{ display: 'flex', gap: 24, marginBottom: 20 }}>
                 <div>
-                  <div style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4 }}>Duração</div>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: '#1e293b' }}>{formatDuration(service.durationMinutes)}</div>
+                  <div style={{ color: '#9a8b7a', fontSize: 12, marginBottom: 4 }}>Duração</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: '#3d3d3d' }}>{formatDuration(service.durationMinutes)}</div>
                 </div>
                 <div>
-                  <div style={{ color: '#94a3b8', fontSize: 12, marginBottom: 4 }}>Preço</div>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: '#10b981' }}>{formatPrice(service.priceCents)}</div>
+                  <div style={{ color: '#9a8b7a', fontSize: 12, marginBottom: 4 }}>Preço</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: '#5a9e6f' }}>{formatPrice(service.priceCents)}</div>
                 </div>
               </div>
 
@@ -257,11 +260,11 @@ export default function ServicosPage() {
                   onClick={() => editService(service)}
                   style={{
                     flex: 1,
-                    background: '#f1f5f9',
+                    background: '#f5f0e8',
                     border: 'none',
                     padding: '10px',
                     borderRadius: 8,
-                    color: '#64748b',
+                    color: '#6b5b4f',
                     fontWeight: 500,
                     cursor: 'pointer',
                     fontSize: 13,
@@ -272,11 +275,11 @@ export default function ServicosPage() {
                 <button
                   onClick={() => deleteService(service.id)}
                   style={{
-                    background: '#fee2e2',
+                    background: '#fceaea',
                     border: 'none',
                     padding: '10px 16px',
                     borderRadius: 8,
-                    color: '#dc2626',
+                    color: '#c9756c',
                     fontWeight: 500,
                     cursor: 'pointer',
                     fontSize: 13,

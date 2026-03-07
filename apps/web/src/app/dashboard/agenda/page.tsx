@@ -37,12 +37,12 @@ interface MessageEvent {
 }
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string; icon: string; gradient?: string }> = {
-  PENDING: { bg: '#fef3c7', text: '#d97706', label: 'Pendente', icon: '⏳', gradient: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' },
-  PENDING_PAYMENT: { bg: '#fff7ed', text: '#ea580c', label: 'Aguardando Pix', icon: '💳', gradient: 'linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%)' },
-  CONFIRMED: { bg: '#dbeafe', text: '#2563eb', label: 'Confirmado', icon: '✓', gradient: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)' },
-  COMPLETED: { bg: '#d1fae5', text: '#059669', label: 'Concluído', icon: '✔', gradient: 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)' },
-  CANCELLED: { bg: '#fee2e2', text: '#dc2626', label: 'Cancelado', icon: '✗', gradient: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)' },
-  NO_SHOW: { bg: '#f3f4f6', text: '#6b7280', label: 'Não compareceu', icon: '○', gradient: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)' },
+  PENDING: { bg: '#fef7e6', text: '#c9a66c', label: 'Pendente', icon: '⏳', gradient: 'linear-gradient(135deg, #fef7e6 0%, #faecd0 100%)' },
+  PENDING_PAYMENT: { bg: '#fef7e6', text: '#9a7b4f', label: 'Aguardando Pix', icon: '💳', gradient: 'linear-gradient(135deg, #fef7e6 0%, #f5e6c4 100%)' },
+  CONFIRMED: { bg: '#e8f4ec', text: '#5a9e6f', label: 'Confirmado', icon: '✓', gradient: 'linear-gradient(135deg, #e8f4ec 0%, #d0ebda 100%)' },
+  COMPLETED: { bg: '#e6f0f5', text: '#5a8fa8', label: 'Concluído', icon: '✔', gradient: 'linear-gradient(135deg, #e6f0f5 0%, #d0e4ef 100%)' },
+  CANCELLED: { bg: '#fceaea', text: '#c9756c', label: 'Cancelado', icon: '✗', gradient: 'linear-gradient(135deg, #fceaea 0%, #f8d4d1 100%)' },
+  NO_SHOW: { bg: '#f5f0e8', text: '#9a8b7a', label: 'Não compareceu', icon: '○', gradient: 'linear-gradient(135deg, #f5f0e8 0%, #ebe3d6 100%)' },
 };
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 8);
@@ -672,8 +672,8 @@ export default function AgendaPage() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-        <div style={{ width: 40, height: 40, border: '4px solid #e5e7eb', borderTopColor: '#667eea', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#faf8f5' }}>
+        <div style={{ width: 40, height: 40, border: '4px solid #e8dfd3', borderTopColor: '#c9a66c', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -684,8 +684,8 @@ export default function AgendaPage() {
       {/* Header */}
       <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: isMobile ? 12 : 0, marginBottom: isMobile ? 16 : 24 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 28, fontWeight: 700, color: '#1a1a2e' }}>Agenda</h1>
-          <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: isMobile ? 13 : 15 }}>Gerencie seus atendimentos</p>
+          <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 28, fontWeight: 600, color: '#3d3d3d', letterSpacing: '-0.3px' }}>Agenda</h1>
+          <p style={{ margin: '8px 0 0', color: '#9a8b7a', fontSize: isMobile ? 13 : 15 }}>Gerencie seus atendimentos</p>
         </div>
         
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -697,23 +697,23 @@ export default function AgendaPage() {
               alignItems: 'center',
               gap: 8,
               padding: '10px 20px',
-              background: 'linear-gradient(135deg, #667eea 0%, #5a67d8 100%)',
-              color: 'white',
+              background: 'linear-gradient(135deg, #c9a66c 0%, #9a7b4f 100%)',
+              color: '#1f1b17',
               border: 'none',
               borderRadius: 10,
               fontWeight: 600,
               cursor: 'pointer',
               fontSize: 14,
-              boxShadow: '0 2px 8px rgba(102, 126, 234, 0.35)',
+              boxShadow: '0 2px 8px rgba(154, 123, 79, 0.35)',
               transition: 'all 0.2s',
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.45)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(154, 123, 79, 0.45)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.35)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(154, 123, 79, 0.35)';
             }}
           >
             <span style={{ fontSize: 18 }}>+</span>

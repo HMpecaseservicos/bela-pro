@@ -178,8 +178,8 @@ export default function ClientesPage() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-        <div style={{ width: 40, height: 40, border: '4px solid #e5e7eb', borderTopColor: '#667eea', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#faf8f5' }}>
+        <div style={{ width: 40, height: 40, border: '4px solid #e8dfd3', borderTopColor: '#c9a66c', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -197,8 +197,8 @@ export default function ClientesPage() {
         marginBottom: isMobile ? 20 : 32 
       }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: isMobile ? 24 : 28, fontWeight: 700, color: '#1a1a2e' }}>Clientes</h1>
-          <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: isMobile ? 14 : 15 }}>Gerencie sua base de clientes</p>
+          <h1 style={{ margin: 0, fontSize: isMobile ? 24 : 28, fontWeight: 600, color: '#3d3d3d', letterSpacing: '-0.3px' }}>Clientes</h1>
+          <p style={{ margin: '8px 0 0', color: '#9a8b7a', fontSize: isMobile ? 14 : 15 }}>Gerencie sua base de clientes</p>
         </div>
         {!isMobile && (
           <div style={{ display: 'flex', gap: 8 }}>
@@ -206,10 +206,10 @@ export default function ClientesPage() {
               onClick={() => setViewMode('table')}
               style={{
                 padding: '10px 16px',
-                border: '2px solid #e5e7eb',
+                border: `1px solid #e8dfd3`,
                 borderRadius: 10,
-                background: viewMode === 'table' ? '#667eea' : 'white',
-                color: viewMode === 'table' ? 'white' : '#64748b',
+                background: viewMode === 'table' ? 'linear-gradient(135deg, #c9a66c 0%, #9a7b4f 100%)' : 'white',
+                color: viewMode === 'table' ? '#1f1b17' : '#9a8b7a',
                 cursor: 'pointer',
                 fontSize: 14,
                 fontWeight: 500,
@@ -221,10 +221,10 @@ export default function ClientesPage() {
               onClick={() => setViewMode('cards')}
               style={{
                 padding: '10px 16px',
-                border: '2px solid #e5e7eb',
+                border: `1px solid #e8dfd3`,
                 borderRadius: 10,
-                background: viewMode === 'cards' ? '#667eea' : 'white',
-                color: viewMode === 'cards' ? 'white' : '#64748b',
+                background: viewMode === 'cards' ? 'linear-gradient(135deg, #c9a66c 0%, #9a7b4f 100%)' : 'white',
+                color: viewMode === 'cards' ? '#1f1b17' : '#9a8b7a',
                 cursor: 'pointer',
                 fontSize: 14,
                 fontWeight: 500,
@@ -244,31 +244,31 @@ export default function ClientesPage() {
         marginBottom: isMobile ? 20 : 32 
       }}>
         <div style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: 'linear-gradient(135deg, #c9a66c 0%, #9a7b4f 100%)',
           borderRadius: isMobile ? 12 : 16,
           padding: isMobile ? 16 : 24,
-          color: 'white',
+          color: '#1f1b17',
         }}>
-          <div style={{ fontSize: isMobile ? 28 : 32, fontWeight: 700 }}>{totalClients}</div>
-          <div style={{ fontSize: isMobile ? 13 : 14, opacity: 0.9, marginTop: 4 }}>Total de Clientes</div>
+          <div style={{ fontSize: isMobile ? 28 : 32, fontWeight: 600 }}>{totalClients}</div>
+          <div style={{ fontSize: isMobile ? 13 : 14, opacity: 0.8, marginTop: 4 }}>Total de Clientes</div>
         </div>
         <div style={{
           background: 'white',
           borderRadius: isMobile ? 12 : 16,
           padding: isMobile ? 16 : 24,
-          border: '2px solid #e5e7eb',
+          border: '1px solid #e8dfd3',
         }}>
-          <div style={{ fontSize: isMobile ? 28 : 32, fontWeight: 700, color: '#10b981' }}>{activeClients}</div>
-          <div style={{ fontSize: isMobile ? 13 : 14, color: '#64748b', marginTop: 4 }}>Clientes Ativos</div>
+          <div style={{ fontSize: isMobile ? 28 : 32, fontWeight: 600, color: '#5a9e6f' }}>{activeClients}</div>
+          <div style={{ fontSize: isMobile ? 13 : 14, color: '#9a8b7a', marginTop: 4 }}>Clientes Ativos</div>
         </div>
         <div style={{
           background: 'white',
           borderRadius: isMobile ? 12 : 16,
           padding: isMobile ? 16 : 24,
-          border: '2px solid #e5e7eb',
+          border: '1px solid #e8dfd3',
         }}>
-          <div style={{ fontSize: isMobile ? 28 : 32, fontWeight: 700, color: '#f59e0b' }}>{newThisMonth}</div>
-          <div style={{ fontSize: isMobile ? 13 : 14, color: '#64748b', marginTop: 4 }}>Novos este mês</div>
+          <div style={{ fontSize: isMobile ? 28 : 32, fontWeight: 600, color: '#c9a66c' }}>{newThisMonth}</div>
+          <div style={{ fontSize: isMobile ? 13 : 14, color: '#9a8b7a', marginTop: 4 }}>Novos este mês</div>
         </div>
       </div>
 
@@ -286,11 +286,12 @@ export default function ClientesPage() {
             style={{
               width: '100%',
               padding: '14px 20px 14px 48px',
-              border: '2px solid #e5e7eb',
+              border: '1px solid #e8dfd3',
               borderRadius: 12,
               fontSize: 15,
               outline: 'none',
               boxSizing: 'border-box',
+              background: 'white',
             }}
           />
         </div>
@@ -303,13 +304,14 @@ export default function ClientesPage() {
           borderRadius: 16, 
           padding: 60, 
           textAlign: 'center',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+          boxShadow: '0 2px 12px rgba(154, 123, 79, 0.08)',
+          border: '1px solid #e8dfd3',
         }}>
-          <svg style={{ width: 64, height: 64, color: '#d1d5db', margin: '0 auto 16px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg style={{ width: 64, height: 64, color: '#c9a66c', margin: '0 auto 16px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
-          <h3 style={{ margin: '0 0 8px', color: '#1e293b' }}>Nenhum cliente encontrado</h3>
-          <p style={{ color: '#94a3b8', margin: 0 }}>Os clientes aparecerão aqui quando fizerem agendamentos</p>
+          <h3 style={{ margin: '0 0 8px', color: '#3d3d3d' }}>Nenhum cliente encontrado</h3>
+          <p style={{ color: '#9a8b7a', margin: 0 }}>Os clientes aparecerão aqui quando fizerem agendamentos</p>
         </div>
       ) : viewMode === 'cards' ? (
         /* Cards View */
@@ -325,19 +327,19 @@ export default function ClientesPage() {
                 background: 'white',
                 borderRadius: isMobile ? 12 : 16,
                 padding: isMobile ? 16 : 24,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                border: '1px solid #f1f5f9',
+                boxShadow: '0 2px 12px rgba(154, 123, 79, 0.08)',
+                border: '1px solid #e8dfd3',
               }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: isMobile ? 12 : 16, marginBottom: isMobile ? 16 : 20 }}>
                   <div style={{
                     width: isMobile ? 48 : 56,
                     height: isMobile ? 48 : 56,
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    background: 'linear-gradient(135deg, #c9a66c 0%, #9a7b4f 100%)',
                     borderRadius: isMobile ? 12 : 14,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: 'white',
+                    color: '#1f1b17',
                     fontWeight: 700,
                     fontSize: isMobile ? 18 : 22,
                     flexShrink: 0,
@@ -345,36 +347,37 @@ export default function ClientesPage() {
                     {client.name.charAt(0).toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <h3 style={{ margin: 0, fontSize: isMobile ? 16 : 18, fontWeight: 600, color: '#1e293b' }}>{client.name}</h3>
-                    <p style={{ margin: '4px 0 0', fontSize: isMobile ? 13 : 14, color: '#64748b' }}>{formatPhone(client.phoneE164)}</p>
-                    {client.email && <p style={{ margin: '2px 0 0', fontSize: isMobile ? 12 : 13, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis' }}>{client.email}</p>}
+                    <h3 style={{ margin: 0, fontSize: isMobile ? 16 : 18, fontWeight: 600, color: '#3d3d3d' }}>{client.name}</h3>
+                    <p style={{ margin: '4px 0 0', fontSize: isMobile ? 13 : 14, color: '#6b5b4f' }}>{formatPhone(client.phoneE164)}</p>
+                    {client.email && <p style={{ margin: '2px 0 0', fontSize: isMobile ? 12 : 13, color: '#9a8b7a', overflow: 'hidden', textOverflow: 'ellipsis' }}>{client.email}</p>}
                   </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? 8 : 12, marginBottom: isMobile ? 16 : 20 }}>
-                  <div style={{ background: '#f8fafc', borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: '#667eea' }}>{completed}</div>
-                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Visitas</div>
+                  <div style={{ background: '#f5f0e8', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                    <div style={{ fontSize: 20, fontWeight: 600, color: '#9a7b4f' }}>{completed}</div>
+                    <div style={{ fontSize: 11, color: '#9a8b7a', marginTop: 2 }}>Visitas</div>
                   </div>
-                  <div style={{ background: '#f8fafc', borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>
+                  <div style={{ background: '#f5f0e8', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#3d3d3d' }}>
                       {lastVisit 
                         ? new Date(lastVisit.startAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
                         : '-'
                       }
                     </div>
-                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Última visita</div>
+                    <div style={{ fontSize: 11, color: '#9a8b7a', marginTop: 2 }}>Última visita</div>
                   </div>
                 </div>
 
                 {client.notes && (
                   <div style={{ 
-                    background: '#fffbeb', 
+                    background: '#fef7e6', 
                     borderRadius: 8, 
                     padding: 12, 
                     marginBottom: 16,
                     fontSize: 13,
-                    color: '#92400e',
+                    color: '#9a7b4f',
+                    border: '1px solid rgba(201, 166, 108, 0.2)',
                   }}>
                     📝 {client.notes}
                   </div>
@@ -408,10 +411,10 @@ export default function ClientesPage() {
                     onClick={() => editClient(client)}
                     style={{
                       padding: '12px 16px',
-                      border: '2px solid #e5e7eb',
+                      border: '1px solid #e8dfd3',
                       borderRadius: 10,
                       background: 'white',
-                      color: '#64748b',
+                      color: '#6b5b4f',
                       fontWeight: 500,
                       cursor: 'pointer',
                       fontSize: 14,
@@ -425,8 +428,8 @@ export default function ClientesPage() {
                       padding: '12px 14px',
                       border: 'none',
                       borderRadius: 10,
-                      background: '#fee2e2',
-                      color: '#dc2626',
+                      background: '#fceaea',
+                      color: '#c9756c',
                       fontWeight: 500,
                       cursor: 'pointer',
                       fontSize: 14,

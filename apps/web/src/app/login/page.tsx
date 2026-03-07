@@ -79,12 +79,12 @@ export default function LoginPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'linear-gradient(135deg, #2c2620 0%, #1f1b17 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       padding: 20,
-      fontFamily: '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     }}>
       <div style={{
         background: 'white',
@@ -92,7 +92,8 @@ export default function LoginPage() {
         padding: 40,
         width: '100%',
         maxWidth: 420,
-        boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
+        boxShadow: '0 25px 50px rgba(0,0,0,0.3)',
+        border: '1px solid rgba(201, 166, 108, 0.2)',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <img 
@@ -105,12 +106,12 @@ export default function LoginPage() {
               display: 'block',
             }}
           />
-          <p style={{ color: '#888', marginTop: 8 }}>Acesse seu painel</p>
+          <p style={{ color: '#9a8b7a', marginTop: 8 }}>Acesse seu painel</p>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 8 }}>
+            <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#3d3d3d', marginBottom: 8 }}>
               Email
             </label>
             <input
@@ -122,20 +123,20 @@ export default function LoginPage() {
               style={{
                 width: '100%',
                 padding: 16,
-                border: '2px solid #e5e7eb',
+                border: '1px solid #e8dfd3',
                 borderRadius: 12,
                 fontSize: 16,
                 outline: 'none',
                 transition: 'border 0.2s',
                 boxSizing: 'border-box',
               }}
-              onFocus={(e) => e.currentTarget.style.borderColor = '#667eea'}
-              onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
+              onFocus={(e) => e.currentTarget.style.borderColor = '#c9a66c'}
+              onBlur={(e) => e.currentTarget.style.borderColor = '#e8dfd3'}
             />
           </div>
 
           <div style={{ marginBottom: 24 }}>
-            <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 8 }}>
+            <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#3d3d3d', marginBottom: 8 }}>
               Senha
             </label>
             <input
@@ -147,23 +148,23 @@ export default function LoginPage() {
               style={{
                 width: '100%',
                 padding: 16,
-                border: '2px solid #e5e7eb',
+                border: '1px solid #e8dfd3',
                 borderRadius: 12,
                 fontSize: 16,
                 outline: 'none',
                 transition: 'border 0.2s',
                 boxSizing: 'border-box',
               }}
-              onFocus={(e) => e.currentTarget.style.borderColor = '#667eea'}
-              onBlur={(e) => e.currentTarget.style.borderColor = '#e5e7eb'}
+              onFocus={(e) => e.currentTarget.style.borderColor = '#c9a66c'}
+              onBlur={(e) => e.currentTarget.style.borderColor = '#e8dfd3'}
             />
           </div>
 
           {error && (
             <div style={{
-              background: '#fef2f2',
-              border: '1px solid #fecaca',
-              color: '#dc2626',
+              background: '#fceaea',
+              border: '1px solid rgba(201, 117, 108, 0.3)',
+              color: '#c9756c',
               padding: 14,
               borderRadius: 12,
               marginBottom: 20,
@@ -180,15 +181,15 @@ export default function LoginPage() {
             style={{
               width: '100%',
               padding: 18,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
+              background: 'linear-gradient(135deg, #c9a66c 0%, #9a7b4f 100%)',
+              color: '#1f1b17',
               border: 'none',
               borderRadius: 12,
               fontSize: 16,
               fontWeight: 600,
               cursor: loading ? 'not-allowed' : 'pointer',
               opacity: loading ? 0.7 : 1,
-              boxShadow: '0 4px 15px rgba(102,126,234,0.4)',
+              boxShadow: '0 4px 15px rgba(154, 123, 79, 0.35)',
               transition: 'all 0.2s',
             }}
           >
@@ -196,9 +197,9 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p style={{ textAlign: 'center', marginTop: 24, color: '#888', fontSize: 14 }}>
+        <p style={{ textAlign: 'center', marginTop: 24, color: '#9a8b7a', fontSize: 14 }}>
           Não tem conta?{' '}
-          <a href="/cadastro" style={{ color: '#667eea', textDecoration: 'none', fontWeight: 600 }}>
+          <a href="/cadastro" style={{ color: '#9a7b4f', textDecoration: 'none', fontWeight: 600 }}>
             Cadastre-se
           </a>
         </p>

@@ -137,7 +137,7 @@ export default function CadastroPage() {
   const inputStyle: React.CSSProperties = {
     width: '100%',
     padding: isMobile ? 14 : 16,
-    border: '2px solid #e5e7eb',
+    border: '1px solid #e8dfd3',
     borderRadius: 12,
     fontSize: isMobile ? 15 : 16,
     outline: 'none',
@@ -148,8 +148,8 @@ export default function CadastroPage() {
   const buttonStyle: React.CSSProperties = {
     width: '100%',
     padding: isMobile ? 14 : 16,
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    color: 'white',
+    background: 'linear-gradient(135deg, #c9a66c 0%, #9a7b4f 100%)',
+    color: '#1f1b17',
     border: 'none',
     borderRadius: 12,
     fontSize: isMobile ? 15 : 16,
@@ -161,7 +161,7 @@ export default function CadastroPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'linear-gradient(135deg, #2c2620 0%, #1f1b17 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -174,13 +174,14 @@ export default function CadastroPage() {
         width: '100%',
         maxWidth: 480,
         boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+        border: '1px solid rgba(201, 166, 108, 0.2)',
       }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: isMobile ? 24 : 32 }}>
           <div style={{
             width: isMobile ? 56 : 72,
             height: isMobile ? 56 : 72,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(135deg, #c9a66c 0%, #9a7b4f 100%)',
             borderRadius: 16,
             display: 'flex',
             alignItems: 'center',
@@ -190,10 +191,10 @@ export default function CadastroPage() {
           }}>
             📅
           </div>
-          <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 28, fontWeight: 700, color: '#1a1a2e' }}>
+          <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 28, fontWeight: 600, color: '#3d3d3d' }}>
             Crie sua Agenda Digital
           </h1>
-          <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: isMobile ? 13 : 15 }}>
+          <p style={{ margin: '8px 0 0', color: '#9a8b7a', fontSize: isMobile ? 13 : 15 }}>
             {step === 1 ? 'Primeiro, seus dados pessoais' : 'Agora, sobre seu negócio'}
           </p>
         </div>
@@ -204,22 +205,22 @@ export default function CadastroPage() {
             flex: 1,
             height: 4,
             borderRadius: 2,
-            background: '#667eea',
+            background: '#c9a66c',
           }} />
           <div style={{
             flex: 1,
             height: 4,
             borderRadius: 2,
-            background: step >= 2 ? '#667eea' : '#e5e7eb',
+            background: step >= 2 ? '#c9a66c' : '#e8dfd3',
             transition: 'background 0.3s',
           }} />
         </div>
 
         {error && (
           <div style={{
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
-            color: '#dc2626',
+            background: '#fceaea',
+            border: '1px solid rgba(201, 117, 108, 0.3)',
+            color: '#c9756c',
             padding: isMobile ? 12 : 16,
             borderRadius: 12,
             marginBottom: isMobile ? 16 : 24,
@@ -374,9 +375,9 @@ export default function CadastroPage() {
         </form>
 
         <div style={{ textAlign: 'center', marginTop: isMobile ? 20 : 24 }}>
-          <p style={{ color: '#64748b', fontSize: isMobile ? 13 : 14 }}>
+          <p style={{ color: '#9a8b7a', fontSize: isMobile ? 13 : 14 }}>
             Já tem uma conta?{' '}
-            <a href="/login" style={{ color: '#667eea', fontWeight: 600, textDecoration: 'none' }}>
+            <a href="/login" style={{ color: '#9a7b4f', fontWeight: 600, textDecoration: 'none' }}>
               Fazer login
             </a>
           </p>
