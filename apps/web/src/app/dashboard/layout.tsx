@@ -3,6 +3,18 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import {
+  LayoutDashboard,
+  CalendarDays,
+  Users,
+  Scissors,
+  CircleDollarSign,
+  Clock3,
+  UserRound,
+  Palette,
+  Settings,
+  type LucideIcon,
+} from 'lucide-react';
 import WorkspaceSwitcher from './components/WorkspaceSwitcher';
 import { NotificationToggle } from '@/components/NotificationToggle';
 
@@ -18,15 +30,15 @@ const THEME = {
 };
 
 const menuItems = [
-  { href: '/dashboard', label: 'Visao do Negocio', exact: true },
-  { href: '/dashboard/agenda', label: 'Agenda' },
-  { href: '/dashboard/clientes', label: 'Clientes' },
-  { href: '/dashboard/servicos', label: 'Servicos' },
-  { href: '/dashboard/financeiro', label: 'Financeiro' },
-  { href: '/dashboard/horarios', label: 'Horarios' },
-  { href: '/dashboard/equipe', label: 'Equipe' },
-  { href: '/dashboard/aparencia', label: 'Aparencia' },
-  { href: '/dashboard/config', label: 'Configuracoes' },
+  { href: '/dashboard', label: 'Visao do Negocio', icon: LayoutDashboard, exact: true },
+  { href: '/dashboard/agenda', label: 'Agenda', icon: CalendarDays },
+  { href: '/dashboard/clientes', label: 'Clientes', icon: Users },
+  { href: '/dashboard/servicos', label: 'Servicos', icon: Scissors },
+  { href: '/dashboard/financeiro', label: 'Financeiro', icon: CircleDollarSign },
+  { href: '/dashboard/horarios', label: 'Horarios', icon: Clock3 },
+  { href: '/dashboard/equipe', label: 'Equipe', icon: UserRound },
+  { href: '/dashboard/aparencia', label: 'Aparencia', icon: Palette },
+  { href: '/dashboard/config', label: 'Configuracoes', icon: Settings },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -134,6 +146,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <nav style={{ flex: 1, padding: '16px 10px', overflowY: 'auto' }}>
           {menuItems.map((item) => {
             const active = isActive(item.href, item.exact);
+            const Icon = item.icon as LucideIcon;
             return (
               <Link
                 key={item.href}
@@ -159,7 +172,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     letterSpacing: '0.01em',
                   }}
                 >
-                  <span style={{ color: active ? '#f5d7a4' : 'rgba(246, 237, 225, 0.42)' }}>o</span>
+                  <span
+                    style={{
+                      color: active ? '#f5d7a4' : 'rgba(246, 237, 225, 0.56)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      filter: active ? 'drop-shadow(0 0 4px rgba(245, 215, 164, 0.35))' : 'none',
+                    }}
+                  >
+                    <Icon size={16} strokeWidth={2} />
+                  </span>
                   <span>{item.label}</span>
                 </div>
               </Link>
