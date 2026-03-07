@@ -1,49 +1,47 @@
-/* BELA PRO - Tema Elegante Premium */
-/* Paleta: Dourado (#9a7b4f, #c9a66c), Bege (#f5f0e8), Creme (#faf8f5) */
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
+
+/* BELA PRO - Style V2 Premium */
 
 :root {
-  /* Cores principais */
-  --gold-primary: #9a7b4f;
-  --gold-light: #c9a66c;
-  --gold-dark: #7a5f3d;
-  --gold-hover: #b8956b;
-  
-  /* Backgrounds */
-  --bg-cream: #faf8f5;
-  --bg-beige: #f5f0e8;
-  --bg-warm: #ede5d8;
-  --bg-card: #ffffff;
-  
-  /* Textos */
-  --text-primary: #3d3d3d;
-  --text-secondary: #6b5b4f;
-  --text-muted: #9a8b7a;
-  --text-light: #bfad99;
-  
-  /* Bordas e sombras */
-  --border-light: #e8dfd3;
-  --border-gold: rgba(154, 123, 79, 0.2);
-  --shadow-soft: 0 2px 12px rgba(154, 123, 79, 0.08);
-  --shadow-card: 0 4px 20px rgba(154, 123, 79, 0.1);
-  
-  /* Sidebar elegante */
-  --sidebar-bg: linear-gradient(180deg, #2c2620 0%, #1f1b17 100%);
-  --sidebar-text: #e8dfd3;
-  --sidebar-active: rgba(201, 166, 108, 0.15);
-  
-  /* Status colors */
-  --status-pending-bg: #fef7e6;
-  --status-pending-text: #c9a66c;
-  --status-confirmed-bg: #e8f4ec;
-  --status-confirmed-text: #5a9e6f;
-  --status-completed-bg: #e6f0f5;
-  --status-completed-text: #5a8fa8;
+  --gold-primary: #a07a45;
+  --gold-soft: #c9a66b;
+  --gold-deep: #8f6938;
+
+  --bg-page: #f4f1ec;
+  --bg-surface: #fbf8f3;
+  --bg-surface-2: #f7f2ea;
+  --bg-sidebar-top: #2d2925;
+  --bg-sidebar-bottom: #1f1c19;
+
+  --text-primary: #2f2a24;
+  --text-secondary: #6e6256;
+  --text-muted: #9b8e81;
+
+  --border-subtle: #e4dbcf;
+  --border-soft-gold: rgba(160, 122, 69, 0.24);
+
+  --shadow-subtle: 0 1px 2px rgba(54, 42, 24, 0.05);
+  --shadow-card: 0 6px 20px rgba(72, 52, 26, 0.08);
+  --shadow-lift: 0 12px 32px rgba(72, 52, 26, 0.12);
+
+  --status-pending-bg: #f8efdf;
+  --status-pending-text: #9f7a44;
+  --status-confirmed-bg: #e9f3eb;
+  --status-confirmed-text: #5f8f67;
+  --status-completed-bg: #e8f0f3;
+  --status-completed-text: #5f8492;
 }
 
 html, body { 
   height: 100%; 
-  background: var(--bg-cream);
+  background: var(--bg-page);
   color: var(--text-primary);
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+h1, h2, h3, .font-display {
+  font-family: 'Playfair Display', Georgia, serif;
+  letter-spacing: -0.01em;
 }
 
 /* Scrollbar elegante */
@@ -57,21 +55,21 @@ html, body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--gold-light);
+  background: #c2b4a1;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--gold-primary);
+  background: #ac9577;
 }
 
 /* Seleção de texto */
 ::selection {
-  background: rgba(201, 166, 108, 0.3);
+  background: rgba(160, 122, 69, 0.22);
   color: var(--text-primary);
 }
 
 /* Transições suaves globais */
 * {
-  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
