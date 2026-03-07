@@ -356,6 +356,8 @@ model Appointment {
   // Lembrete automático
   reminderSentAt DateTime? // quando o lembrete foi enviado
 
+  notes String? // observações do profissional
+
   // Financeiro MVP: snapshot
   totalPriceCents Int @default(0)
 

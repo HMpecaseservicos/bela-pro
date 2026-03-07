@@ -60,6 +60,12 @@ export class AppointmentsController {
     return this.appointmentsService.updateStatus(workspaceId, id, body.status);
   }
 
+  @Put(':id/reschedule')
+  reschedule(@Req() req: any, @Param('id') id: string, @Body() body: any) {
+    const { workspaceId } = req.user;
+    return this.appointmentsService.reschedule(workspaceId, id, body);
+  }
+
   @Put(':id/cancel')
   cancel(@Req() req: any, @Param('id') id: string, @Body() body: { cancelledBy: 'CLIENT' | 'PROFESSIONAL' }) {
     const { workspaceId } = req.user;

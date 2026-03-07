@@ -9,7 +9,14 @@ const createAppointmentSchema = z.object({
   clientPhone: z.string().min(10).max(20),
   serviceIds: z.array(z.string().cuid()).min(1),
   startAt: z.string().datetime(),
+  notes: z.string().max(1000).optional(),
   cancelReason: z.string().max(1000).optional(),
+});
+
+const rescheduleSchema = z.object({
+  startAt: z.string().datetime().optional(),
+  serviceId: z.string().cuid().optional(),
+  notes: z.string().max(1000).optional(),
 });
 
 @Injectable()
@@ -105,6 +112,7 @@ export class AppointmentsService {
         startAt,
         endAt,
         status: 'CONFIRMED',
+        notes: data.notes,
         cancelReason: data.cancelReason,
         services: {
           create: services.map((s) => ({
@@ -242,6 +250,71 @@ export class AppointmentsService {
 
     this.logger.log(`✅ [${workspaceId}] Agendamento ${id} cancelado`);
 
+    return this.findOne(workspaceId, id);
+  }
+
+  async reschedule(workspaceId: string, id: string, input: unknown) {
+    const data = rescheduleSchema.parse(input);
+    const appointment = await this.findOne(workspaceId, id);
+
+    if (appointment.status === 'CANCELLED' || appointment.status === 'COMPLETED') {
+      throw new BadRequestException('Agendamento finalizado não pode ser reagendado.');
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (data.notes !== undefined) updateData.notes = data.notes;
+
+    // Se mudou o horário
+    if (data.startAt) {
+      const newStart = new Date(data.startAt);
+      const serviceId = data.serviceId || appointment.services[0]?.serviceId;
+
+      const service = await this.prisma.service.findFirst({
+        where: { id: serviceId, workspaceId, isActive: true },
+      });
+      if (!service) throw new BadRequestException('Serviço não encontrado ou inativo.');
+
+      const newEnd = new Date(newStart.getTime() + service.durationMinutes * 60000);
+
+      // Verifica conflitos (excluindo o próprio agendamento)
+      const conflicts = await this.prisma.appointment.findMany({
+        where: {
+          workspaceId,
+          id: { not: id },
+          status: { in: ['PENDING', 'CONFIRMED'] },
+          AND: [{ startAt: { lt: newEnd } }, { endAt: { gt: newStart } }],
+        },
+      });
+      if (conflicts.length > 0) {
+        throw new ConflictException('Já existe um agendamento neste horário.');
+      }
+
+      updateData.startAt = newStart;
+      updateData.endAt = newEnd;
+
+      // Se mudou de serviço, atualiza o vínculo
+      if (data.serviceId && data.serviceId !== appointment.services[0]?.serviceId) {
+        await this.prisma.appointmentService.deleteMany({ where: { appointmentId: id } });
+        await this.prisma.appointmentService.create({
+          data: {
+            appointmentId: id,
+            serviceId: service.id,
+            durationMinutes: service.durationMinutes,
+            priceCents: service.priceCents,
+          },
+        });
+        updateData.totalPriceCents = service.priceCents;
+      }
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      await this.prisma.appointment.updateMany({
+        where: { id, workspaceId },
+        data: updateData,
+      });
+    }
+
+    this.logger.log(`✅ [${workspaceId}] Agendamento ${id} reagendado`);
     return this.findOne(workspaceId, id);
   }
 

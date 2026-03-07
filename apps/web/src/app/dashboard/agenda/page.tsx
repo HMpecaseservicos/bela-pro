@@ -166,6 +166,11 @@ export default function AgendaPage() {
     setWorkspaceName(localStorage.getItem('workspaceName') || 'Meu Negócio');
   }, []);
 
+  // Re-fetch ao navegar para outra semana
+  useEffect(() => {
+    if (!loading) fetchAppointments();
+  }, [selectedDate.toDateString()]);
+
   /* ─── API calls ─── */
   async function fetchWorkspaceId() {
     const wsId = localStorage.getItem('workspaceId');
@@ -191,7 +196,16 @@ export default function AgendaPage() {
     const token = localStorage.getItem('token');
     if (!token) { window.location.href = '/login'; return; }
     try {
-      const res = await fetch(`${API_URL}/appointments`, {
+      // Busca janela de 6 semanas centrada na data selecionada
+      const from = new Date(selectedDate);
+      from.setDate(from.getDate() - 21);
+      const to = new Date(selectedDate);
+      to.setDate(to.getDate() + 21);
+      const params = new URLSearchParams({
+        from: from.toISOString(),
+        to: to.toISOString(),
+      });
+      const res = await fetch(`${API_URL}/appointments?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; return; }
@@ -357,10 +371,14 @@ export default function AgendaPage() {
       const [year, month, day] = editData.date.split('-').map(Number);
       const [hour, minute] = editData.time.split(':').map(Number);
       const newStartAt = new Date(year, month - 1, day, hour, minute);
-      const res = await fetch(`${API_URL}/appointments/${selectedAppointment.id}`, {
+      const res = await fetch(`${API_URL}/appointments/${selectedAppointment.id}/reschedule`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ startAt: newStartAt.toISOString(), serviceId: editData.serviceId, notes: editData.notes }),
+        body: JSON.stringify({
+          startAt: newStartAt.toISOString(),
+          serviceId: editData.serviceId || undefined,
+          notes: editData.notes || undefined,
+        }),
       });
       if (!res.ok) { const data = await res.json().catch(() => ({})); throw new Error(data.message || 'Erro ao salvar'); }
       setEditMode(false);
