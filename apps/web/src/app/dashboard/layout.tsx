@@ -11,8 +11,8 @@ const THEME = {
   goldSoft: '#c9a66b',
   page: '#f4f1ec',
   surface: '#fbf8f3',
-  sidebar: 'linear-gradient(180deg, #2d2925 0%, #1f1c19 100%)',
-  sidebarText: '#ddd0bf',
+  sidebar: 'linear-gradient(180deg, #6a5846 0%, #544230 56%, #443528 100%)',
+  sidebarText: '#f1e7d9',
   textPrimary: '#2f2a24',
   borderSubtle: '#e4dbcf',
 };
@@ -85,7 +85,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(25, 22, 18, 0.56)',
+            background: 'rgba(44, 33, 21, 0.46)',
             backdropFilter: 'blur(2px)',
             zIndex: 99,
           }}
@@ -104,10 +104,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           zIndex: 100,
           transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
           transition: 'transform 0.25s ease',
-          boxShadow: '8px 0 24px rgba(0,0,0,0.24)',
+          boxShadow: '8px 0 22px rgba(41, 30, 20, 0.28)',
         }}
       >
-        <div style={{ padding: '24px 20px 16px', borderBottom: '1px solid rgba(201, 166, 107, 0.18)' }}>
+        <div style={{ padding: '24px 20px 16px', borderBottom: '1px solid rgba(236, 210, 171, 0.28)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <img
               src="/logo.png"
@@ -151,15 +151,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     padding: '11px 14px',
                     marginBottom: 5,
                     borderRadius: 12,
-                    border: active ? '1px solid rgba(201, 166, 107, 0.36)' : '1px solid transparent',
-                    background: active ? 'rgba(201, 166, 107, 0.12)' : 'transparent',
-                    color: active ? '#f3e6d2' : 'rgba(221, 208, 191, 0.72)',
+                    border: active ? '1px solid rgba(236, 205, 157, 0.58)' : '1px solid transparent',
+                    background: active ? 'rgba(245, 214, 164, 0.2)' : 'transparent',
+                    color: active ? '#fff6e8' : 'rgba(246, 237, 225, 0.74)',
                     fontSize: 13,
                     fontWeight: active ? 600 : 500,
                     letterSpacing: '0.01em',
                   }}
                 >
-                  <span style={{ color: active ? THEME.goldSoft : 'rgba(221,208,191,0.45)' }}>o</span>
+                  <span style={{ color: active ? '#f5d7a4' : 'rgba(246, 237, 225, 0.42)' }}>o</span>
                   <span>{item.label}</span>
                 </div>
               </Link>
@@ -167,9 +167,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        <div style={{ padding: 16, borderTop: '1px solid rgba(201, 166, 107, 0.18)' }}>
+        <div style={{ padding: 16, borderTop: '1px solid rgba(236, 210, 171, 0.28)' }}>
           <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 11, color: 'rgba(221, 208, 191, 0.6)' }}>Notificacoes</span>
+            <span style={{ fontSize: 11, color: 'rgba(241, 231, 217, 0.66)' }}>Notificacoes</span>
             <NotificationToggle />
           </div>
 
@@ -191,10 +191,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {userName.charAt(0).toUpperCase()}
             </div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: '#e7ddcf', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#f5ecdf', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {userName}
               </div>
-              <div style={{ fontSize: 11, color: 'rgba(221, 208, 191, 0.58)' }}>Administrador</div>
+              <div style={{ fontSize: 11, color: 'rgba(241, 231, 217, 0.66)' }}>Administrador</div>
             </div>
           </div>
 
@@ -203,10 +203,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             style={{
               width: '100%',
               padding: '10px',
-              background: 'rgba(201, 166, 107, 0.1)',
-              border: '1px solid rgba(201, 166, 107, 0.25)',
+              background: 'rgba(246, 220, 178, 0.2)',
+              border: '1px solid rgba(246, 220, 178, 0.34)',
               borderRadius: 10,
-              color: '#dcbf95',
+              color: '#fae3bf',
               fontSize: 13,
               fontWeight: 600,
               cursor: 'pointer',
