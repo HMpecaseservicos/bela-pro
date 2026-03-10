@@ -9,18 +9,14 @@ import {
   Query,
   UseGuards,
   Req,
-  ForbiddenException,
+  Res,
+  Header,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { SuperAdminGuard } from '../auth/super-admin.guard';
 import { BusinessInvitesService, CreateInviteDto, CreatePublicInviteDto, UpdateInviteDto, InviteFilters } from './business-invites.service';
 import { BusinessInviteStatus, InviteFocusType, InviteType } from '@prisma/client';
-
-// Guard para verificar se é Super Admin
-function requireSuperAdmin(req: any) {
-  if (!req.user?.isSuperAdmin) {
-    throw new ForbiddenException('Acesso negado: requer Super Admin');
-  }
-}
 
 @Controller('api/v1/business-invites')
 export class BusinessInvitesController {
@@ -28,10 +24,6 @@ export class BusinessInvitesController {
 
   // ==================== ENDPOINTS PÚBLICOS (Landing Page) ====================
 
-  /**
-   * GET /business-invites/public/:token
-   * Busca convite por token para exibir na landing page
-   */
   @Get('public/:token')
   async getPublicInvite(@Param('token') token: string) {
     const invite = await this.invitesService.findByToken(token);
@@ -43,7 +35,6 @@ export class BusinessInvitesController {
       };
     }
 
-    // Verifica se expirou
     if (new Date() > invite.expiresAt) {
       return {
         success: false,
@@ -52,7 +43,6 @@ export class BusinessInvitesController {
       };
     }
 
-    // Retorna dados limitados (sem expor informações sensíveis)
     return {
       success: true,
       data: {
@@ -67,10 +57,6 @@ export class BusinessInvitesController {
     };
   }
 
-  /**
-   * POST /business-invites/public/:token/cta-click
-   * Registra clique no CTA da landing page
-   */
   @Post('public/:token/cta-click')
   async registerCtaClick(@Param('token') token: string) {
     return this.invitesService.registerCtaClick(token);
@@ -78,25 +64,30 @@ export class BusinessInvitesController {
 
   // ==================== ENDPOINTS PROTEGIDOS (Super Admin) ====================
 
-  /**
-   * GET /business-invites/dashboard
-   * Dashboard de métricas de convites
-   */
   @Get('dashboard')
-  @UseGuards(JwtAuthGuard)
-  async getDashboard(@Req() req: any) {
-    requireSuperAdmin(req);
+  @UseGuards(JwtAuthGuard, SuperAdminGuard)
+  async getDashboard() {
     return this.invitesService.getDashboardMetrics();
   }
 
-  /**
-   * GET /business-invites
-   * Lista todos os convites com filtros
-   */
+  @Get('export/csv')
+  @UseGuards(JwtAuthGuard, SuperAdminGuard)
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  async exportCsv(
+    @Res() res: Response,
+    @Query('status') status?: BusinessInviteStatus,
+    @Query('focusType') focusType?: InviteFocusType,
+    @Query('inviteType') inviteType?: InviteType,
+    @Query('search') search?: string,
+  ) {
+    const csv = await this.invitesService.exportToCsv({ status, focusType, inviteType, search });
+    res.setHeader('Content-Disposition', `attachment; filename=convites-${new Date().toISOString().slice(0, 10)}.csv`);
+    res.send(csv);
+  }
+
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SuperAdminGuard)
   async findAll(
-    @Req() req: any,
     @Query('status') status?: BusinessInviteStatus,
     @Query('focusType') focusType?: InviteFocusType,
     @Query('inviteType') inviteType?: InviteType,
@@ -104,8 +95,6 @@ export class BusinessInvitesController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
-    requireSuperAdmin(req);
-
     const filters: InviteFilters = {
       status,
       focusType,
@@ -118,28 +107,17 @@ export class BusinessInvitesController {
     return this.invitesService.findAll(filters);
   }
 
-  /**
-   * GET /business-invites/:id
-   * Busca convite por ID
-   */
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
-  async findById(@Req() req: any, @Param('id') id: string) {
-    requireSuperAdmin(req);
+  @UseGuards(JwtAuthGuard, SuperAdminGuard)
+  async findById(@Param('id') id: string) {
     return this.invitesService.findById(id);
   }
 
-  /**
-   * POST /business-invites
-   * Cria novo convite personalizado
-   */
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SuperAdminGuard)
   async create(@Req() req: any, @Body() body: CreateInviteDto) {
-    requireSuperAdmin(req);
     const invite = await this.invitesService.createInvite(req.user.userId, body);
     
-    // Gera link e mensagem de WhatsApp
     const inviteLink = this.invitesService.getInviteLink(invite.token);
     const whatsappMessage = this.invitesService.generateWhatsAppMessage(invite);
 
@@ -150,17 +128,11 @@ export class BusinessInvitesController {
     };
   }
 
-  /**
-   * POST /business-invites/public-campaign
-   * Cria convite público para divulgação em redes sociais
-   */
   @Post('public-campaign')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, SuperAdminGuard)
   async createPublicCampaign(@Req() req: any, @Body() body: CreatePublicInviteDto) {
-    requireSuperAdmin(req);
     const invite = await this.invitesService.createPublicInvite(req.user.userId, body);
     
-    // Gera links para compartilhar
     const inviteLink = this.invitesService.getInviteLink(invite.slug || invite.token);
 
     return {
@@ -174,77 +146,39 @@ export class BusinessInvitesController {
     };
   }
 
-  /**
-   * PUT /business-invites/:id
-   * Atualiza convite
-   */
   @Put(':id')
-  @UseGuards(JwtAuthGuard)
-  async update(
-    @Req() req: any,
-    @Param('id') id: string,
-    @Body() body: UpdateInviteDto,
-  ) {
-    requireSuperAdmin(req);
+  @UseGuards(JwtAuthGuard, SuperAdminGuard)
+  async update(@Param('id') id: string, @Body() body: UpdateInviteDto) {
     return this.invitesService.update(id, body);
   }
 
-  /**
-   * DELETE /business-invites/:id
-   * Cancela convite
-   */
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
-  async cancel(@Req() req: any, @Param('id') id: string) {
-    requireSuperAdmin(req);
+  @UseGuards(JwtAuthGuard, SuperAdminGuard)
+  async cancel(@Param('id') id: string) {
     return this.invitesService.cancel(id);
   }
 
-  /**
-   * POST /business-invites/:id/reactivate
-   * Reativa convite expirado ou cancelado
-   */
   @Post(':id/reactivate')
-  @UseGuards(JwtAuthGuard)
-  async reactivate(
-    @Req() req: any,
-    @Param('id') id: string,
-    @Body() body: { expiresInDays?: number },
-  ) {
-    requireSuperAdmin(req);
+  @UseGuards(JwtAuthGuard, SuperAdminGuard)
+  async reactivate(@Param('id') id: string, @Body() body: { expiresInDays?: number }) {
     return this.invitesService.reactivate(id, body.expiresInDays);
   }
 
-  /**
-   * POST /business-invites/:id/mark-whatsapp-sent
-   * Marca convite como enviado via WhatsApp
-   */
   @Post(':id/mark-whatsapp-sent')
-  @UseGuards(JwtAuthGuard)
-  async markWhatsAppSent(@Req() req: any, @Param('id') id: string) {
-    requireSuperAdmin(req);
+  @UseGuards(JwtAuthGuard, SuperAdminGuard)
+  async markWhatsAppSent(@Param('id') id: string) {
     return this.invitesService.markSentViaWhatsApp(id);
   }
 
-  /**
-   * POST /business-invites/:id/mark-email-sent
-   * Marca convite como enviado via Email
-   */
   @Post(':id/mark-email-sent')
-  @UseGuards(JwtAuthGuard)
-  async markEmailSent(@Req() req: any, @Param('id') id: string) {
-    requireSuperAdmin(req);
+  @UseGuards(JwtAuthGuard, SuperAdminGuard)
+  async markEmailSent(@Param('id') id: string) {
     return this.invitesService.markSentViaEmail(id);
   }
 
-  /**
-   * GET /business-invites/:id/whatsapp-link
-   * Gera link de WhatsApp com mensagem pronta
-   */
   @Get(':id/whatsapp-link')
-  @UseGuards(JwtAuthGuard)
-  async getWhatsAppLink(@Req() req: any, @Param('id') id: string) {
-    requireSuperAdmin(req);
+  @UseGuards(JwtAuthGuard, SuperAdminGuard)
+  async getWhatsAppLink(@Param('id') id: string) {
     const invite = await this.invitesService.findById(id);
     const message = this.invitesService.generateWhatsAppMessage(invite);
     const encodedMessage = encodeURIComponent(message);
@@ -258,14 +192,9 @@ export class BusinessInvitesController {
     };
   }
 
-  /**
-   * POST /business-invites/expire-old
-   * Expira convites antigos (para cron job)
-   */
   @Post('expire-old')
-  @UseGuards(JwtAuthGuard)
-  async expireOld(@Req() req: any) {
-    requireSuperAdmin(req);
+  @UseGuards(JwtAuthGuard, SuperAdminGuard)
+  async expireOld() {
     return this.invitesService.expireOldInvites();
   }
 }

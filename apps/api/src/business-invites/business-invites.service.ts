@@ -1,41 +1,46 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { BusinessInviteStatus, InviteFocusType, InviteType } from '@prisma/client';
+import { z } from 'zod';
 
-export interface CreateInviteDto {
-  businessName: string;
-  contactName: string;
-  phone: string;
-  email?: string;
-  city?: string;
-  focusType?: InviteFocusType;
-  personalMessage?: string;
-  notes?: string;
-  expiresInDays?: number;
-}
+const createInviteSchema = z.object({
+  businessName: z.string().min(1, 'Nome obrigatório').max(200),
+  contactName: z.string().min(1, 'Nome do contato obrigatório').max(200),
+  phone: z.string().min(8, 'Telefone inválido').max(20),
+  email: z.string().email('Email inválido').optional().or(z.literal('')),
+  city: z.string().max(100).optional(),
+  focusType: z.enum(['YOUTH_BEAUTY', 'INCOME_GROWTH', 'RECOGNITION']).optional(),
+  personalMessage: z.string().max(500).optional(),
+  notes: z.string().max(500).optional(),
+  expiresInDays: z.number().int().min(1).max(365).optional(),
+});
 
-export interface CreatePublicInviteDto {
-  campaignName: string;
-  slug?: string;
-  focusType?: InviteFocusType;
-  personalMessage?: string;
-  notes?: string;
-  expiresInDays?: number;
-}
+const createPublicInviteSchema = z.object({
+  campaignName: z.string().min(1, 'Nome da campanha obrigatório').max(200),
+  slug: z.string().max(100).optional(),
+  focusType: z.enum(['YOUTH_BEAUTY', 'INCOME_GROWTH', 'RECOGNITION']).optional(),
+  personalMessage: z.string().max(500).optional(),
+  notes: z.string().max(500).optional(),
+  expiresInDays: z.number().int().min(1).max(365).optional(),
+});
 
-export interface UpdateInviteDto {
-  businessName?: string;
-  contactName?: string;
-  phone?: string;
-  email?: string;
-  city?: string;
-  focusType?: InviteFocusType;
-  personalMessage?: string;
-  notes?: string;
-  status?: BusinessInviteStatus;
-  campaignName?: string;
-  slug?: string;
-}
+const updateInviteSchema = z.object({
+  businessName: z.string().min(1).max(200).optional(),
+  contactName: z.string().min(1).max(200).optional(),
+  phone: z.string().min(8).max(20).optional(),
+  email: z.string().email().optional().or(z.literal('')),
+  city: z.string().max(100).optional(),
+  focusType: z.enum(['YOUTH_BEAUTY', 'INCOME_GROWTH', 'RECOGNITION']).optional(),
+  personalMessage: z.string().max(500).optional(),
+  notes: z.string().max(500).optional(),
+  campaignName: z.string().min(1).max(200).optional(),
+  slug: z.string().max(100).optional(),
+});
+
+export type CreateInviteDto = z.infer<typeof createInviteSchema>;
+export type CreatePublicInviteDto = z.infer<typeof createPublicInviteSchema>;
+export type UpdateInviteDto = z.infer<typeof updateInviteSchema>;
 
 export interface InviteFilters {
   status?: BusinessInviteStatus;
@@ -48,13 +53,15 @@ export interface InviteFilters {
 
 @Injectable()
 export class BusinessInvitesService {
+  private readonly logger = new Logger(BusinessInvitesService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Cria um novo convite de empresa
    */
-  async createInvite(sentById: string, data: CreateInviteDto) {
-    // Normaliza o telefone
+  async createInvite(sentById: string, raw: CreateInviteDto) {
+    const data = createInviteSchema.parse(raw);
     const phone = this.normalizePhone(data.phone);
     
     // Verifica se já existe convite para este telefone que ainda está ativo
@@ -112,8 +119,8 @@ export class BusinessInvitesService {
   /**
    * Cria um convite público para divulgação em redes sociais
    */
-  async createPublicInvite(sentById: string, data: CreatePublicInviteDto) {
-    // Valida e normaliza o slug
+  async createPublicInvite(sentById: string, raw: CreatePublicInviteDto) {
+    const data = createPublicInviteSchema.parse(raw);
     let slug = data.slug;
     if (slug) {
       slug = this.normalizeSlug(slug);
@@ -351,10 +358,11 @@ export class BusinessInvitesService {
   /**
    * Atualiza um convite
    */
-  async update(id: string, data: UpdateInviteDto) {
+  async update(id: string, raw: UpdateInviteDto) {
+    const data = updateInviteSchema.parse(raw);
     const invite = await this.findById(id);
 
-    const updateData: any = { ...data };
+    const updateData: Partial<typeof data> & { phone?: string } = { ...data };
     if (data.phone) {
       updateData.phone = this.normalizePhone(data.phone);
     }
@@ -536,8 +544,9 @@ export class BusinessInvitesService {
   }
 
   /**
-   * Expira convites vencidos (cron job)
+   * Expira convites vencidos — roda automaticamente a cada hora
    */
+  @Cron(CronExpression.EVERY_HOUR)
   async expireOldInvites() {
     const now = new Date();
 
@@ -555,7 +564,61 @@ export class BusinessInvitesService {
       },
     });
 
+    if (result.count > 0) {
+      this.logger.log(`Expirados ${result.count} convite(s) vencido(s)`);
+    }
+
     return { expiredCount: result.count };
+  }
+
+  /**
+   * Exporta convites filtrados para CSV
+   */
+  async exportToCsv(filters: Omit<InviteFilters, 'page' | 'limit'>): Promise<string> {
+    const where: any = {};
+    if (filters.status) where.status = filters.status;
+    if (filters.focusType) where.focusType = filters.focusType;
+    if (filters.inviteType) where.inviteType = filters.inviteType;
+    if (filters.search) {
+      where.OR = [
+        { businessName: { contains: filters.search, mode: 'insensitive' } },
+        { contactName: { contains: filters.search, mode: 'insensitive' } },
+        { phone: { contains: filters.search } },
+        { city: { contains: filters.search, mode: 'insensitive' } },
+        { campaignName: { contains: filters.search, mode: 'insensitive' } },
+      ];
+    }
+
+    const invites = await this.prisma.businessInvite.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: { sentBy: { select: { name: true } }, convertedWorkspace: { select: { name: true } } },
+    });
+
+    const header = 'Tipo,Nome,Contato,Telefone,Email,Cidade,Foco,Status,Visualizações,Cliques,Criado,Expira,Convertido Para';
+    const rows = invites.map((i) => {
+      const esc = (v: string | null | undefined) => {
+        if (!v) return '';
+        return `"${v.replace(/"/g, '""')}"`;
+      };
+      return [
+        i.inviteType,
+        esc(i.inviteType === 'PUBLIC' ? i.campaignName : i.businessName),
+        esc(i.contactName),
+        esc(i.phone),
+        esc(i.email),
+        esc(i.city),
+        i.focusType,
+        i.status,
+        i.viewCount,
+        i.totalClicks ?? 0,
+        i.createdAt.toISOString().slice(0, 10),
+        i.expiresAt.toISOString().slice(0, 10),
+        esc(i.convertedWorkspace?.name),
+      ].join(',');
+    });
+
+    return '\uFEFF' + [header, ...rows].join('\n');
   }
 
   /**
