@@ -244,10 +244,10 @@ function DashboardMockup() {
             PRÓXIMOS HORÁRIOS
           </div>
           {[
-            { t: '09:00', n: 'Ana Paula', s: 'Corte + Escova', status: true },
-            { t: '10:30', n: 'Mariana S.', s: 'Coloração', status: true },
-            { t: '13:00', n: 'Juliana M.', s: 'Manicure', status: false },
-            { t: '15:00', n: 'Beatriz R.', s: 'Hidratação', status: true },
+            { t: '09:00', n: 'Ana Paula', s: 'Atendimento', status: true },
+            { t: '10:30', n: 'Mariana S.', s: 'Procedimento', status: true },
+            { t: '13:00', n: 'Juliana M.', s: 'Consulta', status: false },
+            { t: '15:00', n: 'Beatriz R.', s: 'Retorno', status: true },
           ].map((a, i) => (
             <div key={i} style={{
               display: 'flex', alignItems: 'center', gap: 12,
@@ -319,17 +319,17 @@ const FEATURES = [
     icon: '🔗',
     title: 'Link de Agendamento',
     desc: 'Seus clientes agendam online 24h. Compartilhe no Instagram, WhatsApp e redes sociais.',
-    details: ['Página personalizada', 'Todos os serviços com preço', 'Integração com WhatsApp'],
+    details: ['Página personalizada', 'Serviços com preço e duração', 'Integração com WhatsApp'],
   },
   {
     icon: '👥',
-    title: 'CRM de Clientes',
-    desc: 'Cadastro completo com histórico, preferências e classificação automática de pontualidade.',
-    details: ['Histórico de atendimentos', 'Notas e observações', 'Classificação automática'],
+    title: 'Gestão de Clientes',
+    desc: 'Cadastro completo com histórico de atendimentos e classificação automática.',
+    details: ['Histórico completo', 'Notas e observações', 'Classificação automática'],
   },
   {
     icon: '💰',
-    title: 'Gestão Financeira',
+    title: 'Controle Financeiro',
     desc: 'Receitas, despesas e lucro real em um painel visual. Gráficos e relatórios que facilitam decisões.',
     details: ['Receitas automáticas', 'Gráficos de evolução', 'Categorias personalizadas'],
   },
@@ -337,13 +337,13 @@ const FEATURES = [
     icon: '💳',
     title: 'Pagamento via PIX',
     desc: 'Receba sinal ou pagamento total via PIX direto da plataforma. QR Code gerado automaticamente.',
-    details: ['QR Code instantâneo', 'Sinal configurável', 'Confirmação manual'],
+    details: ['QR Code instantâneo', 'Sinal configurável', 'Confirmação automática'],
   },
   {
     icon: '🤖',
     title: 'Chatbot WhatsApp',
     desc: 'Atendimento automatizado via WhatsApp. Confirma, reagenda e responde clientes sem você levantar o dedo.',
-    details: ['Respostas automáticas', 'Lembretes de consulta', 'Disponível 24/7'],
+    details: ['Respostas automáticas', 'Lembretes automáticos', 'Disponível 24/7'],
   },
 ];
 
@@ -352,7 +352,7 @@ const FEATURES = [
 // =============================================================================
 
 const STATS = [
-  { value: '500+', label: 'Profissionais confiam', icon: '👩‍💼' },
+  { value: '500+', label: 'Profissionais ativos', icon: '👩‍💼' },
   { value: '15.000+', label: 'Agendamentos / mês', icon: '📅' },
   { value: '4.9★', label: 'Avaliação média', icon: '⭐' },
   { value: 'R$ 2M+', label: 'Gerenciados / mês', icon: '💰' },
@@ -366,19 +366,19 @@ const TESTIMONIALS = [
   {
     text: 'Antes eu anotava tudo em caderno e sempre perdia informação. Agora tenho tudo organizado no celular. Me sinto profissional de verdade.',
     author: 'Marina Silva',
-    role: 'Cabeleireira • São Paulo',
+    role: 'Profissional autônoma • São Paulo',
     avatar: 'MS',
   },
   {
-    text: 'O link de agendamento mudou minha vida! Coloquei no Instagram e as clientes agendam sozinhas. Minha agenda nunca ficou tão cheia.',
+    text: 'O link de agendamento mudou minha vida! Coloquei no Instagram e os clientes agendam sozinhos. Minha agenda nunca ficou tão cheia.',
     author: 'Priscila Santos',
-    role: 'Nail Designer • Rio de Janeiro',
+    role: 'Empreendedora • Rio de Janeiro',
     avatar: 'PS',
   },
   {
     text: 'Finalmente sei exatamente quanto eu ganho no mês. Os relatórios são claros e me ajudam a investir certo no meu negócio.',
     author: 'Fernanda Costa',
-    role: 'Esteticista • Belo Horizonte',
+    role: 'Consultora de imagem • Belo Horizonte',
     avatar: 'FC',
   },
 ];
@@ -565,7 +565,7 @@ export default function BusinessInviteLandingPage() {
               <div style={{ width: 7, height: 7, borderRadius: '50%', background: C.gold, animation: 'pulse 2s infinite' }} />
               <span style={{ color: C.textSecondary, fontSize: 13, fontWeight: 500 }}>
                 {invite.inviteType === 'PUBLIC'
-                  ? <><span style={{ color: C.gold }}>Oferta Exclusiva</span> para Profissionais de Beleza</>
+                  ? <><span style={{ color: C.gold }}>Oferta Exclusiva</span> para você</>                    
                   : <>Convite exclusivo para <span style={{ color: C.gold }}>{recipientName}</span></>
                 }
               </span>
@@ -580,11 +580,11 @@ export default function BusinessInviteLandingPage() {
               marginBottom: 28,
               letterSpacing: '-1.5px',
             }}>
-              A gestão que{' '}
+              A plataforma que{' '}
               <span className="gold-text">
                 transforma
               </span>{' '}
-              profissionais em referência
+              o seu negócio
             </h1>
 
             {/* Sub */}
@@ -595,8 +595,8 @@ export default function BusinessInviteLandingPage() {
               marginBottom: 40,
               maxWidth: 520,
             }}>
-              Organize agenda, clientes e finanças em uma plataforma elegante e poderosa. 
-              Menos cadernos e planilhas. Mais tempo para o que importa: seus clientes.
+              Organize sua agenda, clientes e finanças em um só lugar. 
+              Menos cadernos e planilhas. Mais tempo para o que realmente importa.
             </p>
 
             {/* Personal message */}
@@ -697,7 +697,7 @@ export default function BusinessInviteLandingPage() {
               <span className="gold-text">Nada que não precisa.</span>
             </h2>
             <p style={{ color: C.textSecondary, fontSize: 17, maxWidth: 560, margin: '0 auto', lineHeight: 1.7 }}>
-              Ferramentas pensadas para o dia a dia de quem trabalha com beleza. Simples, elegante, poderoso.
+              Ferramentas pensadas para o dia a dia do profissional. Simples, elegante, poderoso.
             </p>
           </div>
 
@@ -890,7 +890,7 @@ export default function BusinessInviteLandingPage() {
           <img src="/logo-white.png" alt="Bela Pro" style={{ height: 40, width: 'auto', opacity: 0.7 }} />
         </div>
         <p style={{ color: C.textMuted, fontSize: 13 }}>
-          A plataforma de gestão para profissionais de beleza
+          A plataforma de gestão para profissionais
         </p>
         <p style={{ color: 'rgba(255,255,255,0.15)', fontSize: 11, marginTop: 16 }}>
           © 2026 Bela Pro. Todos os direitos reservados.
