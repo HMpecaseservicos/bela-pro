@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 
 // =============================================================================
 // TYPES
@@ -140,12 +140,67 @@ export default function PatrocinadoresPage() {
     expiresInDays: 30, notes: '',
   });
 
+  const [showAccessModal, setShowAccessModal] = useState(false);
+  const [accessForm, setAccessForm] = useState({ sponsorId: '', sponsorName: '', email: '', password: '' });
+  const [uploadingField, setUploadingField] = useState<string | null>(null);
+  const logoLightRef = useRef<HTMLInputElement>(null);
+  const logoDarkRef = useRef<HTMLInputElement>(null);
+  const coverRef = useRef<HTMLInputElement>(null);
+
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
 
   const getToken = () => localStorage.getItem('token') || '';
+
+  const handleImageUpload = async (file: File, category: string, field: 'logoLightUrl' | 'logoDarkUrl' | 'coverImageUrl') => {
+    setUploadingField(field);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(`${API_URL}/upload/sponsor-image?category=${category}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}` },
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const baseUrl = API_URL.replace('/api/v1', '');
+        const fullUrl = `${baseUrl}${data.url}`;
+        setForm(prev => ({ ...prev, [field]: fullUrl }));
+        showToast('Imagem enviada!');
+      } else {
+        showToast('Erro ao enviar imagem', 'error');
+      }
+    } catch { showToast('Erro de conexão', 'error'); }
+    finally { setUploadingField(null); }
+  };
+
+  const handleSetupAccess = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${API_URL}/admin/sponsor-access/${accessForm.sponsorId}/setup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ email: accessForm.email, password: accessForm.password }),
+      });
+      if (res.ok) {
+        showToast('Acesso Diamond configurado! O patrocinador já pode fazer login.');
+        setShowAccessModal(false);
+        setAccessForm({ sponsorId: '', sponsorName: '', email: '', password: '' });
+        fetchSponsors();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.message || 'Erro ao configurar acesso', 'error');
+      }
+    } catch { showToast('Erro de conexão', 'error'); }
+  };
+
+  const openAccessModal = (s: Sponsor) => {
+    setAccessForm({ sponsorId: s.id, sponsorName: s.name, email: '', password: '' });
+    setShowAccessModal(true);
+  };
 
   const fetchSponsors = useCallback(async () => {
     try {
@@ -577,6 +632,12 @@ export default function PatrocinadoresPage() {
                         <button onClick={() => openEdit(s)} style={{ ...btnSecondary, padding: '6px 12px', fontSize: 12 }}>
                           ✏️
                         </button>
+                        {s.tier === 'DIAMOND' && (
+                          <button onClick={() => openAccessModal(s)} title="Configurar acesso Diamond"
+                            style={{ ...btnSecondary, padding: '6px 12px', fontSize: 12, color: '#7c3aed' }}>
+                            💎
+                          </button>
+                        )}
                         <button onClick={() => toggleActive(s)} style={{
                           ...btnSecondary, padding: '6px 12px', fontSize: 12,
                           color: s.isActive ? T.danger : T.success,
@@ -727,26 +788,49 @@ export default function PatrocinadoresPage() {
                     rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
                 </div>
 
-                {/* Logos */}
+                {/* Logos — Upload */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
-                  <div>
-                    <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Logo (light) URL</label>
-                    <input type="url" value={form.logoLightUrl}
-                      onChange={e => setForm({ ...form, logoLightUrl: e.target.value })}
-                      placeholder="https://..." style={inputStyle} />
-                  </div>
-                  <div>
-                    <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Logo (dark) URL</label>
-                    <input type="url" value={form.logoDarkUrl}
-                      onChange={e => setForm({ ...form, logoDarkUrl: e.target.value })}
-                      placeholder="https://..." style={inputStyle} />
-                  </div>
-                  <div>
-                    <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Capa URL</label>
-                    <input type="url" value={form.coverImageUrl}
-                      onChange={e => setForm({ ...form, coverImageUrl: e.target.value })}
-                      placeholder="https://..." style={inputStyle} />
-                  </div>
+                  {[
+                    { field: 'logoLightUrl' as const, label: 'Logo (Light)', cat: 'logo', ref: logoLightRef },
+                    { field: 'logoDarkUrl' as const, label: 'Logo (Dark)', cat: 'logo-dark', ref: logoDarkRef },
+                    { field: 'coverImageUrl' as const, label: 'Capa', cat: 'cover', ref: coverRef },
+                  ].map(img => (
+                    <div key={img.field}>
+                      <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>{img.label}</label>
+                      <input ref={img.ref} type="file" accept="image/*" style={{ display: 'none' }}
+                        onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload(f, img.cat, img.field); }} />
+                      <div style={{
+                        border: `2px dashed ${form[img.field] ? T.gold : T.borderLight}`,
+                        borderRadius: 10, padding: 12, textAlign: 'center', cursor: 'pointer',
+                        background: form[img.field] ? `${T.gold}08` : T.surface,
+                        minHeight: 80, display: 'flex', flexDirection: 'column', alignItems: 'center',
+                        justifyContent: 'center', gap: 6, position: 'relative',
+                      }} onClick={() => img.ref.current?.click()}>
+                        {uploadingField === img.field ? (
+                          <span style={{ fontSize: 12, color: T.gold }}>Enviando...</span>
+                        ) : form[img.field] ? (
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={form[img.field]} alt={img.label}
+                              style={{ maxHeight: 48, maxWidth: '100%', objectFit: 'contain', borderRadius: 6 }} />
+                            <span style={{ fontSize: 10, color: T.textMuted }}>Clique para trocar</span>
+                          </>
+                        ) : (
+                          <>
+                            <span style={{ fontSize: 22 }}>📁</span>
+                            <span style={{ fontSize: 11, color: T.textMuted }}>Upload {img.label}</span>
+                          </>
+                        )}
+                        {form[img.field] && (
+                          <button type="button" onClick={e => { e.stopPropagation(); setForm(prev => ({ ...prev, [img.field]: '' })); }}
+                            style={{ position: 'absolute', top: 4, right: 4, background: T.dangerBg, border: 'none',
+                              borderRadius: 6, width: 20, height: 20, cursor: 'pointer', fontSize: 10, color: T.danger, lineHeight: '20px' }}>
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
                 {/* Website + CTA */}
@@ -986,6 +1070,61 @@ export default function PatrocinadoresPage() {
                 <button type="button" onClick={() => setShowInviteModal(false)} style={btnSecondary}>Cancelar</button>
                 <button type="submit" style={{ ...btnPrimary, background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)' }}>
                   ✉️ Criar Convite & Copiar Link
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DIAMOND ACCESS MODAL */}
+      {showAccessModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000,
+          display: 'flex', justifyContent: 'center', alignItems: 'center',
+          padding: '40px 16px',
+        }}>
+          <div style={{
+            background: T.white, borderRadius: 16, width: '100%', maxWidth: 480,
+            padding: 32, position: 'relative',
+          }}>
+            <button onClick={() => setShowAccessModal(false)} style={{
+              position: 'absolute', top: 16, right: 16, background: 'none', border: 'none',
+              fontSize: 22, cursor: 'pointer', color: T.textMuted, padding: 4,
+            }}>✕</button>
+
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div style={{ fontSize: 40, marginBottom: 8 }}>💎</div>
+              <h2 style={{ color: T.textPrimary, margin: 0, fontFamily: 'Playfair Display, serif', fontSize: 22 }}>
+                Acesso Diamond Panel
+              </h2>
+              <p style={{ color: T.textMuted, marginTop: 4, fontSize: 13 }}>
+                Configure login para <strong>{accessForm.sponsorName}</strong>
+              </p>
+              <p style={{ color: T.textMuted, fontSize: 12, marginTop: 2 }}>
+                O patrocinador poderá acessar seu painel em <strong>/parceiro/login</strong>
+              </p>
+            </div>
+
+            <form onSubmit={handleSetupAccess}>
+              <div style={{ display: 'grid', gap: 14 }}>
+                <div>
+                  <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Email de acesso *</label>
+                  <input type="email" required value={accessForm.email}
+                    onChange={e => setAccessForm({ ...accessForm, email: e.target.value })}
+                    placeholder="sponsor@empresa.com" style={inputStyle} />
+                </div>
+                <div>
+                  <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Senha *</label>
+                  <input type="password" required minLength={6} value={accessForm.password}
+                    onChange={e => setAccessForm({ ...accessForm, password: e.target.value })}
+                    placeholder="Mínimo 6 caracteres" style={inputStyle} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+                <button type="button" onClick={() => setShowAccessModal(false)} style={btnSecondary}>Cancelar</button>
+                <button type="submit" style={{ ...btnPrimary, background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)' }}>
+                  💎 Configurar Acesso
                 </button>
               </div>
             </form>

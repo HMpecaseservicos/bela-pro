@@ -54,6 +54,34 @@ export class UploadController {
   }
 
   /**
+   * POST /upload/sponsor-image
+   * Upload de imagem para patrocinadores (admin ou sponsor autenticado)
+   */
+  @Post('sponsor-image')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  async uploadSponsorImage(
+    @UploadedFile() file: Express.Multer.File,
+    @Query('category') category: 'logo' | 'logo-dark' | 'cover' | 'post' = 'logo',
+  ) {
+    if (!file) {
+      throw new BadRequestException('Nenhum arquivo enviado');
+    }
+
+    const url = await this.uploadService.uploadSponsorImage(file, category);
+
+    return {
+      success: true,
+      url,
+      filename: file.originalname,
+      size: file.size,
+    };
+  }
+
+  /**
    * GET /upload/files/:workspaceId/:filename
    * Serve arquivos estáticos de imagens
    * Público - para exibir imagens na página de agendamento

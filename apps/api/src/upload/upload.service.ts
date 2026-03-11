@@ -23,6 +23,34 @@ export class UploadService {
     }
   }
 
+  async uploadSponsorImage(
+    file: Express.Multer.File,
+    category: 'logo' | 'logo-dark' | 'cover' | 'post',
+  ): Promise<string> {
+    if (!this.allowedMimeTypes.includes(file.mimetype)) {
+      throw new BadRequestException(
+        'Tipo de arquivo não permitido. Use: JPG, PNG, GIF ou WebP',
+      );
+    }
+
+    if (file.size > this.maxFileSize) {
+      throw new BadRequestException('Arquivo muito grande. Máximo: 5MB');
+    }
+
+    const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+    const filename = `sponsor-${category}-${randomUUID()}${ext}`;
+
+    const sponsorDir = path.join(this.uploadDir, 'sponsors');
+    if (!fs.existsSync(sponsorDir)) {
+      fs.mkdirSync(sponsorDir, { recursive: true });
+    }
+
+    const filePath = path.join(sponsorDir, filename);
+    fs.writeFileSync(filePath, file.buffer);
+
+    return `/api/v1/upload/files/sponsors/${filename}`;
+  }
+
   async uploadImage(
     file: Express.Multer.File,
     workspaceId: string,

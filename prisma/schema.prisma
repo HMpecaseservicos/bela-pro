@@ -1079,15 +1079,55 @@ model Sponsor {
   // Notas internas
   notes String?
 
+  // Login Diamond Sponsor
+  email        String?  @unique
+  passwordHash String?
+
   // Auditoria
   createdByUserId String?
   updatedByUserId String?
+
+  // Relations
+  posts SponsorPost[]
 
   @@index([isActive])
   @@index([tier])
   @@index([sponsorType])
   @@index([isFeatured])
   @@index([displayOrder])
+  @@index([email])
+}
+
+// =============================================================================
+// POSTAGENS DO PATROCINADOR (Diamond Panel)
+// =============================================================================
+
+model SponsorPost {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sponsorId String
+  sponsor   Sponsor @relation(fields: [sponsorId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  imageUrl    String?
+  ctaLabel    String?
+  ctaUrl      String?
+
+  // Publicação
+  isActive    Boolean   @default(true)
+  publishedAt DateTime  @default(now())
+  expiresAt   DateTime?
+
+  // Tracking
+  viewCount   Int       @default(0)
+  clickCount  Int       @default(0)
+
+  @@index([sponsorId])
+  @@index([isActive])
+  @@index([publishedAt])
 }
 
 // =============================================================================

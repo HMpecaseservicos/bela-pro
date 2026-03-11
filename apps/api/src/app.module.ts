@@ -24,6 +24,7 @@ import { BillingModule } from './billing/billing.module';
 import { BusinessInvitesModule } from './business-invites/business-invites.module';
 import { SponsorsModule } from './sponsors/sponsors.module';
 import { SponsorInvitesModule } from './sponsor-invites/sponsor-invites.module';
+import { SponsorDashboardModule } from './sponsor-dashboard/sponsor-dashboard.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { SponsorInvitesModule } from './sponsor-invites/sponsor-invites.module';
     BusinessInvitesModule,
     SponsorsModule,
     SponsorInvitesModule,
+    SponsorDashboardModule,
   ],
   controllers: [HealthController, RootController],
 })
