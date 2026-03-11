@@ -77,6 +77,40 @@ export class SponsorContractsAdminController {
 }
 
 // =============================================================================
+// ADMIN PAYMENTS CONTROLLER
+// =============================================================================
+
+@Controller('api/v1/admin/sponsor-payments')
+@UseGuards(JwtAuthGuard, SuperAdminGuard)
+export class SponsorPaymentsAdminController {
+  constructor(private readonly service: SponsorInvitesService) {}
+
+  @Get('pending')
+  listPendingPayments() {
+    return this.service.listPendingPayments();
+  }
+
+  @Patch(':id/confirm')
+  confirmPayment(
+    @Param('id') id: string,
+    @Body() body: { paidByName?: string; transactionId?: string; notes?: string },
+    @Req() req: { user: { userId: string } },
+  ) {
+    return this.service.confirmPayment(id, req.user.userId, body);
+  }
+
+  @Post('expire-pending')
+  expirePendingPayments() {
+    return this.service.expirePendingPayments();
+  }
+
+  @Post('expire-contracts')
+  expireActiveContracts() {
+    return this.service.expireActiveContracts();
+  }
+}
+
+// =============================================================================
 // PUBLIC CONTROLLER
 // =============================================================================
 
@@ -127,5 +161,19 @@ export class SponsorContractsPublicController {
   @Get(':contractNumber')
   getContractByNumber(@Param('contractNumber') contractNumber: string) {
     return this.service.getContractByNumber(contractNumber);
+  }
+}
+
+// =============================================================================
+// PUBLIC PAYMENT CONTROLLER
+// =============================================================================
+
+@Controller('api/v1/public/sponsor-payments')
+export class SponsorPaymentsPublicController {
+  constructor(private readonly service: SponsorInvitesService) {}
+
+  @Get(':paymentId')
+  getPaymentStatus(@Param('paymentId') paymentId: string) {
+    return this.service.getPaymentStatus(paymentId);
   }
 }

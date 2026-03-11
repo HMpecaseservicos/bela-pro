@@ -271,7 +271,7 @@ export class SponsorInvitesService {
       passwordHash = await hash(data.password);
     }
 
-    // Transaction: create sponsor + contract + update invite
+    // Transaction: create sponsor + contract + payment + update invite
     const result = await this.prisma.$transaction(async (tx) => {
       const sponsor = await tx.sponsor.create({
         data: {
@@ -282,7 +282,7 @@ export class SponsorInvitesService {
           tier: data.selectedTier,
           sponsorType: data.selectedType,
           placementScopes: ['ALL'],
-          isActive: true,
+          isActive: false, // Aguardando pagamento
           contractStartsAt: startsAt,
           contractEndsAt: endsAt,
           email: data.contactEmail,
@@ -307,10 +307,29 @@ export class SponsorInvitesService {
           startsAt,
           endsAt,
           durationMonths: data.durationMonths,
-          status: 'ACTIVE',
+          status: 'PENDING_PAYMENT',
           signedAt: new Date(),
           signedByName: data.signedByName,
           signedByIp: ip,
+        },
+      });
+
+      // Calcular preço e gerar PIX
+      const amountCents = this.TIER_PRICING[data.selectedTier]?.[data.durationMonths] || 0;
+      const description = `BELAPRO ${data.selectedTier} ${data.durationMonths}M`;
+      const pixCode = this.generatePixCode(amountCents, description);
+      const pixExpiresAt = new Date();
+      pixExpiresAt.setHours(pixExpiresAt.getHours() + 48); // PIX válido por 48h
+
+      const payment = await tx.sponsorPayment.create({
+        data: {
+          contractId: contract.id,
+          amountCents,
+          tier: data.selectedTier,
+          durationMonths: data.durationMonths,
+          status: 'PENDING',
+          pixCode,
+          pixExpiresAt,
         },
       });
 
@@ -333,19 +352,215 @@ export class SponsorInvitesService {
         });
       }
 
-      return { sponsor, contract };
+      return { sponsor, contract, payment };
     });
 
-    this.logger.log(`Self-registration: ${data.companyName} (${data.selectedTier}) — contract ${contractNumber}`);
+    this.logger.log(`Self-registration: ${data.companyName} (${data.selectedTier}) — contract ${contractNumber} — PENDING_PAYMENT`);
+
+    const amountCents = this.TIER_PRICING[data.selectedTier]?.[data.durationMonths] || 0;
 
     return {
       success: true,
       sponsorId: result.sponsor.id,
       contractNumber: result.contract.contractNumber,
       contractId: result.contract.id,
+      paymentId: result.payment.id,
       tier: data.selectedTier,
       isDiamond: data.selectedTier === 'DIAMOND',
+      pendingPayment: true,
+      payment: {
+        amountCents,
+        amountFormatted: `R$ ${(amountCents / 100).toFixed(2).replace('.', ',')}`,
+        pixCode: result.payment.pixCode,
+        pixExpiresAt: result.payment.pixExpiresAt,
+        durationMonths: data.durationMonths,
+      },
     };
+  }
+
+  // ---- PAYMENT CONFIRMATION ----
+
+  async confirmPayment(
+    paymentId: string,
+    adminUserId: string,
+    data: { paidByName?: string; transactionId?: string; notes?: string },
+  ) {
+    const payment = await this.prisma.sponsorPayment.findUnique({
+      where: { id: paymentId },
+      include: { contract: { include: { sponsor: true } } },
+    });
+
+    if (!payment) throw new NotFoundException('Pagamento não encontrado');
+    if (payment.status !== 'PENDING') {
+      throw new BadRequestException('Pagamento não está pendente');
+    }
+
+    // Calculate new contract dates from now (payment date)
+    const startsAt = new Date();
+    const endsAt = new Date();
+    endsAt.setMonth(endsAt.getMonth() + payment.durationMonths);
+
+    await this.prisma.$transaction(async (tx) => {
+      // Update payment
+      await tx.sponsorPayment.update({
+        where: { id: paymentId },
+        data: {
+          status: 'PAID',
+          paidAt: new Date(),
+          paidByName: data.paidByName,
+          paymentMethod: 'PIX',
+          transactionId: data.transactionId,
+          confirmedBy: adminUserId,
+          notes: data.notes,
+        },
+      });
+
+      // Activate contract
+      await tx.sponsorContract.update({
+        where: { id: payment.contractId },
+        data: {
+          status: 'ACTIVE',
+          startsAt,
+          endsAt,
+        },
+      });
+
+      // Activate sponsor
+      await tx.sponsor.update({
+        where: { id: payment.contract.sponsorId },
+        data: {
+          isActive: true,
+          contractStartsAt: startsAt,
+          contractEndsAt: endsAt,
+        },
+      });
+    });
+
+    this.logger.log(`Payment confirmed: ${payment.id} — Sponsor ${payment.contract.sponsor.name} now ACTIVE`);
+
+    return {
+      success: true,
+      message: 'Pagamento confirmado e patrocinador ativado',
+      sponsorId: payment.contract.sponsorId,
+      sponsorName: payment.contract.sponsor.name,
+      contractId: payment.contractId,
+      activatedAt: new Date(),
+      expiresAt: endsAt,
+    };
+  }
+
+  // ---- GET PAYMENT STATUS ----
+
+  async getPaymentStatus(paymentId: string) {
+    const payment = await this.prisma.sponsorPayment.findUnique({
+      where: { id: paymentId },
+      include: { contract: { select: { contractNumber: true, sponsor: { select: { name: true } } } } },
+    });
+
+    if (!payment) throw new NotFoundException('Pagamento não encontrado');
+
+    return {
+      id: payment.id,
+      status: payment.status,
+      amountCents: payment.amountCents,
+      amountFormatted: `R$ ${(payment.amountCents / 100).toFixed(2).replace('.', ',')}`,
+      tier: payment.tier,
+      durationMonths: payment.durationMonths,
+      pixCode: payment.pixCode,
+      pixExpiresAt: payment.pixExpiresAt,
+      pixExpired: payment.pixExpiresAt && payment.pixExpiresAt < new Date(),
+      paidAt: payment.paidAt,
+      contractNumber: payment.contract.contractNumber,
+      sponsorName: payment.contract.sponsor.name,
+    };
+  }
+
+  // ---- LIST PENDING PAYMENTS (Admin) ----
+
+  async listPendingPayments() {
+    const payments = await this.prisma.sponsorPayment.findMany({
+      where: { status: 'PENDING' },
+      include: { contract: { select: { contractNumber: true, sponsor: { select: { name: true, email: true } } } } },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return payments.map((p) => ({
+      id: p.id,
+      sponsorName: p.contract.sponsor.name,
+      sponsorEmail: p.contract.sponsor.email,
+      contractNumber: p.contract.contractNumber,
+      tier: p.tier,
+      durationMonths: p.durationMonths,
+      amountCents: p.amountCents,
+      amountFormatted: `R$ ${(p.amountCents / 100).toFixed(2).replace('.', ',')}`,
+      pixExpiresAt: p.pixExpiresAt,
+      pixExpired: p.pixExpiresAt && p.pixExpiresAt < new Date(),
+      createdAt: p.createdAt,
+    }));
+  }
+
+  // ---- EXPIRE PENDING PAYMENTS (Cron) ----
+
+  async expirePendingPayments() {
+    const expired = await this.prisma.sponsorPayment.updateMany({
+      where: {
+        status: 'PENDING',
+        pixExpiresAt: { lt: new Date() },
+      },
+      data: { status: 'EXPIRED' },
+    });
+
+    if (expired.count > 0) {
+      this.logger.log(`Expired ${expired.count} pending sponsor payments`);
+    }
+
+    return { expiredCount: expired.count };
+  }
+
+  // ---- EXPIRE ACTIVE CONTRACTS (Cron) ----
+
+  async expireActiveContracts() {
+    const now = new Date();
+
+    // Find expired contracts
+    const expiredContracts = await this.prisma.sponsorContract.findMany({
+      where: {
+        status: 'ACTIVE',
+        endsAt: { lt: now },
+      },
+      select: { id: true, sponsorId: true },
+    });
+
+    if (expiredContracts.length === 0) return { expiredCount: 0 };
+
+    const sponsorIds = [...new Set(expiredContracts.map((c) => c.sponsorId))];
+    const contractIds = expiredContracts.map((c) => c.id);
+
+    await this.prisma.$transaction(async (tx) => {
+      // Mark contracts as expired
+      await tx.sponsorContract.updateMany({
+        where: { id: { in: contractIds } },
+        data: { status: 'EXPIRED' },
+      });
+
+      // Deactivate sponsors (only if no other active contract)
+      for (const sponsorId of sponsorIds) {
+        const activeContract = await tx.sponsorContract.findFirst({
+          where: { sponsorId, status: 'ACTIVE' },
+        });
+
+        if (!activeContract) {
+          await tx.sponsor.update({
+            where: { id: sponsorId },
+            data: { isActive: false },
+          });
+        }
+      }
+    });
+
+    this.logger.log(`Expired ${expiredContracts.length} contracts, deactivated ${sponsorIds.length} sponsors`);
+
+    return { expiredCount: expiredContracts.length, deactivatedSponsors: sponsorIds.length };
   }
 
   // ---- CONTRACT GENERATION (for admin-created sponsors) ----
@@ -432,13 +647,33 @@ export class SponsorInvitesService {
 
   // ---- TIER DETAILS ----
 
+  // Preços em centavos por tier e período
+  private readonly TIER_PRICING: Record<string, Record<number, number>> = {
+    DIAMOND: { 3: 119970, 6: 179940, 12: 287880 },  // R$ 1.199,70 | R$ 1.799,40 | R$ 2.878,80
+    GOLD:    { 3: 44970,  6: 59940,  12: 107880 },   // R$ 449,70   | R$ 599,40   | R$ 1.078,80
+    SILVER:  { 3: 14970,  6: 23940,  12: 41880 },    // R$ 149,70   | R$ 239,40   | R$ 418,80
+    BRONZE:  { 3: 5970,   6: 8940,   12: 14880 },    // R$ 59,70    | R$ 89,40    | R$ 148,80
+  };
+
+  // PIX config (hardcoded para plataforma)
+  private readonly PIX_CONFIG = {
+    key: 'contato@belapro.com.br',
+    keyType: 'EMAIL',
+    holderName: 'BELA PRO TECNOLOGIA LTDA',
+    city: 'SAO PAULO',
+  };
+
   getTierDetails() {
     return {
       DIAMOND: {
         name: 'Diamond Partner',
         icon: '💎',
         color: '#a78bfa',
-        priceLabel: 'Sob consulta',
+        pricing: {
+          3: { price: 119970, priceLabel: 'R$ 1.199,70', perMonth: 'R$ 399,90/mês' },
+          6: { price: 179940, priceLabel: 'R$ 1.799,40', perMonth: 'R$ 299,90/mês', discount: '25% de desconto' },
+          12: { price: 287880, priceLabel: 'R$ 2.878,80', perMonth: 'R$ 239,90/mês', discount: '40% de desconto', featured: true },
+        },
         highlights: ['Painel exclusivo com analytics', 'Gestão própria de postagens e anúncios', 'Logo em todas as páginas da plataforma', 'Relatórios detalhados de performance', 'Destaque prioritário na plataforma', 'Badge "Parceiro Diamond Verificado"', 'Suporte dedicado e prioritário', 'Customização da área de parceiro'],
         placement: 'Todas as páginas (landing, booking, dashboard, marketing)',
         maxPosts: 'Ilimitado',
@@ -447,7 +682,11 @@ export class SponsorInvitesService {
         name: 'Gold Partner',
         icon: '🥇',
         color: '#f59e0b',
-        priceLabel: 'Sob consulta',
+        pricing: {
+          3: { price: 44970, priceLabel: 'R$ 449,70', perMonth: 'R$ 149,90/mês' },
+          6: { price: 59940, priceLabel: 'R$ 599,40', perMonth: 'R$ 99,90/mês', discount: '33% de desconto' },
+          12: { price: 107880, priceLabel: 'R$ 1.078,80', perMonth: 'R$ 89,90/mês', discount: '40% de desconto', featured: true },
+        },
         highlights: ['Logo na página de agendamento', 'Logo na landing page de convites', 'Relatório mensal de impressões e cliques', 'Badge "Parceiro Gold Verificado"', 'Até 5 postagens ativas por mês', 'Suporte por email'],
         placement: 'Landing de convite + Página de agendamento',
         maxPosts: '5 por mês',
@@ -456,7 +695,11 @@ export class SponsorInvitesService {
         name: 'Silver Partner',
         icon: '🥈',
         color: '#94a3b8',
-        priceLabel: 'Sob consulta',
+        pricing: {
+          3: { price: 14970, priceLabel: 'R$ 149,70', perMonth: 'R$ 49,90/mês' },
+          6: { price: 23940, priceLabel: 'R$ 239,40', perMonth: 'R$ 39,90/mês', discount: '20% de desconto' },
+          12: { price: 41880, priceLabel: 'R$ 418,80', perMonth: 'R$ 34,90/mês', discount: '30% de desconto', featured: true },
+        },
         highlights: ['Logo na página de agendamento', 'Relatório mensal de impressões', 'Badge "Parceiro Silver"', 'Até 2 postagens ativas por mês'],
         placement: 'Página de agendamento',
         maxPosts: '2 por mês',
@@ -465,12 +708,86 @@ export class SponsorInvitesService {
         name: 'Bronze Partner',
         icon: '🥉',
         color: '#d97706',
-        priceLabel: 'Gratuito',
-        highlights: ['Menção na página de parceiros', 'Badge "Parceiro Bronze"', 'Relatório trimestral básico'],
+        pricing: {
+          3: { price: 5970, priceLabel: 'R$ 59,70', perMonth: 'R$ 19,90/mês' },
+          6: { price: 8940, priceLabel: 'R$ 89,40', perMonth: 'R$ 14,90/mês', discount: '25% de desconto' },
+          12: { price: 14880, priceLabel: 'R$ 148,80', perMonth: 'R$ 12,40/mês', discount: '38% de desconto', featured: true },
+        },
+        highlights: ['Logo na página de parceiros', 'Badge "Parceiro Bronze"', 'Relatório trimestral básico'],
         placement: 'Página de parceiros',
         maxPosts: 'Não incluído',
       },
     };
+  }
+
+  // ---- PIX CODE GENERATION ----
+
+  private generatePixCode(amountCents: number, description: string): string {
+    const amount = (amountCents / 100).toFixed(2);
+    const txId = `BELA${Date.now().toString(36).toUpperCase()}`.slice(0, 25);
+    
+    const cleanName = this.removeAccents(this.PIX_CONFIG.holderName).toUpperCase().slice(0, 25);
+    const cleanCity = this.removeAccents(this.PIX_CONFIG.city).toUpperCase().slice(0, 15);
+    
+    // Construir payload PIX EMV
+    let payload = '000201';
+    
+    // ID 26 - Merchant Account Information (PIX)
+    const gui = '0014BR.GOV.BCB.PIX';
+    const chave = `01${this.PIX_CONFIG.key.length.toString().padStart(2, '0')}${this.PIX_CONFIG.key}`;
+    const merchantInfo = gui + chave;
+    payload += `26${merchantInfo.length.toString().padStart(2, '0')}${merchantInfo}`;
+    
+    // ID 52 - Merchant Category Code
+    payload += '52040000';
+    
+    // ID 53 - Transaction Currency (986 = BRL)
+    payload += '5303986';
+    
+    // ID 54 - Transaction Amount
+    payload += `54${amount.length.toString().padStart(2, '0')}${amount}`;
+    
+    // ID 58 - Country Code
+    payload += '5802BR';
+    
+    // ID 59 - Merchant Name
+    payload += `59${cleanName.length.toString().padStart(2, '0')}${cleanName}`;
+    
+    // ID 60 - Merchant City
+    payload += `60${cleanCity.length.toString().padStart(2, '0')}${cleanCity}`;
+    
+    // ID 62 - Additional Data Field Template
+    const txIdField = `05${txId.length.toString().padStart(2, '0')}${txId}`;
+    payload += `62${txIdField.length.toString().padStart(2, '0')}${txIdField}`;
+    
+    // ID 63 - CRC16
+    payload += '6304';
+    const crc = this.calculateCRC16(payload);
+    payload = payload.slice(0, -4) + '6304' + crc;
+    
+    return payload;
+  }
+
+  private removeAccents(str: string): string {
+    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9 ]/g, '');
+  }
+
+  private calculateCRC16(payload: string): string {
+    const polynomial = 0x1021;
+    let crc = 0xFFFF;
+    
+    for (let i = 0; i < payload.length; i++) {
+      crc ^= (payload.charCodeAt(i) << 8);
+      for (let j = 0; j < 8; j++) {
+        if (crc & 0x8000) {
+          crc = ((crc << 1) ^ polynomial) & 0xFFFF;
+        } else {
+          crc = (crc << 1) & 0xFFFF;
+        }
+      }
+    }
+    
+    return crc.toString(16).toUpperCase().padStart(4, '0');
   }
 
   // ---- HELPERS ----

@@ -5,6 +5,8 @@ import {
   SponsorInvitesPublicController,
   SponsorContractsAdminController,
   SponsorContractsPublicController,
+  SponsorPaymentsAdminController,
+  SponsorPaymentsPublicController,
 } from './sponsor-invites.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 
@@ -15,6 +17,8 @@ import { PrismaModule } from '../prisma/prisma.module';
     SponsorInvitesPublicController,
     SponsorContractsAdminController,
     SponsorContractsPublicController,
+    SponsorPaymentsAdminController,
+    SponsorPaymentsPublicController,
   ],
   providers: [SponsorInvitesService],
   exports: [SponsorInvitesService],

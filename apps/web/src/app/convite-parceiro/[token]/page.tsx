@@ -23,10 +23,26 @@ interface TierDetail {
   name: string;
   icon: string;
   color: string;
-  priceLabel: string;
   highlights: string[];
   placement: string;
   maxPosts: string;
+  pricing: {
+    [key: number]: {
+      price: number;
+      priceLabel: string;
+      perMonth: string;
+      discount?: string;
+      featured?: boolean;
+    };
+  };
+}
+
+interface PaymentInfo {
+  amountCents: number;
+  amountFormatted: string;
+  pixCode: string;
+  pixExpiresAt: string;
+  durationMonths: number;
 }
 
 // =============================================================================
@@ -180,10 +196,10 @@ export default function SponsorInviteLandingPage() {
   const [expired, setExpired] = useState(false);
 
   // Registration flow
-  const [step, setStep] = useState<'landing' | 'tier' | 'form' | 'contract' | 'success'>('landing');
+  const [step, setStep] = useState<'landing' | 'tier' | 'form' | 'contract' | 'payment' | 'success'>('landing');
   const [tierDetails, setTierDetails] = useState<Record<string, TierDetail> | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<{ contractNumber: string; isDiamond: boolean } | null>(null);
+  const [result, setResult] = useState<{ contractNumber: string; isDiamond: boolean; pendingPayment?: boolean; payment?: PaymentInfo; paymentId?: string } | null>(null);
 
   // Form
   const [form, setForm] = useState({
@@ -284,8 +300,15 @@ export default function SponsorInviteLandingPage() {
 
       if (res.ok) {
         const data = await res.json();
-        setResult({ contractNumber: data.contractNumber, isDiamond: data.isDiamond });
-        setStep('success');
+        setResult({
+          contractNumber: data.contractNumber,
+          isDiamond: data.isDiamond,
+          pendingPayment: data.pendingPayment,
+          payment: data.payment,
+          paymentId: data.paymentId,
+        });
+        // Se há pagamento pendente, vai para tela de pagamento; senão, sucesso direto
+        setStep(data.pendingPayment ? 'payment' : 'success');
       } else {
         const data = await res.json().catch(() => ({}));
         alert(data.message || 'Erro ao processar cadastro');
@@ -432,6 +455,7 @@ export default function SponsorInviteLandingPage() {
       { key: 'tier', label: '1. Plano', num: 1 },
       { key: 'form', label: '2. Dados', num: 2 },
       { key: 'contract', label: '3. Contrato', num: 3 },
+      { key: 'payment', label: '4. Pagamento', num: 4 },
     ];
     const currentIdx = steps.findIndex(s => s.key === step);
 
@@ -698,7 +722,7 @@ export default function SponsorInviteLandingPage() {
       {step === 'tier' && tierDetails && (
         <section style={{ position: 'relative', zIndex: 1, padding: '48px 24px 80px', maxWidth: 1100, margin: '0 auto' }}>
           <div className="anim-up" style={{ textAlign: 'center', marginBottom: 48 }}>
-            <p style={{ color: C.gold, fontSize: 12, fontWeight: 700, letterSpacing: 4, textTransform: 'uppercase', marginBottom: 16 }}>PASSO 1 DE 3</p>
+            <p style={{ color: C.gold, fontSize: 12, fontWeight: 700, letterSpacing: 4, textTransform: 'uppercase', marginBottom: 16 }}>PASSO 1 DE 4</p>
             <h2 style={{ fontFamily: FONT.serif, fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 800, letterSpacing: '-1px', marginBottom: 12 }}>
               Escolha o <span className="gold-text">nível de parceria</span>
             </h2>
@@ -742,8 +766,28 @@ export default function SponsorInviteLandingPage() {
                   )}
 
                   <div style={{ fontSize: 40, marginBottom: 12 }}>{tm.icon}</div>
-                  <h3 style={{ color: tm.color, fontSize: 18, fontWeight: 700, fontFamily: FONT.serif, marginBottom: 4 }}>{td?.name}</h3>
-                  <p style={{ color: C.gold, fontSize: 13, fontWeight: 600, marginBottom: 16 }}>{td?.priceLabel}</p>
+                  <h3 style={{ color: tm.color, fontSize: 18, fontWeight: 700, fontFamily: FONT.serif, marginBottom: 8 }}>{td?.name}</h3>
+                  
+                  {/* Pricing display */}
+                  {td?.pricing && td.pricing[form.durationMonths] && (
+                    <div style={{ marginBottom: 16 }}>
+                      <p style={{ color: C.gold, fontSize: 20, fontWeight: 800, marginBottom: 2 }}>
+                        {td.pricing[form.durationMonths].priceLabel}
+                      </p>
+                      <p style={{ color: C.textMuted, fontSize: 11 }}>
+                        {td.pricing[form.durationMonths].perMonth}
+                      </p>
+                      {td.pricing[form.durationMonths].discount && (
+                        <span style={{
+                          display: 'inline-block', marginTop: 6, padding: '3px 8px',
+                          borderRadius: 8, background: `${C.success}15`, color: C.success,
+                          fontSize: 9, fontWeight: 700,
+                        }}>
+                          {td.pricing[form.durationMonths].discount}
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
                     {td?.highlights.slice(0, 5).map((h, j) => (
@@ -831,7 +875,7 @@ export default function SponsorInviteLandingPage() {
       {step === 'form' && (
         <section style={{ position: 'relative', zIndex: 1, padding: '48px 24px 80px', maxWidth: 680, margin: '0 auto' }}>
           <div className="anim-up" style={{ textAlign: 'center', marginBottom: 40 }}>
-            <p style={{ color: C.gold, fontSize: 12, fontWeight: 700, letterSpacing: 4, textTransform: 'uppercase', marginBottom: 16 }}>PASSO 2 DE 3</p>
+            <p style={{ color: C.gold, fontSize: 12, fontWeight: 700, letterSpacing: 4, textTransform: 'uppercase', marginBottom: 16 }}>PASSO 2 DE 4</p>
             <h2 style={{ fontFamily: FONT.serif, fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 800, letterSpacing: '-1px', marginBottom: 8 }}>
               Dados da <span className="gold-text">empresa</span>
             </h2>
@@ -987,7 +1031,7 @@ export default function SponsorInviteLandingPage() {
       {step === 'contract' && (
         <section style={{ position: 'relative', zIndex: 1, padding: '48px 24px 80px', maxWidth: 800, margin: '0 auto' }}>
           <div className="anim-up" style={{ textAlign: 'center', marginBottom: 40 }}>
-            <p style={{ color: C.gold, fontSize: 12, fontWeight: 700, letterSpacing: 4, textTransform: 'uppercase', marginBottom: 16 }}>PASSO 3 DE 3</p>
+            <p style={{ color: C.gold, fontSize: 12, fontWeight: 700, letterSpacing: 4, textTransform: 'uppercase', marginBottom: 16 }}>PASSO 3 DE 4</p>
             <h2 style={{ fontFamily: FONT.serif, fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 800, letterSpacing: '-1px', marginBottom: 8 }}>
               Revise e <span className="gold-text">assine o contrato</span>
             </h2>
@@ -1225,8 +1269,174 @@ export default function SponsorInviteLandingPage() {
                 boxShadow: (form.acceptedTerms && form.signedByName && !submitting) ? `0 6px 30px rgba(201,165,92,0.35)` : 'none',
                 transition: 'all 0.3s',
               }}>
-              {submitting ? 'Processando...' : '✍️ Assinar e Concluir Cadastro'}
+              {submitting ? 'Processando...' : '✍️ Assinar e Continuar'}
             </button>
+          </div>
+        </section>
+      )}
+
+      {/* ============================== */}
+      {/* STEP: PAYMENT (PIX)            */}
+      {/* ============================== */}
+      {step === 'payment' && result?.pendingPayment && result.payment && (
+        <section style={{ position: 'relative', zIndex: 1, padding: '48px 24px 80px', maxWidth: 700, margin: '0 auto' }}>
+          <div className="anim-up" style={{ textAlign: 'center', marginBottom: 40 }}>
+            <p style={{ color: C.gold, fontSize: 12, fontWeight: 700, letterSpacing: 4, textTransform: 'uppercase', marginBottom: 16 }}>PASSO 4 DE 4</p>
+            <h2 style={{ fontFamily: FONT.serif, fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 800, letterSpacing: '-1px', marginBottom: 8 }}>
+              Realize o <span className="gold-text">pagamento</span>
+            </h2>
+            <p style={{ color: C.textSecondary, fontSize: 14 }}>
+              Seu cadastro foi registrado! Complete o pagamento via PIX para ativar a parceria.
+            </p>
+          </div>
+
+          {/* Payment card */}
+          <div className="anim-up-d1" style={{
+            background: C.bgCard, borderRadius: 24, border: `1px solid ${C.borderGold}`,
+            padding: '40px 36px', textAlign: 'center', position: 'relative', overflow: 'hidden',
+          }}>
+            {/* Top accent */}
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0, height: 4,
+              background: `linear-gradient(90deg, ${C.gold}, ${selectedTier.color}, ${C.gold})`,
+            }} />
+
+            {/* Amount */}
+            <div style={{ marginBottom: 32 }}>
+              <p style={{ color: C.textMuted, fontSize: 11, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 }}>
+                Valor Total — {result.payment.durationMonths} meses
+              </p>
+              <p style={{
+                fontFamily: FONT.serif, fontSize: 'clamp(40px, 8vw, 60px)', fontWeight: 900,
+                background: `linear-gradient(135deg, ${C.goldLight}, ${C.gold})`,
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                letterSpacing: '-2px', lineHeight: 1,
+              }}>
+                {result.payment.amountFormatted}
+              </p>
+              <p style={{ color: C.textMuted, fontSize: 12, marginTop: 8 }}>
+                Plano {selectedTier.name} {selectedTier.icon}
+              </p>
+            </div>
+
+            {/* PIX QR Code section */}
+            <div style={{
+              background: '#fff', borderRadius: 16, padding: '24px',
+              marginBottom: 24, display: 'inline-block',
+            }}>
+              <div style={{
+                width: 200, height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: '#f3f4f6', borderRadius: 8,
+              }}>
+                {/* QR Code placeholder - in production, use a QR library */}
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(result.payment.pixCode)}`}
+                  alt="QR Code PIX"
+                  style={{ width: 200, height: 200, borderRadius: 8 }}
+                />
+              </div>
+            </div>
+
+            <p style={{ color: C.textSecondary, fontSize: 13, marginBottom: 24 }}>
+              Escaneie o QR Code acima com o app do seu banco
+            </p>
+
+            {/* Copy PIX code */}
+            <div style={{ marginBottom: 24 }}>
+              <p style={{ color: C.textMuted, fontSize: 10, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 }}>
+                Ou copie o código PIX
+              </p>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                background: C.bgGlass, borderRadius: 12, padding: '12px 16px',
+                border: `1px solid ${C.border}`, maxWidth: 500, margin: '0 auto',
+              }}>
+                <input
+                  type="text"
+                  readOnly
+                  value={result.payment.pixCode}
+                  style={{
+                    flex: 1, background: 'transparent', border: 'none',
+                    color: C.textSecondary, fontSize: 11, fontFamily: 'monospace',
+                    outline: 'none',
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(result.payment!.pixCode);
+                    alert('Código PIX copiado!');
+                  }}
+                  style={{
+                    padding: '8px 16px', borderRadius: 8,
+                    background: C.gold, border: 'none', color: C.bg,
+                    fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                    fontFamily: FONT.sans,
+                  }}
+                >
+                  Copiar
+                </button>
+              </div>
+            </div>
+
+            {/* Timer */}
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '10px 20px', borderRadius: 20,
+              background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)',
+            }}>
+              <span style={{ fontSize: 16 }}>⏳</span>
+              <span style={{ color: '#f59e0b', fontSize: 12, fontWeight: 600 }}>
+                Válido até {new Date(result.payment.pixExpiresAt).toLocaleString('pt-BR', {
+                  day: '2-digit', month: '2-digit', year: 'numeric',
+                  hour: '2-digit', minute: '2-digit',
+                })}
+              </span>
+            </div>
+
+            {/* Contract number */}
+            <div style={{ marginTop: 28, paddingTop: 24, borderTop: `1px solid ${C.border}` }}>
+              <p style={{ color: C.textMuted, fontSize: 10, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>
+                Contrato Nº
+              </p>
+              <p style={{ color: C.gold, fontSize: 14, fontWeight: 700, fontFamily: 'monospace' }}>
+                {result.contractNumber}
+              </p>
+            </div>
+          </div>
+
+          {/* Instructions */}
+          <div className="anim-up-d2" style={{
+            marginTop: 32, padding: '24px 28px', borderRadius: 16,
+            background: C.bgGlass, border: `1px solid ${C.border}`,
+          }}>
+            <h4 style={{ color: C.gold, fontSize: 13, fontWeight: 700, marginBottom: 16 }}>
+              📋 Próximos passos
+            </h4>
+            <ol style={{ color: C.textSecondary, fontSize: 13, lineHeight: 1.8, paddingLeft: 20 }}>
+              <li>Realize o pagamento PIX usando o QR Code ou código acima</li>
+              <li>Aguarde a confirmação do pagamento (processamento manual em até 24h úteis)</li>
+              <li>Após confirmação, sua parceria será ativada automaticamente</li>
+              <li>Você receberá um email com os detalhes de acesso</li>
+            </ol>
+
+            {result.isDiamond && (
+              <div style={{
+                marginTop: 20, padding: '16px 20px', borderRadius: 12,
+                background: C.diamondBg, border: '1px solid rgba(167,139,250,0.2)',
+              }}>
+                <p style={{ color: C.diamond, fontSize: 12, fontWeight: 600 }}>
+                  💎 Como Diamond, após a ativação você terá acesso ao painel exclusivo em{' '}
+                  <strong>/parceiro/login</strong>
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Contact */}
+          <div className="anim-up-d3" style={{ marginTop: 24, textAlign: 'center' }}>
+            <p style={{ color: C.textMuted, fontSize: 12 }}>
+              Dúvidas? Entre em contato: <a href="mailto:contato@belapro.com.br" style={{ color: C.gold }}>contato@belapro.com.br</a>
+            </p>
           </div>
         </section>
       )}

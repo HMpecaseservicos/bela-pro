@@ -1198,11 +1198,18 @@ model SponsorInvite {
 // =============================================================================
 
 enum SponsorContractStatus {
-  DRAFT
-  ACTIVE
+  PENDING_PAYMENT  // Aguardando pagamento
+  ACTIVE           // Pago e ativo
+  EXPIRED          // Período expirado
+  CANCELLED        // Cancelado
+  RENEWED          // Renovado para novo período
+}
+
+enum SponsorPaymentStatus {
+  PENDING
+  PAID
   EXPIRED
   CANCELLED
-  RENEWED
 }
 
 model SponsorContract {
@@ -1240,7 +1247,7 @@ model SponsorContract {
   paymentTerms       String?
 
   // Status
-  status             SponsorContractStatus @default(DRAFT)
+  status             SponsorContractStatus @default(PENDING_PAYMENT)
   signedAt           DateTime?
   signedByName       String?
   signedByIp         String?
@@ -1252,6 +1259,9 @@ model SponsorContract {
   renewalNotifiedAt  DateTime?
   previousContractId String?
 
+  // Pagamento
+  payment            SponsorPayment?
+
   // Notas
   notes              String?
 
@@ -1259,4 +1269,42 @@ model SponsorContract {
   @@index([status])
   @@index([contractNumber])
   @@index([endsAt])
+}
+
+// =============================================================================
+// PAGAMENTO DE PATROCÍNIO
+// =============================================================================
+
+model SponsorPayment {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contractId String          @unique
+  contract   SponsorContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  // Valores
+  amountCents       Int      // Valor total do patrocínio em centavos
+  tier              String   // Tier (para referência/histórico)
+  durationMonths    Int      // Período contratado
+
+  // Status
+  status            SponsorPaymentStatus @default(PENDING)
+
+  // PIX
+  pixCode           String?  @db.Text  // Código PIX "copia e cola"
+  pixExpiresAt      DateTime?           // Quando o PIX expira (48h)
+
+  // Confirmação
+  paidAt            DateTime?
+  paidByName        String?             // Nome de quem pagou
+  paymentMethod     String?             // PIX, transferencia manual, etc
+  transactionId     String?             // ID da transação se houver
+
+  // Admin
+  confirmedBy       String?             // userId do admin que confirmou
+  notes             String?
+
+  @@index([status])
+  @@index([tier])
 }

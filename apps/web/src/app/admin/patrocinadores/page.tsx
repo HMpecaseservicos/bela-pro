@@ -532,6 +532,9 @@ export default function PatrocinadoresPage() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <a href="/admin/patrocinadores/financeiro" style={{ ...btnPrimary, background: 'linear-gradient(135deg, #e3a008 0%, #ca8a04 100%)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>
+            💰 Financeiro
+          </a>
           <button onClick={() => setShowUniversalModal(true)} style={{ ...btnPrimary, background: 'linear-gradient(135deg, #059669 0%, #047857 100%)' }}>
             🌐 Convite Universal
           </button>
