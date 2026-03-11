@@ -523,8 +523,12 @@ export default function BusinessInviteLandingPage() {
       {/* ::::::::: NAV ::::::::: */}
       <nav className="nav-fixed">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-white.png" alt="Bela Pro" style={{ height: 36, width: 'auto' }} />
+          <span style={{
+            fontFamily: FONT.serif, fontSize: 24, fontWeight: 800, letterSpacing: '-0.5px',
+            background: `linear-gradient(135deg, ${C.goldLight} 0%, ${C.gold} 50%, ${C.goldDark} 100%)`,
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+          }}>Bela Pro</span>
         </div>
         <Link href={`/cadastro?ref=${token}`} onClick={handleCtaClick} className="cta-btn" style={{ padding: '12px 28px', fontSize: 14 }}>
           Começar grátis
@@ -886,8 +890,12 @@ export default function BusinessInviteLandingPage() {
         textAlign: 'center',
       }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-white.png" alt="Bela Pro" style={{ height: 40, width: 'auto', opacity: 0.7 }} />
+          <span style={{
+            fontFamily: FONT.serif, fontSize: 28, fontWeight: 800, letterSpacing: '-0.5px',
+            background: `linear-gradient(135deg, ${C.goldLight} 0%, ${C.gold} 50%, ${C.goldDark} 100%)`,
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text', opacity: 0.7,
+          }}>Bela Pro</span>
         </div>
         <p style={{ color: C.textMuted, fontSize: 13 }}>
           A plataforma de gestão para profissionais
