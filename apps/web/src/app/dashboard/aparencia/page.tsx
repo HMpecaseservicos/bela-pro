@@ -232,14 +232,10 @@ export default function AparenciaPage() {
     }
   }
 
-  // URL dinâmica baseada no ambiente atual
-  const getBookingUrl = () => {
-    if (typeof window !== 'undefined') {
-      return `${window.location.protocol}//${window.location.host}/${config.slug || 'seu-negocio'}/booking`;
-    }
-    return `/${config.slug || 'seu-negocio'}/booking`;
-  };
-  const bookingUrl = getBookingUrl();
+  // URL dinâmica baseada no ambiente atual (usada internamente)
+  const bookingUrl = typeof window !== 'undefined'
+    ? `${window.location.protocol}//${window.location.host}/${config.slug || 'seu-negocio'}/booking`
+    : `/${config.slug || 'seu-negocio'}/booking`;
 
   if (loading) {
     return (
@@ -301,60 +297,6 @@ export default function AparenciaPage() {
           {error}
         </div>
       )}
-
-      {/* Booking Link */}
-      <div style={{
-        background: `linear-gradient(135deg, ${config.primaryColorHex} 0%, ${adjustColor(config.primaryColorHex, -30)} 100%)`,
-        borderRadius: isMobile ? 12 : 16,
-        padding: isMobile ? 16 : 24,
-        marginBottom: isMobile ? 20 : 32,
-        color: 'white',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-          <span style={{ fontSize: isMobile ? 20 : 24 }}>🔗</span>
-          <h3 style={{ margin: 0, fontSize: isMobile ? 16 : 18, fontWeight: 600 }}>Link de Agendamento</h3>
-        </div>
-        <p style={{ margin: '0 0 16px', opacity: 0.9, fontSize: isMobile ? 12 : 14 }}>
-          Compartilhe este link com seus clientes
-        </p>
-        <div style={{
-          display: 'flex',
-          gap: 12,
-          background: 'rgba(255,255,255,0.2)',
-          borderRadius: 10,
-          padding: '12px 16px',
-          alignItems: 'center',
-        }}>
-          <input
-            type="text"
-            value={bookingUrl}
-            readOnly
-            style={{
-              flex: 1,
-              background: 'transparent',
-              border: 'none',
-              color: 'white',
-              fontSize: 14,
-              outline: 'none',
-            }}
-          />
-          <button
-            onClick={() => navigator.clipboard.writeText(bookingUrl)}
-            style={{
-              background: 'white',
-              color: config.primaryColorHex,
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: 8,
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontSize: 13,
-            }}
-          >
-            Copiar
-          </button>
-        </div>
-      </div>
 
       {/* Logo e Imagens */}
       <div style={sectionStyle}>

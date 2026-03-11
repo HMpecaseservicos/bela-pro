@@ -36,6 +36,7 @@ export default function ConfigPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -53,6 +54,13 @@ export default function ConfigPage() {
           setLoading(false);
           return;
         }
+
+        // Check super admin status
+        fetch(`${API_URL}/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        }).then(r => r.ok ? r.json() : null).then(data => {
+          if (data?.isSuperAdmin) setIsSuperAdmin(true);
+        }).catch(() => {});
 
         const res = await fetch(`${API_URL}/workspace/me`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -286,6 +294,48 @@ export default function ConfigPage() {
           </div>
         </div>
       </Link>
+
+      {/* Super Admin — só aparece para super admins */}
+      {isSuperAdmin && (
+        <Link href="/admin" style={{ textDecoration: 'none' }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+            borderRadius: isMobile ? 12 : 16,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            padding: isMobile ? 16 : 24,
+            marginBottom: isMobile ? 16 : 24,
+            border: '1px solid rgba(201,165,92,0.3)',
+            cursor: 'pointer',
+            transition: 'all 0.15s',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  background: 'linear-gradient(135deg, #c9a55c 0%, #a07a35 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 24,
+                }}>
+                  🛡️
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 16, color: '#f5f1eb' }}>
+                    Painel Super Admin
+                  </div>
+                  <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)' }}>
+                    Gerenciar usuários, convites e sistema
+                  </div>
+                </div>
+              </div>
+              <span style={{ fontSize: 20, color: '#c9a55c' }}>→</span>
+            </div>
+          </div>
+        </Link>
+      )}
 
       {/* Link Público de Agendamento */}
       {config.slug && (
