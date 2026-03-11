@@ -1089,3 +1089,57 @@ model Sponsor {
   @@index([isFeatured])
   @@index([displayOrder])
 }
+
+// =============================================================================
+// CONVITE PARA PATROCINADORES
+// =============================================================================
+
+enum SponsorInviteStatus {
+  PENDING
+  VIEWED
+  CLICKED_CTA
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+model SponsorInvite {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  token String @unique @default(cuid())
+
+  // Dados do patrocinador convidado
+  companyName    String
+  contactName    String
+  contactEmail   String?
+  contactPhone   String?
+  personalMessage String?
+
+  // Proposta
+  proposedTier     SponsorTier  @default(GOLD)
+  proposedType     SponsorType  @default(BRAND)
+  proposedBenefits String[]     @default([])
+
+  // Status e tracking
+  status       SponsorInviteStatus @default(PENDING)
+  viewCount    Int                 @default(0)
+  lastViewedAt DateTime?
+  ctaClickedAt DateTime?
+  respondedAt  DateTime?
+  expiresAt    DateTime
+
+  // Se aceito, link ao Sponsor criado
+  convertedSponsorId String?
+
+  // Notas internas
+  notes String?
+
+  // Auditoria
+  createdByUserId String?
+
+  @@index([status])
+  @@index([token])
+  @@index([expiresAt])
+}

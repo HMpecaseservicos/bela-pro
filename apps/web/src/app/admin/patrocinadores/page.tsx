@@ -34,6 +34,23 @@ interface Sponsor {
   createdAt: string;
 }
 
+interface SponsorInvite {
+  id: string;
+  token: string;
+  companyName: string;
+  contactName: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  personalMessage?: string;
+  proposedTier: string;
+  proposedType: string;
+  proposedBenefits: string[];
+  status: 'PENDING' | 'VIEWED' | 'CLICKED_CTA' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED';
+  viewCount: number;
+  expiresAt: string;
+  createdAt: string;
+}
+
 // =============================================================================
 // STYLE V2 PREMIUM THEME
 // =============================================================================
@@ -111,6 +128,18 @@ export default function PatrocinadoresPage() {
   };
   const [form, setForm] = useState(emptyForm);
 
+  // Invite state
+  const [activeTab, setActiveTab] = useState<'sponsors' | 'invites'>('sponsors');
+  const [invites, setInvites] = useState<SponsorInvite[]>([]);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteForm, setInviteForm] = useState({
+    companyName: '', contactName: '', contactEmail: '', contactPhone: '',
+    personalMessage: '', proposedTier: 'GOLD' as Sponsor['tier'],
+    proposedType: 'BRAND' as Sponsor['sponsorType'],
+    proposedBenefits: ['Logo na landing page premium', 'Destaque na página de agendamento', 'Relatório de impressões e cliques', 'Badge exclusiva de parceiro verificado'],
+    expiresInDays: 30, notes: '',
+  });
+
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
@@ -134,6 +163,85 @@ export default function PatrocinadoresPage() {
   }, [filters]);
 
   useEffect(() => { fetchSponsors(); }, [fetchSponsors]);
+
+  // Fetch invites
+  const fetchInvites = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/admin/sponsor-invites`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (res.ok) setInvites(await res.json());
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { if (activeTab === 'invites') fetchInvites(); }, [activeTab, fetchInvites]);
+
+  const handleSendInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${API_URL}/admin/sponsor-invites`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({
+          ...inviteForm,
+          contactEmail: inviteForm.contactEmail || null,
+          contactPhone: inviteForm.contactPhone || null,
+          personalMessage: inviteForm.personalMessage || null,
+          notes: inviteForm.notes || null,
+        }),
+      });
+      if (res.ok) {
+        const invite = await res.json();
+        const inviteUrl = `${window.location.origin}/convite-parceiro/${invite.token}`;
+        navigator.clipboard.writeText(inviteUrl).catch(() => {});
+        showToast('Convite criado! Link copiado para a área de transferência.');
+        setShowInviteModal(false);
+        setInviteForm({
+          companyName: '', contactName: '', contactEmail: '', contactPhone: '',
+          personalMessage: '', proposedTier: 'GOLD', proposedType: 'BRAND',
+          proposedBenefits: ['Logo na landing page premium', 'Destaque na página de agendamento', 'Relatório de impressões e cliques', 'Badge exclusiva de parceiro verificado'],
+          expiresInDays: 30, notes: '',
+        });
+        fetchInvites();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.message || 'Erro ao criar convite', 'error');
+      }
+    } catch { showToast('Erro de conexão', 'error'); }
+  };
+
+  const handleCancelInvite = async (id: string) => {
+    if (!confirm('Cancelar este convite?')) return;
+    try {
+      const res = await fetch(`${API_URL}/admin/sponsor-invites/${id}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (res.ok) { showToast('Convite cancelado'); fetchInvites(); }
+    } catch { showToast('Erro', 'error'); }
+  };
+
+  const handleResendInvite = async (id: string) => {
+    try {
+      const res = await fetch(`${API_URL}/admin/sponsor-invites/${id}/resend`, {
+        method: 'PATCH', headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (res.ok) { showToast('Convite reenviado!'); fetchInvites(); }
+    } catch { showToast('Erro', 'error'); }
+  };
+
+  const copyInviteLink = (token: string) => {
+    const url = `${window.location.origin}/convite-parceiro/${token}`;
+    navigator.clipboard.writeText(url).then(() => showToast('Link copiado!')).catch(() => showToast('Erro ao copiar', 'error'));
+  };
+
+  const INVITE_STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+    PENDING: { label: 'Enviado', color: T.warning, bg: T.warningBg },
+    VIEWED: { label: 'Visualizado', color: T.info, bg: T.infoBg },
+    CLICKED_CTA: { label: 'Clicou CTA', color: '#7c3aed', bg: '#ede9fe' },
+    ACCEPTED: { label: 'Aceito ✓', color: T.success, bg: T.successBg },
+    DECLINED: { label: 'Recusado', color: T.danger, bg: T.dangerBg },
+    EXPIRED: { label: 'Expirado', color: T.textMuted, bg: T.surface2 },
+  };
 
   const generateSlug = (name: string) =>
     name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -274,21 +382,45 @@ export default function PatrocinadoresPage() {
       )}
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28, flexWrap: 'wrap', gap: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 16 }}>
         <div>
           <h1 style={{ fontSize: 26, fontWeight: 700, color: T.textPrimary, margin: 0, fontFamily: 'Playfair Display, serif' }}>
             Patrocinadores & Parceiros
           </h1>
           <p style={{ color: T.textMuted, marginTop: 4, fontSize: 14 }}>
-            Gerencie patrocinadores e parceiros da plataforma
+            Gerencie patrocinadores e convites de parceria
           </p>
         </div>
-        <button onClick={openCreate} style={btnPrimary}>
-          + Novo Patrocinador
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={() => setShowInviteModal(true)} style={{ ...btnPrimary, background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)' }}>
+            ✉️ Enviar Convite
+          </button>
+          <button onClick={openCreate} style={btnPrimary}>
+            + Novo Patrocinador
+          </button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: T.surface2, borderRadius: 12, padding: 4, width: 'fit-content' }}>
+        {[
+          { key: 'sponsors' as const, label: '🤝 Patrocinadores', count: totalSponsors },
+          { key: 'invites' as const, label: '✉️ Convites', count: invites.length },
+        ].map(tab => (
+          <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
+            padding: '10px 20px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+            border: 'none', cursor: 'pointer',
+            background: activeTab === tab.key ? T.white : 'transparent',
+            color: activeTab === tab.key ? T.gold : T.textMuted,
+            boxShadow: activeTab === tab.key ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
+          }}>
+            {tab.label} {tab.count > 0 && <span style={{ marginLeft: 4, fontSize: 11, opacity: 0.7 }}>({tab.count})</span>}
+          </button>
+        ))}
       </div>
 
       {/* Metrics Cards */}
+      {activeTab === 'sponsors' && (<>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
         {[
           { label: 'Total', value: totalSponsors, icon: '🤝', color: T.gold },
@@ -465,6 +597,82 @@ export default function PatrocinadoresPage() {
           </table>
         </div>
       </div>
+      </>)}
+
+      {/* INVITES TAB */}
+      {activeTab === 'invites' && (
+        <div style={{ background: T.white, borderRadius: T.radius, border: `1px solid ${T.borderLight}`, overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+              <thead>
+                <tr style={{ background: T.surface2, borderBottom: `1px solid ${T.border}` }}>
+                  <th style={{ padding: 12, textAlign: 'left', color: T.textMuted, fontWeight: 500, fontSize: 12 }}>Empresa</th>
+                  <th style={{ padding: 12, textAlign: 'left', color: T.textMuted, fontWeight: 500, fontSize: 12 }}>Contato</th>
+                  <th style={{ padding: 12, textAlign: 'center', color: T.textMuted, fontWeight: 500, fontSize: 12 }}>Tier Proposto</th>
+                  <th style={{ padding: 12, textAlign: 'center', color: T.textMuted, fontWeight: 500, fontSize: 12 }}>Status</th>
+                  <th style={{ padding: 12, textAlign: 'center', color: T.textMuted, fontWeight: 500, fontSize: 12 }}>Views</th>
+                  <th style={{ padding: 12, textAlign: 'center', color: T.textMuted, fontWeight: 500, fontSize: 12 }}>Validade</th>
+                  <th style={{ padding: 12, textAlign: 'center', color: T.textMuted, fontWeight: 500, fontSize: 12 }}>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invites.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ padding: 48, textAlign: 'center', color: T.textMuted }}>
+                      Nenhum convite enviado ainda
+                    </td>
+                  </tr>
+                ) : invites.map(inv => {
+                  const tier = TIER_CONFIG[inv.proposedTier];
+                  const st = INVITE_STATUS_CONFIG[inv.status];
+                  const isExpired = new Date(inv.expiresAt) < new Date();
+                  return (
+                    <tr key={inv.id} style={{ borderBottom: `1px solid ${T.borderLight}` }}>
+                      <td style={{ padding: 12 }}>
+                        <div style={{ fontWeight: 600, color: T.textPrimary }}>{inv.companyName}</div>
+                        <div style={{ fontSize: 11, color: T.textMuted }}>{TYPE_CONFIG[inv.proposedType]?.label}</div>
+                      </td>
+                      <td style={{ padding: 12 }}>
+                        <div style={{ color: T.textPrimary, fontSize: 13 }}>{inv.contactName}</div>
+                        {inv.contactEmail && <div style={{ fontSize: 11, color: T.textMuted }}>{inv.contactEmail}</div>}
+                      </td>
+                      <td style={{ padding: 12, textAlign: 'center' }}>
+                        <span style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: tier?.bg, color: tier?.color }}>
+                          {tier?.icon} {tier?.label}
+                        </span>
+                      </td>
+                      <td style={{ padding: 12, textAlign: 'center' }}>
+                        <span style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: st?.bg, color: st?.color }}>
+                          {st?.label}
+                        </span>
+                      </td>
+                      <td style={{ padding: 12, textAlign: 'center', fontWeight: 600, color: T.info }}>{inv.viewCount}</td>
+                      <td style={{ padding: 12, textAlign: 'center', fontSize: 11, color: isExpired ? T.danger : T.textMuted }}>
+                        {new Date(inv.expiresAt).toLocaleDateString('pt-BR')}
+                        {isExpired && <div style={{ color: T.danger, fontSize: 10 }}>Expirado</div>}
+                      </td>
+                      <td style={{ padding: 12, textAlign: 'center' }}>
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                          <button onClick={() => copyInviteLink(inv.token)} title="Copiar link"
+                            style={{ ...btnSecondary, padding: '6px 12px', fontSize: 12 }}>🔗</button>
+                          {['PENDING', 'VIEWED', 'EXPIRED'].includes(inv.status) && (
+                            <button onClick={() => handleResendInvite(inv.id)} title="Reenviar"
+                              style={{ ...btnSecondary, padding: '6px 12px', fontSize: 12, color: T.info }}>🔄</button>
+                          )}
+                          {!['ACCEPTED', 'DECLINED'].includes(inv.status) && (
+                            <button onClick={() => handleCancelInvite(inv.id)} title="Cancelar"
+                              style={{ ...btnSecondary, padding: '6px 12px', fontSize: 12, color: T.danger }}>🗑️</button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* CREATE / EDIT MODAL */}
       {showModal && (
@@ -657,6 +865,127 @@ export default function PatrocinadoresPage() {
                 </button>
                 <button type="submit" style={btnPrimary}>
                   {editingSponsor ? 'Salvar Alterações' : 'Criar Patrocinador'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* INVITE MODAL */}
+      {showInviteModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000,
+          display: 'flex', justifyContent: 'center', alignItems: 'flex-start',
+          padding: '40px 16px', overflowY: 'auto',
+        }}>
+          <div style={{
+            background: T.white, borderRadius: 16, width: '100%', maxWidth: 640,
+            padding: 32, position: 'relative',
+          }}>
+            <button onClick={() => setShowInviteModal(false)} style={{
+              position: 'absolute', top: 16, right: 16, background: 'none', border: 'none',
+              fontSize: 22, cursor: 'pointer', color: T.textMuted, padding: 4,
+            }}>✕</button>
+
+            <h2 style={{ color: T.textPrimary, marginBottom: 4, fontFamily: 'Playfair Display, serif', fontSize: 22 }}>
+              ✉️ Convite para Parceiro
+            </h2>
+            <p style={{ color: T.textMuted, marginBottom: 20, fontSize: 13 }}>
+              Envie um convite profissional e irrecusável para um parceiro ou fornecedor
+            </p>
+
+            <form onSubmit={handleSendInvite}>
+              <div style={{ display: 'grid', gap: 14 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div>
+                    <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Empresa *</label>
+                    <input type="text" required value={inviteForm.companyName}
+                      onChange={e => setInviteForm({ ...inviteForm, companyName: e.target.value })}
+                      placeholder="Ex: L'Oréal Brasil" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Nome do contato *</label>
+                    <input type="text" required value={inviteForm.contactName}
+                      onChange={e => setInviteForm({ ...inviteForm, contactName: e.target.value })}
+                      placeholder="João Silva" style={inputStyle} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div>
+                    <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Email</label>
+                    <input type="email" value={inviteForm.contactEmail}
+                      onChange={e => setInviteForm({ ...inviteForm, contactEmail: e.target.value })}
+                      placeholder="contato@empresa.com" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Telefone</label>
+                    <input type="tel" value={inviteForm.contactPhone}
+                      onChange={e => setInviteForm({ ...inviteForm, contactPhone: e.target.value })}
+                      placeholder="(11) 99999-0000" style={inputStyle} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div>
+                    <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Tier proposto</label>
+                    <select value={inviteForm.proposedTier} onChange={e => setInviteForm({ ...inviteForm, proposedTier: e.target.value as Sponsor['tier'] })} style={inputStyle}>
+                      {Object.entries(TIER_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Tipo</label>
+                    <select value={inviteForm.proposedType} onChange={e => setInviteForm({ ...inviteForm, proposedType: e.target.value as Sponsor['sponsorType'] })} style={inputStyle}>
+                      {Object.entries(TYPE_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Mensagem personalizada</label>
+                  <textarea value={inviteForm.personalMessage}
+                    onChange={e => setInviteForm({ ...inviteForm, personalMessage: e.target.value })}
+                    rows={3} style={{ ...inputStyle, resize: 'vertical' }}
+                    placeholder="Escreva uma mensagem especial para este parceiro..." />
+                </div>
+
+                <div>
+                  <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 6, display: 'block' }}>Benefícios propostos</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {inviteForm.proposedBenefits.map((b, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <input type="text" value={b}
+                          onChange={e => {
+                            const benefits = [...inviteForm.proposedBenefits];
+                            benefits[i] = e.target.value;
+                            setInviteForm({ ...inviteForm, proposedBenefits: benefits });
+                          }}
+                          style={{ ...inputStyle, flex: 1 }} />
+                        <button type="button" onClick={() => {
+                          setInviteForm({ ...inviteForm, proposedBenefits: inviteForm.proposedBenefits.filter((_, j) => j !== i) });
+                        }} style={{ background: 'none', border: 'none', color: T.danger, cursor: 'pointer', fontSize: 16 }}>✕</button>
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => setInviteForm({ ...inviteForm, proposedBenefits: [...inviteForm.proposedBenefits, ''] })}
+                      style={{ ...btnSecondary, fontSize: 12, padding: '6px 14px', width: 'fit-content' }}>
+                      + Adicionar benefício
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Validade (dias)</label>
+                  <input type="number" value={inviteForm.expiresInDays} min={1} max={365}
+                    onChange={e => setInviteForm({ ...inviteForm, expiresInDays: Number(e.target.value) })}
+                    style={{ ...inputStyle, maxWidth: 120 }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
+                <button type="button" onClick={() => setShowInviteModal(false)} style={btnSecondary}>Cancelar</button>
+                <button type="submit" style={{ ...btnPrimary, background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)' }}>
+                  ✉️ Criar Convite & Copiar Link
                 </button>
               </div>
             </form>
