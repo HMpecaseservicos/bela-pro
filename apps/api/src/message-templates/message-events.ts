@@ -39,31 +39,31 @@ export const MESSAGE_EVENTS: MessageEventMeta[] = [
     type: MessageEventType.APPOINTMENT_CREATED,
     label: 'Agendamento Criado',
     description: 'Enviado quando um novo agendamento é criado (aguardando confirmação)',
-    defaultMessage: 'Olá {{clientName}}! 🗓️\n\nSeu agendamento foi recebido:\n📅 {{date}} às {{time}}\n💇 {{serviceName}}\n\nAguarde a confirmação!',
+    defaultMessage: 'Olá {{clientName}}! 🗓️\n\nSeu agendamento foi recebido:\n📅 {{date}} às {{time}}\n� {{serviceName}}\n\nAguarde a confirmação!',
   },
   {
     type: MessageEventType.APPOINTMENT_CONFIRMED,
     label: 'Agendamento Confirmado',
     description: 'Enviado quando o agendamento é confirmado pelo profissional',
-    defaultMessage: 'Olá {{clientName}}! ✅\n\nSeu agendamento está confirmado:\n📅 {{date}} às {{time}}\n💇 {{serviceName}}\n📍 {{workspaceName}}\n\nTe esperamos!',
+    defaultMessage: 'Olá {{clientName}}! ✅\n\nSeu agendamento está confirmado:\n📅 {{date}} às {{time}}\n� {{serviceName}}\n📍 {{workspaceName}}\n\nTe esperamos!',
   },
   {
     type: MessageEventType.APPOINTMENT_COMPLETED,
     label: 'Serviço Concluído',
     description: 'Enviado quando o atendimento é finalizado',
-    defaultMessage: 'Olá {{clientName}}! 💜\n\nObrigado pela visita!\n💇 {{serviceName}}\n\nEsperamos que tenha gostado! Volte sempre! ⭐',
+    defaultMessage: 'Olá {{clientName}}! 💜\n\nObrigado pela visita!\n� {{serviceName}}\n\nEsperamos que tenha gostado! Volte sempre! ⭐',
   },
   {
     type: MessageEventType.APPOINTMENT_REMINDER_24H,
     label: 'Lembrete 24h',
     description: 'Lembrete enviado 24 horas antes do agendamento',
-    defaultMessage: 'Olá {{clientName}}! ⏰\n\nLembrete: amanhã você tem horário marcado:\n📅 {{date}} às {{time}}\n💇 {{serviceName}}\n\nConfirma sua presença?',
+    defaultMessage: 'Olá {{clientName}}! ⏰\n\nLembrete: amanhã você tem horário marcado:\n📅 {{date}} às {{time}}\n� {{serviceName}}\n\nConfirma sua presença?',
   },
   {
     type: MessageEventType.APPOINTMENT_REMINDER_2H,
     label: 'Lembrete 2h',
     description: 'Lembrete enviado 2 horas antes do agendamento',
-    defaultMessage: 'Olá {{clientName}}! ⏰\n\nDaqui a pouco é o seu horário:\n📅 Hoje às {{time}}\n💇 {{serviceName}}\n\nEstamos te esperando!',
+    defaultMessage: 'Olá {{clientName}}! ⏰\n\nDaqui a pouco é o seu horário:\n📅 Hoje às {{time}}\n� {{serviceName}}\n\nEstamos te esperando!',
   },
   {
     type: MessageEventType.APPOINTMENT_CANCELLED,
@@ -78,7 +78,7 @@ export const MESSAGE_EVENTS: MessageEventMeta[] = [
  */
 export const TEMPLATE_VARIABLES = [
   { key: 'clientName', label: 'Nome do cliente', example: 'Maria' },
-  { key: 'serviceName', label: 'Nome do serviço', example: 'Corte + Escova' },
+  { key: 'serviceName', label: 'Nome do serviço', example: 'Consulta' },
   { key: 'date', label: 'Data do agendamento', example: '25/01/2026' },
   { key: 'time', label: 'Horário', example: '14:30' },
   { key: 'workspaceName', label: 'Nome do estabelecimento', example: 'Studio da Ana' },

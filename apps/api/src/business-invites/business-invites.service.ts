@@ -656,18 +656,18 @@ export class BusinessInvitesService {
   private getFocusMessages(focusType: InviteFocusType) {
     const messages = {
       YOUTH_BEAUTY: {
-        intro: '✨ Você que transforma a autoestima das suas clientes, merece uma ferramenta que valorize o seu trabalho.',
-        benefit: '💄 Com o Bela Pro, suas clientes saem não apenas mais bonitas, mas *mais confiantes*. E você? Mais organizada, com mais tempo e mais lucro.',
-        closing: 'Faça parte das profissionais que estão revolucionando a beleza! ✨',
+        intro: '✨ Você que transforma a vida dos seus clientes, merece uma ferramenta que valorize o seu trabalho.',
+        benefit: '📈 Com o Bela Pro, seus clientes saem mais satisfeitos. E você? Mais organizado(a), com mais tempo e mais lucro.',
+        closing: 'Faça parte dos profissionais que estão crescendo com o Bela Pro! ✨',
       },
       INCOME_GROWTH: {
-        intro: '💰 Cansada de trabalhar muito e ganhar pouco? O Bela Pro foi feito para mudar isso!',
+        intro: '💰 Cansado(a) de trabalhar muito e ganhar pouco? O Bela Pro foi feito para mudar isso!',
         benefit: '📈 Profissionais que usam o Bela Pro *aumentaram seus ganhos em até 40%* reduzindo faltas, organizando a agenda e fidelizando clientes.',
         closing: 'Chegou a sua vez de ganhar o que você realmente merece! 💪',
       },
       RECOGNITION: {
-        intro: '🏆 Seu talento merece ser reconhecido! O Bela Pro é a ferramenta das profissionais de sucesso.',
-        benefit: '⭐ Com agenda profissional, lembretes automáticos e atendimento VIP pelo WhatsApp, suas clientes vão perceber que você é *diferenciada*.',
+        intro: '🏆 Seu talento merece ser reconhecido! O Bela Pro é a ferramenta dos profissionais de sucesso.',
+        benefit: '⭐ Com agenda profissional, lembretes automáticos e atendimento VIP pelo WhatsApp, seus clientes vão perceber que você é *diferenciado(a)*.',
         closing: 'Destaque-se no mercado e conquiste o reconhecimento que você merece! 👑',
       },
     };

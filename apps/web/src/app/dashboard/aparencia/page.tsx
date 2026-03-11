@@ -235,9 +235,9 @@ export default function AparenciaPage() {
   // URL dinâmica baseada no ambiente atual
   const getBookingUrl = () => {
     if (typeof window !== 'undefined') {
-      return `${window.location.protocol}//${window.location.host}/${config.slug || 'seu-salao'}/booking`;
+      return `${window.location.protocol}//${window.location.host}/${config.slug || 'seu-negocio'}/booking`;
     }
-    return `/${config.slug || 'seu-salao'}/booking`;
+    return `/${config.slug || 'seu-negocio'}/booking`;
   };
   const bookingUrl = getBookingUrl();
 
@@ -629,7 +629,7 @@ export default function AparenciaPage() {
               type="text"
               value={config.brandName}
               onChange={e => setConfig({ ...config, brandName: e.target.value })}
-              placeholder="Ex: Studio Beleza"
+              placeholder="Ex: Studio Ana"
               style={inputStyle}
             />
           </div>

@@ -1,7 +1,7 @@
 {
   "name": "Agenda Digital - BELA PRO",
   "short_name": "BELA PRO",
-  "description": "Sistema de agendamento online para salões e profissionais de beleza",
+  "description": "Sistema de agendamento online para profissionais",
   "start_url": "/dashboard",
   "display": "standalone",
   "orientation": "portrait",

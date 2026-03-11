@@ -139,7 +139,7 @@ export class BusinessInvitesController {
       ...invite,
       inviteLink,
       shareLinks: {
-        whatsapp: `https://wa.me/?text=${encodeURIComponent(`Transforme seu salão! Acesse: ${inviteLink}`)}`,
+        whatsapp: `https://wa.me/?text=${encodeURIComponent(`Conheça o Bela Pro! Acesse: ${inviteLink}`)}`,
         instagram: inviteLink,
         facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(inviteLink)}`,
       },

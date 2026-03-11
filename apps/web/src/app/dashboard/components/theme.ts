@@ -1,7 +1,7 @@
 /**
  * BELA PRO - Tema Elegante Premium
  * Paleta de cores sofisticada com tons dourados, bege e creme
- * Desenvolvido para o público feminino - profissionais da beleza
+ * Desenvolvido para profissionais que agendam serviços
  */
 
 export const THEME = {

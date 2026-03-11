@@ -82,7 +82,7 @@ const T = {
 };
 
 const FOCUS_TYPES: Record<string, { label: string; color: string; description: string }> = {
-  YOUTH_BEAUTY: { label: '✨ Juventude & Beleza', color: '#c97092', description: 'Foco em autoestima' },
+  YOUTH_BEAUTY: { label: '✨ Impacto & Confiança', color: '#c97092', description: 'Foco em autoestima' },
   INCOME_GROWTH: { label: '💰 Aumento de Renda', color: T.success, description: 'Foco em crescimento' },
   RECOGNITION: { label: '🏆 Reconhecimento', color: T.gold, description: 'Foco profissional' },
 };
@@ -795,7 +795,7 @@ export default function AdminConvitesPage() {
             Convites de Empresas
           </h1>
           <p style={{ color: T.textMuted, marginTop: 4, fontSize: 14 }}>
-            Gerencie convites para profissionais de beleza
+            Gerencie convites para profissionais
           </p>
         </div>
         <div className="header-actions" style={{ display: 'flex', gap: 10 }}>
@@ -973,7 +973,7 @@ export default function AdminConvitesPage() {
                                 setShareData({
                                   campaignName: invite.campaignName, inviteLink: link,
                                   shareLinks: {
-                                    whatsapp: `https://wa.me/?text=${encodeURIComponent(`Transforme seu salão! Acesse: ${link}`)}`,
+                                    whatsapp: `https://wa.me/?text=${encodeURIComponent(`Conheça o Bela Pro! Acesse: ${link}`)}`,
                                     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`,
                                   },
                                 });
@@ -1087,12 +1087,12 @@ export default function AdminConvitesPage() {
           ) : (
             <>
               <h2 style={{ color: T.textPrimary, marginBottom: 4, fontFamily: 'Playfair Display, serif', fontSize: 20 }}>✉️ Convite Pessoal</h2>
-              <p style={{ color: T.textMuted, marginBottom: 24, fontSize: 13 }}>Convite exclusivo para um profissional de beleza</p>
+              <p style={{ color: T.textMuted, marginBottom: 24, fontSize: 13 }}>Convite exclusivo para um profissional</p>
               <form onSubmit={handleCreateInvite}>
                 <div style={{ display: 'grid', gap: 14 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                     <div>
-                      <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Salão/Profissional *</label>
+                      <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Empresa/Profissional *</label>
                       <input type="text" required value={form.businessName}
                         onChange={(e) => setForm({ ...form, businessName: e.target.value })}
                         placeholder="Ex: Studio Maria" style={inputStyle} />
@@ -1194,7 +1194,7 @@ export default function AdminConvitesPage() {
               <div style={{ display: 'grid', gap: 14 }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                   <div>
-                    <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Salão/Profissional</label>
+                    <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Empresa/Profissional</label>
                     <input type="text" value={form.businessName}
                       onChange={(e) => setForm({ ...form, businessName: e.target.value })} style={inputStyle} />
                   </div>

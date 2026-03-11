@@ -296,7 +296,7 @@ export default function CadastroPage() {
                   type="text"
                   value={form.businessName}
                   onChange={e => handleBusinessNameChange(e.target.value)}
-                  placeholder="Ex: Salão da Maria"
+                  placeholder="Ex: Studio Maria"
                   style={inputStyle}
                   autoFocus
                 />
@@ -323,7 +323,7 @@ export default function CadastroPage() {
                     type="text"
                     value={form.businessSlug}
                     onChange={e => setForm({ ...form, businessSlug: generateSlug(e.target.value) })}
-                    placeholder="salao-da-maria"
+                    placeholder="studio-maria"
                     style={{
                       ...inputStyle,
                       borderRadius: '0 12px 12px 0',

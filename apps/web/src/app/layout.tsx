@@ -5,7 +5,7 @@ import type { Metadata, Viewport } from 'next';
 
 export const metadata: Metadata = {
   title: 'Agenda Digital - BELA PRO',
-  description: 'Sistema de agendamento online para salões e profissionais de beleza',
+  description: 'Sistema de agendamento online para profissionais',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
