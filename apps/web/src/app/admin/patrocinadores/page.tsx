@@ -51,6 +51,23 @@ interface SponsorInvite {
   createdAt: string;
 }
 
+interface SponsorContract {
+  id: string;
+  contractNumber: string;
+  tier: string;
+  sponsorType: string;
+  contractedParty: string;
+  contactName: string;
+  contactEmail: string;
+  status: 'DRAFT' | 'ACTIVE' | 'EXPIRED' | 'CANCELLED' | 'RENEWED';
+  durationMonths: number;
+  startsAt: string;
+  endsAt: string;
+  signedAt?: string;
+  signedByName?: string;
+  sponsor: { id: string; name: string; tier: string };
+}
+
 // =============================================================================
 // STYLE V2 PREMIUM THEME
 // =============================================================================
@@ -128,9 +145,10 @@ export default function PatrocinadoresPage() {
   };
   const [form, setForm] = useState(emptyForm);
 
-  // Invite state
-  const [activeTab, setActiveTab] = useState<'sponsors' | 'invites'>('sponsors');
+  // Invite & contracts state
+  const [activeTab, setActiveTab] = useState<'sponsors' | 'invites' | 'contracts'>('sponsors');
   const [invites, setInvites] = useState<SponsorInvite[]>([]);
+  const [contracts, setContracts] = useState<SponsorContract[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteForm, setInviteForm] = useState({
     companyName: '', contactName: '', contactEmail: '', contactPhone: '',
@@ -230,6 +248,30 @@ export default function PatrocinadoresPage() {
   }, []);
 
   useEffect(() => { if (activeTab === 'invites') fetchInvites(); }, [activeTab, fetchInvites]);
+
+  // Fetch contracts
+  const fetchContracts = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/admin/sponsor-contracts`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (res.ok) setContracts(await res.json());
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { if (activeTab === 'contracts') fetchContracts(); }, [activeTab, fetchContracts]);
+
+  const handleCancelContract = async (id: string) => {
+    if (!confirm('Tem certeza que deseja cancelar este contrato?')) return;
+    try {
+      const res = await fetch(`${API_URL}/admin/sponsor-contracts/${id}/cancel`, {
+        method: 'PATCH', headers: { Authorization: `Bearer ${getToken()}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: 'Cancelado pelo administrador' }),
+      });
+      if (res.ok) { showToast('Contrato cancelado'); fetchContracts(); }
+      else showToast('Erro ao cancelar contrato', 'error');
+    } catch { showToast('Erro de conexão', 'error'); }
+  };
 
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -461,6 +503,7 @@ export default function PatrocinadoresPage() {
         {[
           { key: 'sponsors' as const, label: '🤝 Patrocinadores', count: totalSponsors },
           { key: 'invites' as const, label: '✉️ Convites', count: invites.length },
+          { key: 'contracts' as const, label: '📄 Contratos', count: contracts.length },
         ].map(tab => (
           <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
             padding: '10px 20px', borderRadius: 10, fontSize: 13, fontWeight: 600,
@@ -722,6 +765,91 @@ export default function PatrocinadoresPage() {
                           )}
                           {!['ACCEPTED', 'DECLINED'].includes(inv.status) && (
                             <button onClick={() => handleCancelInvite(inv.id)} title="Cancelar"
+                              style={{ ...btnSecondary, padding: '6px 12px', fontSize: 12, color: T.danger }}>🗑️</button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* CONTRACTS TAB */}
+      {activeTab === 'contracts' && (
+        <div style={{ background: T.white, borderRadius: T.radius, border: `1px solid ${T.borderLight}`, overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+              <thead>
+                <tr style={{ background: T.surface2, borderBottom: `1px solid ${T.border}` }}>
+                  <th style={{ padding: 12, textAlign: 'left', color: T.textMuted, fontWeight: 500, fontSize: 12 }}>Nº Contrato</th>
+                  <th style={{ padding: 12, textAlign: 'left', color: T.textMuted, fontWeight: 500, fontSize: 12 }}>Empresa</th>
+                  <th style={{ padding: 12, textAlign: 'center', color: T.textMuted, fontWeight: 500, fontSize: 12 }}>Tier</th>
+                  <th style={{ padding: 12, textAlign: 'center', color: T.textMuted, fontWeight: 500, fontSize: 12 }}>Status</th>
+                  <th style={{ padding: 12, textAlign: 'center', color: T.textMuted, fontWeight: 500, fontSize: 12 }}>Vigência</th>
+                  <th style={{ padding: 12, textAlign: 'center', color: T.textMuted, fontWeight: 500, fontSize: 12 }}>Assinado</th>
+                  <th style={{ padding: 12, textAlign: 'center', color: T.textMuted, fontWeight: 500, fontSize: 12 }}>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {contracts.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ padding: 48, textAlign: 'center', color: T.textMuted }}>
+                      Nenhum contrato encontrado
+                    </td>
+                  </tr>
+                ) : contracts.map(c => {
+                  const cTier = TIER_CONFIG[c.tier];
+                  const cStatus: Record<string, { label: string; color: string; bg: string }> = {
+                    DRAFT: { label: 'Rascunho', color: T.textMuted, bg: T.surface2 },
+                    ACTIVE: { label: 'Ativo', color: T.success, bg: T.successBg },
+                    EXPIRED: { label: 'Expirado', color: T.warning, bg: T.warningBg },
+                    CANCELLED: { label: 'Cancelado', color: T.danger, bg: T.dangerBg },
+                    RENEWED: { label: 'Renovado', color: T.info, bg: T.infoBg },
+                  };
+                  const st = cStatus[c.status] || cStatus.DRAFT;
+                  return (
+                    <tr key={c.id} style={{ borderBottom: `1px solid ${T.borderLight}` }}>
+                      <td style={{ padding: 12 }}>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 600, fontSize: 12, color: T.gold }}>{c.contractNumber}</span>
+                      </td>
+                      <td style={{ padding: 12 }}>
+                        <div style={{ fontWeight: 600, color: T.textPrimary }}>{c.contractedParty}</div>
+                        <div style={{ fontSize: 11, color: T.textMuted }}>{c.contactName}</div>
+                      </td>
+                      <td style={{ padding: 12, textAlign: 'center' }}>
+                        <span style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: cTier?.bg, color: cTier?.color }}>
+                          {cTier?.icon} {cTier?.label}
+                        </span>
+                      </td>
+                      <td style={{ padding: 12, textAlign: 'center' }}>
+                        <span style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: st.bg, color: st.color }}>
+                          {st.label}
+                        </span>
+                      </td>
+                      <td style={{ padding: 12, textAlign: 'center', fontSize: 11, color: T.textMuted }}>
+                        {new Date(c.startsAt).toLocaleDateString('pt-BR')} — {new Date(c.endsAt).toLocaleDateString('pt-BR')}
+                        <div style={{ fontSize: 10, color: T.textMuted }}>{c.durationMonths} meses</div>
+                      </td>
+                      <td style={{ padding: 12, textAlign: 'center', fontSize: 11 }}>
+                        {c.signedByName ? (
+                          <div>
+                            <div style={{ color: T.success, fontWeight: 600 }}>✓ {c.signedByName}</div>
+                            {c.signedAt && <div style={{ color: T.textMuted, fontSize: 10 }}>{new Date(c.signedAt).toLocaleDateString('pt-BR')}</div>}
+                          </div>
+                        ) : (
+                          <span style={{ color: T.textMuted }}>—</span>
+                        )}
+                      </td>
+                      <td style={{ padding: 12, textAlign: 'center' }}>
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                          <button onClick={() => window.open(`/contrato/${c.contractNumber}`, '_blank')} title="Ver contrato"
+                            style={{ ...btnSecondary, padding: '6px 12px', fontSize: 12 }}>👁️</button>
+                          {c.status === 'ACTIVE' && (
+                            <button onClick={() => handleCancelContract(c.id)} title="Cancelar contrato"
                               style={{ ...btnSecondary, padding: '6px 12px', fontSize: 12, color: T.danger }}>🗑️</button>
                           )}
                         </div>

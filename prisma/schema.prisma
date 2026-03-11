@@ -1088,7 +1088,8 @@ model Sponsor {
   updatedByUserId String?
 
   // Relations
-  posts SponsorPost[]
+  posts     SponsorPost[]
+  contracts SponsorContract[]
 
   @@index([isActive])
   @@index([tier])
@@ -1182,4 +1183,72 @@ model SponsorInvite {
   @@index([status])
   @@index([token])
   @@index([expiresAt])
+}
+
+// =============================================================================
+// CONTRATO DE PATROCÍNIO
+// =============================================================================
+
+enum SponsorContractStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  RENEWED
+}
+
+model SponsorContract {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contractNumber String @unique
+
+  sponsorId String
+  sponsor   Sponsor @relation(fields: [sponsorId], references: [id], onDelete: Cascade)
+
+  // Partes
+  sponsorName        String
+  sponsorEmail       String?
+  sponsorPhone       String?
+  sponsorDocument    String?   // CNPJ/CPF
+  sponsorAddress     String?
+  contactPersonName  String
+
+  // Termos
+  tier               SponsorTier
+  sponsorType        SponsorType
+  benefits           String[]   @default([])
+  obligations        String[]   @default([])
+
+  // Vigência
+  startsAt           DateTime
+  endsAt             DateTime
+  durationMonths     Int
+
+  // Valores (opcional, pode ser parceria sem valor monetário)
+  monthlyValue       Float?
+  totalValue         Float?
+  paymentTerms       String?
+
+  // Status
+  status             SponsorContractStatus @default(DRAFT)
+  signedAt           DateTime?
+  signedByName       String?
+  signedByIp         String?
+  cancelledAt        DateTime?
+  cancellationReason String?
+
+  // Renovação
+  autoRenew          Boolean   @default(false)
+  renewalNotifiedAt  DateTime?
+  previousContractId String?
+
+  // Notas
+  notes              String?
+
+  @@index([sponsorId])
+  @@index([status])
+  @@index([contractNumber])
+  @@index([endsAt])
 }
