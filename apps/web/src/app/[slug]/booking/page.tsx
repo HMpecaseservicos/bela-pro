@@ -25,8 +25,10 @@ import {
 } from './components';
 
 // Constants
-import { COLORS } from './constants';
+import { COLORS, API_URL } from './constants';
 import { formatDateFull } from './utils';
+
+interface SponsorBrief { id: string; name: string; logoLightUrl?: string; websiteUrl?: string; ctaUrl?: string; }
 
 export default function BookingPage() {
   const params = useParams();
@@ -34,7 +36,12 @@ export default function BookingPage() {
   
   // Hydration fix
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  const [sponsors, setSponsors] = useState<SponsorBrief[]>([]);
+  useEffect(() => {
+    setMounted(true);
+    fetch(`${API_URL}/public/sponsors?placement=PUBLIC_BOOKING`)
+      .then(r => r.ok ? r.json() : []).then(setSponsors).catch(() => {});
+  }, []);
 
   // Hook com toda a lógica de booking
   const booking = useBooking({ slug });
@@ -369,6 +376,31 @@ export default function BookingPage() {
         primaryColor={booking.primaryColor}
         onContinue={handleContinue}
       />
+
+      {/* Sponsor strip */}
+      {sponsors.length > 0 && (
+        <div style={{
+          display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 28,
+          padding: '20px 16px', flexWrap: 'wrap', borderTop: `1px solid ${COLORS.border}`,
+        }}>
+          <span style={{ color: COLORS.textMuted, fontSize: 10, letterSpacing: 1.5, textTransform: 'uppercase' }}>Parceiros</span>
+          {sponsors.slice(0, 6).map(s => (
+            <a key={s.id} href={s.ctaUrl || s.websiteUrl || '#'} target="_blank" rel="noopener noreferrer"
+              onClick={() => { fetch(`${API_URL}/public/sponsors/${s.id}/click`, { method: 'POST' }).catch(() => {}); }}
+              style={{ opacity: 0.45, transition: 'opacity 0.3s' }}
+              onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; }}
+              onMouseLeave={e => { e.currentTarget.style.opacity = '0.45'; }}
+            >
+              {s.logoLightUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={s.logoLightUrl} alt={s.name} style={{ height: 22, maxWidth: 80, objectFit: 'contain' }} />
+              ) : (
+                <span style={{ color: COLORS.textMuted, fontSize: 11, fontWeight: 500 }}>{s.name}</span>
+              )}
+            </a>
+          ))}
+        </div>
+      )}
 
       {/* Footer branding BELA PRO */}
       <footer

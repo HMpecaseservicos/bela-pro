@@ -1005,3 +1005,87 @@ model BusinessInvite {
   @@index([inviteType])
   @@index([slug])
 }
+
+// =============================================================================
+// SPONSORS & PARTNERS
+// =============================================================================
+
+enum SponsorTier {
+  DIAMOND
+  GOLD
+  SILVER
+  BRONZE
+}
+
+enum SponsorType {
+  BRAND
+  SUPPLIER
+  OFFICIAL_PARTNER
+  EDUCATIONAL_PARTNER
+  TECH_PARTNER
+  CAMPAIGN_PARTNER
+}
+
+enum SponsorPlacement {
+  INVITE_LANDING
+  PUBLIC_BOOKING
+  DASHBOARD
+  MARKETING_PAGE
+  ALL
+}
+
+model Sponsor {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name        String
+  slug        String   @unique
+  description String?
+
+  // Imagens
+  logoLightUrl  String?
+  logoDarkUrl   String?
+  coverImageUrl String?
+
+  // Links
+  websiteUrl String?
+  ctaLabel   String?
+  ctaUrl     String?
+
+  // Classificação
+  tier        SponsorTier   @default(SILVER)
+  sponsorType SponsorType   @default(BRAND)
+
+  // Onde exibir
+  placementScopes SponsorPlacement[] @default([ALL])
+
+  // Ordenação e destaque
+  displayOrder Int     @default(0)
+  isActive     Boolean @default(true)
+  isFeatured   Boolean @default(false)
+
+  // Vigência contratual
+  contractStartsAt DateTime?
+  contractEndsAt   DateTime?
+
+  // Tracking
+  trackingEnabled Boolean   @default(true)
+  viewCount       Int       @default(0)
+  clickCount      Int       @default(0)
+  lastViewedAt    DateTime?
+  lastClickedAt   DateTime?
+
+  // Notas internas
+  notes String?
+
+  // Auditoria
+  createdByUserId String?
+  updatedByUserId String?
+
+  @@index([isActive])
+  @@index([tier])
+  @@index([sponsorType])
+  @@index([isFeatured])
+  @@index([displayOrder])
+}

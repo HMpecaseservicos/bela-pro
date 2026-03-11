@@ -12,6 +12,7 @@ const MENU_ITEMS = [
   { href: '/admin/plans', label: 'Planos', icon: '📋' },
   { href: '/admin/subscriptions', label: 'Assinaturas', icon: '💳' },
   { href: '/admin/billing', label: 'Billing', icon: '💰' },
+  { href: '/admin/patrocinadores', label: 'Patrocinadores', icon: '🤝' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

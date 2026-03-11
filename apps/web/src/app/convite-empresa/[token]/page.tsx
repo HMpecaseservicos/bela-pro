@@ -405,14 +405,23 @@ export default function BusinessInviteLandingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expired, setExpired] = useState(false);
+  const [sponsors, setSponsors] = useState<{ id: string; name: string; logoLightUrl?: string; logoDarkUrl?: string; websiteUrl?: string; ctaUrl?: string; tier: string }[]>([]);
   const heroRef = useRef<HTMLElement>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
   useEffect(() => {
     fetchInvite();
+    fetchSponsors();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  async function fetchSponsors() {
+    try {
+      const res = await fetch(`${API_URL}/public/sponsors?placement=INVITE_LANDING`);
+      if (res.ok) setSponsors(await res.json());
+    } catch { /* silencioso */ }
+  }
 
   async function fetchInvite() {
     try {
@@ -882,6 +891,54 @@ export default function BusinessInviteLandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ::::::::: PARCEIROS OFICIAIS ::::::::: */}
+      {sponsors.length > 0 && (
+        <section style={{
+          padding: '64px 32px',
+          background: C.sectionAlt,
+          borderTop: `1px solid ${C.border}`,
+        }}>
+          <div style={{ textAlign: 'center', marginBottom: 40 }}>
+            <p style={{ color: C.gold, fontSize: 12, fontWeight: 600, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 8 }}>
+              PARCEIROS OFICIAIS
+            </p>
+            <p style={{ color: C.textMuted, fontSize: 14, maxWidth: 400, margin: '0 auto' }}>
+              Empresas que confiam e apoiam o Bela Pro
+            </p>
+          </div>
+          <div style={{
+            display: 'flex', justifyContent: 'center', alignItems: 'center',
+            gap: 40, flexWrap: 'wrap', maxWidth: 900, margin: '0 auto',
+          }}>
+            {sponsors.map(s => (
+              <a
+                key={s.id}
+                href={s.ctaUrl || s.websiteUrl || '#'}
+                target="_blank" rel="noopener noreferrer"
+                onClick={() => { fetch(`${API_URL}/public/sponsors/${s.id}/click`, { method: 'POST' }).catch(() => {}); }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: 12, filter: 'grayscale(70%) brightness(0.7)', opacity: 0.6,
+                  transition: 'all 0.3s ease',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.filter = 'grayscale(0%) brightness(1)'; e.currentTarget.style.opacity = '1'; }}
+                onMouseLeave={e => { e.currentTarget.style.filter = 'grayscale(70%) brightness(0.7)'; e.currentTarget.style.opacity = '0.6'; }}
+              >
+                {(s.logoDarkUrl || s.logoLightUrl) ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={s.logoDarkUrl || s.logoLightUrl} alt={s.name}
+                    style={{ height: 36, maxWidth: 120, objectFit: 'contain' }} />
+                ) : (
+                  <span style={{ color: C.textMuted, fontSize: 14, fontWeight: 600, fontFamily: FONT.sans }}>
+                    {s.name}
+                  </span>
+                )}
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ::::::::: FOOTER ::::::::: */}
       <footer style={{

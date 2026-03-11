@@ -22,6 +22,7 @@ import { PaymentsModule } from './payments/payments.module';
 import { FinancialModule } from './financial/financial.module';
 import { BillingModule } from './billing/billing.module';
 import { BusinessInvitesModule } from './business-invites/business-invites.module';
+import { SponsorsModule } from './sponsors/sponsors.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { BusinessInvitesModule } from './business-invites/business-invites.modul
     FinancialModule,
     BillingModule,
     BusinessInvitesModule,
+    SponsorsModule,
   ],
   controllers: [HealthController, RootController],
 })
