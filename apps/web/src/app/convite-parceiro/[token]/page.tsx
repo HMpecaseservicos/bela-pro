@@ -8,6 +8,8 @@ import { useParams } from 'next/navigation';
 // =============================================================================
 
 interface InviteData {
+  isUniversal?: boolean;
+  universalTitle?: string;
   companyName: string;
   contactName: string;
   personalMessage?: string;
@@ -211,21 +213,32 @@ export default function SponsorInviteLandingPage() {
         ]);
         const invData = await invRes.json();
         if (invData.expired) { setExpired(true); setLoading(false); return; }
-        if (!invData.companyName) { setError('Convite não encontrado'); setLoading(false); return; }
+        // Universal invites have no companyName; directed invites do
+        if (!invData.isUniversal && !invData.companyName) { setError('Convite não encontrado'); setLoading(false); return; }
         setInvite(invData);
 
         if (tierRes.ok) {
           setTierDetails(await tierRes.json());
         }
 
-        // Pre-fill form
-        setForm(prev => ({
-          ...prev,
-          companyName: invData.companyName,
-          contactName: invData.contactName,
-          selectedTier: invData.proposedTier,
-          selectedType: invData.proposedType || 'BRAND',
-        }));
+        // Pre-fill form (only for directed invites)
+        if (!invData.isUniversal) {
+          setForm(prev => ({
+            ...prev,
+            companyName: invData.companyName,
+            contactName: invData.contactName,
+            selectedTier: invData.proposedTier,
+            selectedType: invData.proposedType || 'BRAND',
+          }));
+        } else {
+          // Universal: just set default tier
+          setForm(prev => ({
+            ...prev,
+            selectedTier: invData.proposedTier || 'GOLD',
+          }));
+          // Universal goes straight to tier selection
+          setStep('tier');
+        }
       } catch {
         setError('Erro ao carregar convite');
       } finally {
@@ -690,7 +703,11 @@ export default function SponsorInviteLandingPage() {
               Escolha o <span className="gold-text">nível de parceria</span>
             </h2>
             <p style={{ color: C.textSecondary, fontSize: 16, maxWidth: 560, margin: '0 auto' }}>
-              Cada tier oferece benefícios exclusivos. O tier <strong style={{ color: TIER_META[invite.proposedTier].color }}>{TIER_META[invite.proposedTier].name}</strong> foi sugerido para você.
+              {invite?.isUniversal ? (
+                'Selecione o nível de parceria ideal para o seu negócio. Cada tier oferece benefícios exclusivos.'
+              ) : (
+                <>Cada tier oferece benefícios exclusivos. O tier <strong style={{ color: TIER_META[invite!.proposedTier].color }}>{TIER_META[invite!.proposedTier].name}</strong> foi sugerido para você.</>
+              )}
             </p>
           </div>
 
@@ -787,13 +804,15 @@ export default function SponsorInviteLandingPage() {
 
           {/* Nav */}
           <div className="anim-up-d6" style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 48 }}>
-            <button onClick={() => setStep('landing')} style={{
-              padding: '14px 32px', borderRadius: 12, background: 'transparent',
-              border: `1px solid ${C.border}`, color: C.textSecondary,
-              fontFamily: FONT.sans, cursor: 'pointer', fontSize: 14, fontWeight: 500,
-            }}>
-              ← Voltar
-            </button>
+            {!invite?.isUniversal && (
+              <button onClick={() => setStep('landing')} style={{
+                padding: '14px 32px', borderRadius: 12, background: 'transparent',
+                border: `1px solid ${C.border}`, color: C.textSecondary,
+                fontFamily: FONT.sans, cursor: 'pointer', fontSize: 14, fontWeight: 500,
+              }}>
+                ← Voltar
+              </button>
+            )}
             <button onClick={() => setStep('form')} style={{
               padding: '14px 40px', borderRadius: 12,
               background: `linear-gradient(135deg, ${C.gold}, ${C.goldDark})`,

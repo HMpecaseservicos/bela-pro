@@ -21,6 +21,15 @@ const createInviteSchema = z.object({
   notes: z.string().max(2000).optional().nullable(),
 });
 
+const createUniversalInviteSchema = z.object({
+  universalTitle: z.string().max(200).optional().nullable(),
+  personalMessage: z.string().max(2000).optional().nullable(),
+  proposedTier: z.enum(['DIAMOND', 'GOLD', 'SILVER', 'BRONZE']).default('GOLD'),
+  proposedBenefits: z.array(z.string()).default([]),
+  expiresInDays: z.number().min(1).max(365).default(90),
+  notes: z.string().max(2000).optional().nullable(),
+});
+
 const selfRegisterSchema = z.object({
   // Dados da empresa
   companyName: z.string().min(2).max(120),
@@ -81,6 +90,28 @@ export class SponsorInvitesService {
     });
   }
 
+  async createUniversal(raw: unknown, userId: string) {
+    const data = createUniversalInviteSchema.parse(raw);
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + data.expiresInDays);
+
+    return this.prisma.sponsorInvite.create({
+      data: {
+        isUniversal: true,
+        universalTitle: data.universalTitle ?? 'Seja nosso parceiro!',
+        companyName: '',
+        contactName: '',
+        personalMessage: data.personalMessage ?? null,
+        proposedTier: data.proposedTier,
+        proposedBenefits: data.proposedBenefits,
+        notes: data.notes ?? null,
+        expiresAt,
+        createdByUserId: userId,
+      },
+    });
+  }
+
   async findAll(filters?: { status?: string; search?: string }) {
     const where: Record<string, unknown> = {};
     if (filters?.status) where.status = filters.status;
@@ -132,7 +163,7 @@ export class SponsorInvitesService {
       if (invite.status !== 'EXPIRED') {
         await this.prisma.sponsorInvite.update({ where: { id: invite.id }, data: { status: 'EXPIRED' } });
       }
-      return { expired: true, companyName: invite.companyName };
+      return { expired: true, companyName: invite.companyName || 'Convite', isUniversal: invite.isUniversal };
     }
 
     // Increment views
@@ -147,6 +178,8 @@ export class SponsorInvitesService {
 
     return {
       expired: false,
+      isUniversal: invite.isUniversal,
+      universalTitle: invite.universalTitle,
       companyName: invite.companyName,
       contactName: invite.contactName,
       personalMessage: invite.personalMessage,
@@ -203,8 +236,13 @@ export class SponsorInvitesService {
 
     const invite = await this.prisma.sponsorInvite.findUnique({ where: { token } });
     if (!invite) throw new NotFoundException('Convite não encontrado');
-    if (['EXPIRED', 'ACCEPTED', 'DECLINED'].includes(invite.status) || invite.expiresAt < new Date()) {
+
+    // Universal invites can be reused; directed invites cannot be re-accepted
+    if (!invite.isUniversal && ['EXPIRED', 'ACCEPTED', 'DECLINED'].includes(invite.status)) {
       throw new BadRequestException('Convite não disponível para cadastro');
+    }
+    if (invite.expiresAt < new Date()) {
+      throw new BadRequestException('Convite expirado');
     }
 
     // Check email uniqueness for sponsors
@@ -276,15 +314,24 @@ export class SponsorInvitesService {
         },
       });
 
-      // Update invite
-      await tx.sponsorInvite.update({
-        where: { id: invite.id },
-        data: {
-          status: 'ACCEPTED',
-          respondedAt: new Date(),
-          convertedSponsorId: sponsor.id,
-        },
-      });
+      // Update invite: universal stays active (increment usage), directed gets accepted
+      if (invite.isUniversal) {
+        await tx.sponsorInvite.update({
+          where: { id: invite.id },
+          data: {
+            usageCount: { increment: 1 },
+          },
+        });
+      } else {
+        await tx.sponsorInvite.update({
+          where: { id: invite.id },
+          data: {
+            status: 'ACCEPTED',
+            respondedAt: new Date(),
+            convertedSponsorId: sponsor.id,
+          },
+        });
+      }
 
       return { sponsor, contract };
     });

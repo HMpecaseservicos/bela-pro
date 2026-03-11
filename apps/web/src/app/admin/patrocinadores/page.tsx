@@ -37,6 +37,8 @@ interface Sponsor {
 interface SponsorInvite {
   id: string;
   token: string;
+  isUniversal?: boolean;
+  universalTitle?: string;
   companyName: string;
   contactName: string;
   contactEmail?: string;
@@ -47,6 +49,7 @@ interface SponsorInvite {
   proposedBenefits: string[];
   status: 'PENDING' | 'VIEWED' | 'CLICKED_CTA' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED';
   viewCount: number;
+  usageCount?: number;
   expiresAt: string;
   createdAt: string;
 }
@@ -150,12 +153,21 @@ export default function PatrocinadoresPage() {
   const [invites, setInvites] = useState<SponsorInvite[]>([]);
   const [contracts, setContracts] = useState<SponsorContract[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showUniversalModal, setShowUniversalModal] = useState(false);
   const [inviteForm, setInviteForm] = useState({
     companyName: '', contactName: '', contactEmail: '', contactPhone: '',
     personalMessage: '', proposedTier: 'GOLD' as Sponsor['tier'],
     proposedType: 'BRAND' as Sponsor['sponsorType'],
     proposedBenefits: ['Logo na landing page premium', 'Destaque na página de agendamento', 'Relatório de impressões e cliques', 'Badge exclusiva de parceiro verificado'],
     expiresInDays: 30, notes: '',
+  });
+  const [universalForm, setUniversalForm] = useState({
+    universalTitle: 'Seja nosso parceiro!',
+    personalMessage: '',
+    proposedTier: 'GOLD' as Sponsor['tier'],
+    proposedBenefits: ['Logo na landing page premium', 'Destaque na página de agendamento', 'Relatório de impressões e cliques', 'Badge exclusiva de parceiro verificado'],
+    expiresInDays: 90,
+    notes: '',
   });
 
   const [showAccessModal, setShowAccessModal] = useState(false);
@@ -303,6 +315,37 @@ export default function PatrocinadoresPage() {
       } else {
         const data = await res.json().catch(() => ({}));
         showToast(data.message || 'Erro ao criar convite', 'error');
+      }
+    } catch { showToast('Erro de conexão', 'error'); }
+  };
+
+  const handleCreateUniversal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${API_URL}/admin/sponsor-invites/universal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({
+          ...universalForm,
+          personalMessage: universalForm.personalMessage || null,
+          notes: universalForm.notes || null,
+        }),
+      });
+      if (res.ok) {
+        const invite = await res.json();
+        const inviteUrl = `${window.location.origin}/convite-parceiro/${invite.token}`;
+        navigator.clipboard.writeText(inviteUrl).catch(() => {});
+        showToast('Convite universal criado! Link copiado para a área de transferência.');
+        setShowUniversalModal(false);
+        setUniversalForm({
+          universalTitle: 'Seja nosso parceiro!', personalMessage: '', proposedTier: 'GOLD',
+          proposedBenefits: ['Logo na landing page premium', 'Destaque na página de agendamento', 'Relatório de impressões e cliques', 'Badge exclusiva de parceiro verificado'],
+          expiresInDays: 90, notes: '',
+        });
+        fetchInvites();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.message || 'Erro ao criar convite universal', 'error');
       }
     } catch { showToast('Erro de conexão', 'error'); }
   };
@@ -488,7 +531,10 @@ export default function PatrocinadoresPage() {
             Gerencie patrocinadores e convites de parceria
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <button onClick={() => setShowUniversalModal(true)} style={{ ...btnPrimary, background: 'linear-gradient(135deg, #059669 0%, #047857 100%)' }}>
+            🌐 Convite Universal
+          </button>
           <button onClick={() => setShowInviteModal(true)} style={{ ...btnPrimary, background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)' }}>
             ✉️ Enviar Convite
           </button>
@@ -712,6 +758,7 @@ export default function PatrocinadoresPage() {
                 <tr style={{ background: T.surface2, borderBottom: `1px solid ${T.border}` }}>
                   <th style={{ padding: 12, textAlign: 'left', color: T.textMuted, fontWeight: 500, fontSize: 12 }}>Empresa</th>
                   <th style={{ padding: 12, textAlign: 'left', color: T.textMuted, fontWeight: 500, fontSize: 12 }}>Contato</th>
+                  <th style={{ padding: 12, textAlign: 'center', color: T.textMuted, fontWeight: 500, fontSize: 12 }}>Tipo</th>
                   <th style={{ padding: 12, textAlign: 'center', color: T.textMuted, fontWeight: 500, fontSize: 12 }}>Tier Proposto</th>
                   <th style={{ padding: 12, textAlign: 'center', color: T.textMuted, fontWeight: 500, fontSize: 12 }}>Status</th>
                   <th style={{ padding: 12, textAlign: 'center', color: T.textMuted, fontWeight: 500, fontSize: 12 }}>Views</th>
@@ -733,12 +780,38 @@ export default function PatrocinadoresPage() {
                   return (
                     <tr key={inv.id} style={{ borderBottom: `1px solid ${T.borderLight}` }}>
                       <td style={{ padding: 12 }}>
-                        <div style={{ fontWeight: 600, color: T.textPrimary }}>{inv.companyName}</div>
-                        <div style={{ fontSize: 11, color: T.textMuted }}>{TYPE_CONFIG[inv.proposedType]?.label}</div>
+                        {inv.isUniversal ? (
+                          <>
+                            <div style={{ fontWeight: 600, color: '#059669' }}>🌐 {inv.universalTitle || 'Convite Universal'}</div>
+                            <div style={{ fontSize: 11, color: T.textMuted }}>Universal — {inv.usageCount || 0} uso(s)</div>
+                          </>
+                        ) : (
+                          <>
+                            <div style={{ fontWeight: 600, color: T.textPrimary }}>{inv.companyName}</div>
+                            <div style={{ fontSize: 11, color: T.textMuted }}>{TYPE_CONFIG[inv.proposedType]?.label}</div>
+                          </>
+                        )}
                       </td>
                       <td style={{ padding: 12 }}>
-                        <div style={{ color: T.textPrimary, fontSize: 13 }}>{inv.contactName}</div>
-                        {inv.contactEmail && <div style={{ fontSize: 11, color: T.textMuted }}>{inv.contactEmail}</div>}
+                        {inv.isUniversal ? (
+                          <span style={{ color: T.textMuted, fontSize: 12, fontStyle: 'italic' }}>Qualquer parceiro</span>
+                        ) : (
+                          <>
+                            <div style={{ color: T.textPrimary, fontSize: 13 }}>{inv.contactName}</div>
+                            {inv.contactEmail && <div style={{ fontSize: 11, color: T.textMuted }}>{inv.contactEmail}</div>}
+                          </>
+                        )}
+                      </td>
+                      <td style={{ padding: 12, textAlign: 'center' }}>
+                        {inv.isUniversal ? (
+                          <span style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: '#e6f7f0', color: '#059669' }}>
+                            🌐 Universal
+                          </span>
+                        ) : (
+                          <span style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: T.surface2, color: T.textSecondary }}>
+                            ✉️ Direcionado
+                          </span>
+                        )}
                       </td>
                       <td style={{ padding: 12, textAlign: 'center' }}>
                         <span style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: tier?.bg, color: tier?.color }}>
@@ -1198,6 +1271,80 @@ export default function PatrocinadoresPage() {
                 <button type="button" onClick={() => setShowInviteModal(false)} style={btnSecondary}>Cancelar</button>
                 <button type="submit" style={{ ...btnPrimary, background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)' }}>
                   ✉️ Criar Convite & Copiar Link
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* UNIVERSAL INVITE MODAL */}
+      {showUniversalModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000,
+          display: 'flex', justifyContent: 'center', alignItems: 'flex-start',
+          padding: '40px 16px', overflowY: 'auto',
+        }}>
+          <div style={{
+            background: T.white, borderRadius: 16, width: '100%', maxWidth: 560,
+            padding: 32, position: 'relative',
+          }}>
+            <button onClick={() => setShowUniversalModal(false)} style={{
+              position: 'absolute', top: 16, right: 16, background: 'none', border: 'none',
+              fontSize: 22, cursor: 'pointer', color: T.textMuted, padding: 4,
+            }}>✕</button>
+
+            <h2 style={{ color: T.textPrimary, marginBottom: 4, fontFamily: 'Playfair Display, serif', fontSize: 22 }}>
+              🌐 Convite Universal
+            </h2>
+            <p style={{ color: T.textMuted, marginBottom: 6, fontSize: 13 }}>
+              Crie um link genérico que qualquer parceiro pode usar para se cadastrar
+            </p>
+            <div style={{
+              background: '#e6f7f0', border: '1px solid #b2e0d0', borderRadius: 10, padding: '10px 14px',
+              fontSize: 12, color: '#047857', marginBottom: 20, lineHeight: 1.5,
+            }}>
+              💡 <strong>Diferente do convite direcionado:</strong> não precisa preencher dados do parceiro.
+              O link pode ser compartilhado em redes sociais, site, ou por qualquer canal.
+              Múltiplos parceiros podem se cadastrar pelo mesmo link.
+            </div>
+
+            <form onSubmit={handleCreateUniversal}>
+              <div style={{ display: 'grid', gap: 14 }}>
+                <div>
+                  <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Título do convite</label>
+                  <input type="text" value={universalForm.universalTitle}
+                    onChange={e => setUniversalForm({ ...universalForm, universalTitle: e.target.value })}
+                    placeholder="Seja nosso parceiro!" style={inputStyle} />
+                </div>
+
+                <div>
+                  <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Tier sugerido (o parceiro pode escolher outro)</label>
+                  <select value={universalForm.proposedTier} onChange={e => setUniversalForm({ ...universalForm, proposedTier: e.target.value as Sponsor['tier'] })} style={inputStyle}>
+                    {Object.entries(TIER_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Mensagem de boas-vindas (opcional)</label>
+                  <textarea value={universalForm.personalMessage}
+                    onChange={e => setUniversalForm({ ...universalForm, personalMessage: e.target.value })}
+                    rows={3} style={{ ...inputStyle, resize: 'vertical' }}
+                    placeholder="Mensagem que aparecerá na página do convite..." />
+                </div>
+
+                <div>
+                  <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Validade (dias)</label>
+                  <input type="number" value={universalForm.expiresInDays} min={1} max={365}
+                    onChange={e => setUniversalForm({ ...universalForm, expiresInDays: Number(e.target.value) })}
+                    style={{ ...inputStyle, maxWidth: 120 }} />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
+                <button type="button" onClick={() => setShowUniversalModal(false)} style={btnSecondary}>Cancelar</button>
+                <button type="submit" style={{ ...btnPrimary, background: 'linear-gradient(135deg, #059669 0%, #047857 100%)' }}>
+                  🌐 Criar Link Universal & Copiar
                 </button>
               </div>
             </form>

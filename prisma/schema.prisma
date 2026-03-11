@@ -1151,9 +1151,13 @@ model SponsorInvite {
 
   token String @unique @default(cuid())
 
-  // Dados do patrocinador convidado
-  companyName    String
-  contactName    String
+  // Convite universal (sem dados do patrocinador pré-preenchidos)
+  isUniversal Boolean @default(false)
+  universalTitle String?  // título personalizado ex: "Seja nosso parceiro!"
+
+  // Dados do patrocinador convidado (opcionais para universal)
+  companyName    String   @default("")
+  contactName    String   @default("")
   contactEmail   String?
   contactPhone   String?
   personalMessage String?
@@ -1174,6 +1178,9 @@ model SponsorInvite {
   // Se aceito, link ao Sponsor criado
   convertedSponsorId String?
 
+  // Registros de uso (para convite universal — pode ter múltiplos cadastros)
+  usageCount Int @default(0)
+
   // Notas internas
   notes String?
 
@@ -1183,6 +1190,7 @@ model SponsorInvite {
   @@index([status])
   @@index([token])
   @@index([expiresAt])
+  @@index([isUniversal])
 }
 
 // =============================================================================

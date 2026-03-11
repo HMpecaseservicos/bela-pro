@@ -20,6 +20,11 @@ export class SponsorInvitesAdminController {
     return this.service.create(body, req.user.userId);
   }
 
+  @Post('universal')
+  createUniversal(@Body() body: unknown, @Req() req: { user: { userId: string } }) {
+    return this.service.createUniversal(body, req.user.userId);
+  }
+
   @Get()
   findAll(@Query('status') status?: string, @Query('search') search?: string) {
     return this.service.findAll({ status, search });
