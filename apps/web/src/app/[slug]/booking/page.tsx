@@ -28,7 +28,7 @@ import {
 import { COLORS, API_URL } from './constants';
 import { formatDateFull } from './utils';
 
-interface SponsorBrief { id: string; name: string; logoLightUrl?: string; websiteUrl?: string; ctaUrl?: string; }
+interface SponsorBrief { id: string; name: string; tier?: string; logoLightUrl?: string; logoDarkUrl?: string; websiteUrl?: string; ctaUrl?: string; ctaLabel?: string; isFeatured?: boolean; }
 
 export default function BookingPage() {
   const params = useParams();
@@ -377,37 +377,138 @@ export default function BookingPage() {
         onContinue={handleContinue}
       />
 
-      {/* Sponsor strip */}
+      {/* Parceiros & Patrocinadores */}
       {sponsors.length > 0 && (
-        <div style={{
-          display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 28,
-          padding: '20px 16px', flexWrap: 'wrap', borderTop: `1px solid ${COLORS.border}`,
+        <section style={{
+          padding: '40px 20px 32px',
+          background: 'linear-gradient(180deg, #f9fafb 0%, #f3f4f6 100%)',
+          borderTop: `1px solid ${COLORS.border}`,
         }}>
-          <span style={{ color: COLORS.textMuted, fontSize: 10, letterSpacing: 1.5, textTransform: 'uppercase' }}>Parceiros</span>
-          {sponsors.slice(0, 6).map(s => (
-            <a key={s.id} href={s.ctaUrl || s.websiteUrl || '#'} target="_blank" rel="noopener noreferrer"
-              onClick={() => { fetch(`${API_URL}/public/sponsors/${s.id}/click`, { method: 'POST' }).catch(() => {}); }}
-              style={{ opacity: 0.45, transition: 'opacity 0.3s' }}
-              onMouseEnter={e => { e.currentTarget.style.opacity = '0.85'; }}
-              onMouseLeave={e => { e.currentTarget.style.opacity = '0.45'; }}
-            >
-              {s.logoLightUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={s.logoLightUrl} alt={s.name} style={{ height: 22, maxWidth: 80, objectFit: 'contain' }} />
-              ) : (
-                <span style={{ color: COLORS.textMuted, fontSize: 11, fontWeight: 500 }}>{s.name}</span>
-              )}
-            </a>
-          ))}
-        </div>
+          <div style={{ maxWidth: 800, margin: '0 auto' }}>
+            {/* Header */}
+            <div style={{ textAlign: 'center', marginBottom: 28 }}>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '5px 16px', borderRadius: 20,
+                background: 'rgba(0,0,0,0.04)', marginBottom: 10,
+              }}>
+                <span style={{ fontSize: 12 }}>🤝</span>
+                <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: COLORS.textMuted }}>
+                  Parceiros Oficiais
+                </span>
+              </div>
+              <p style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.5, maxWidth: 400, margin: '0 auto' }}>
+                Marcas e fornecedores que confiam na nossa plataforma
+              </p>
+            </div>
+
+            {/* Sponsors Grid */}
+            <div style={{
+              display: 'flex', justifyContent: 'center', alignItems: 'center',
+              gap: 12, flexWrap: 'wrap',
+            }}>
+              {sponsors.slice(0, 8).map(s => {
+                const tierAccent: Record<string, string> = {
+                  DIAMOND: '#7c3aed', GOLD: '#d97706', SILVER: '#6b7280', BRONZE: '#92400e',
+                };
+                const accentColor = tierAccent[s.tier || ''] || COLORS.textMuted;
+                const isDiamond = s.tier === 'DIAMOND';
+                const isGold = s.tier === 'GOLD';
+
+                return (
+                  <a
+                    key={s.id}
+                    href={s.ctaUrl || s.websiteUrl || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => { fetch(`${API_URL}/public/sponsors/${s.id}/click`, { method: 'POST' }).catch(() => {}); }}
+                    title={s.ctaLabel || s.name}
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      gap: 6, padding: '14px 18px', borderRadius: 14,
+                      background: '#ffffff',
+                      border: `1.5px solid ${isDiamond ? 'rgba(124,58,237,0.2)' : isGold ? 'rgba(217,119,6,0.15)' : COLORS.border}`,
+                      boxShadow: isDiamond
+                        ? '0 2px 12px rgba(124,58,237,0.08)'
+                        : isGold
+                          ? '0 2px 10px rgba(217,119,6,0.06)'
+                          : '0 1px 4px rgba(0,0,0,0.04)',
+                      minWidth: 100, minHeight: 70,
+                      textDecoration: 'none',
+                      transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
+                      position: 'relative',
+                      cursor: 'pointer',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.transform = 'translateY(-3px)';
+                      e.currentTarget.style.boxShadow = isDiamond
+                        ? '0 8px 24px rgba(124,58,237,0.15)'
+                        : isGold
+                          ? '0 8px 20px rgba(217,119,6,0.12)'
+                          : '0 6px 16px rgba(0,0,0,0.08)';
+                      e.currentTarget.style.borderColor = accentColor;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = isDiamond
+                        ? '0 2px 12px rgba(124,58,237,0.08)'
+                        : isGold
+                          ? '0 2px 10px rgba(217,119,6,0.06)'
+                          : '0 1px 4px rgba(0,0,0,0.04)';
+                      e.currentTarget.style.borderColor = isDiamond ? 'rgba(124,58,237,0.2)' : isGold ? 'rgba(217,119,6,0.15)' : COLORS.border;
+                    }}
+                  >
+                    {/* Tier badge for Diamond/Gold */}
+                    {(isDiamond || isGold) && (
+                      <div style={{
+                        position: 'absolute', top: -6, right: -4,
+                        fontSize: 10, lineHeight: 1,
+                      }}>
+                        {isDiamond ? '💎' : '🥇'}
+                      </div>
+                    )}
+
+                    {/* Logo ou Nome */}
+                    {s.logoLightUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={s.logoLightUrl}
+                        alt={s.name}
+                        style={{
+                          height: 28, maxWidth: 90, objectFit: 'contain',
+                          filter: 'none',
+                        }}
+                      />
+                    ) : (
+                      <span style={{
+                        color: COLORS.textPrimary, fontSize: 12, fontWeight: 700,
+                        letterSpacing: '-0.2px', textAlign: 'center', lineHeight: 1.3,
+                      }}>
+                        {s.name}
+                      </span>
+                    )}
+
+                    {/* Tier label */}
+                    <span style={{
+                      fontSize: 8, fontWeight: 700, letterSpacing: 1,
+                      textTransform: 'uppercase', color: accentColor, opacity: 0.7,
+                    }}>
+                      {s.tier === 'DIAMOND' ? 'Diamond' : s.tier === 'GOLD' ? 'Gold' : s.tier === 'SILVER' ? 'Silver' : 'Bronze'}
+                    </span>
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        </section>
       )}
 
       {/* Footer branding BELA PRO */}
       <footer
         style={{
           textAlign: 'center',
-          padding: '32px 20px 48px',
-          background: 'linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.02) 100%)',
+          padding: '28px 20px 44px',
+          background: '#f3f4f6',
         }}
       >
         <div
@@ -416,7 +517,7 @@ export default function BookingPage() {
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
-            marginBottom: 8,
+            marginBottom: 6,
           }}
         >
           <span style={{ color: COLORS.textMuted, fontSize: 12 }}>Powered by</span>
@@ -424,18 +525,18 @@ export default function BookingPage() {
             src="/logo.png"
             alt="BELA PRO"
             style={{
-              height: 24,
+              height: 22,
               width: 'auto',
-              opacity: 0.85,
+              opacity: 0.8,
             }}
           />
         </div>
         <p
           style={{
             color: COLORS.textMuted,
-            fontSize: 11,
+            fontSize: 10,
             margin: 0,
-            opacity: 0.7,
+            opacity: 0.6,
           }}
         >
           Sistema de agendamento profissional
