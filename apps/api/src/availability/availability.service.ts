@@ -63,7 +63,11 @@ export class AvailabilityService {
     // 4. Calcula horário mínimo respeitando minLeadTimeMinutes
     const minStartTime = new Date(now.getTime() + workspace.minLeadTimeMinutes * 60000);
 
-    const dayOfWeek = targetDate.getDay(); // 0=Dom, 6=Sab
+    // FIX: Calcula dayOfWeek baseado na data LOCAL (não UTC)
+    // Quando recebemos "2026-03-21" queremos o dia da semana dessa data no timezone do workspace
+    const [year, month, day] = date.split('-').map(Number);
+    const localDate = new Date(year, month - 1, day); // Cria data em timezone local
+    const dayOfWeek = localDate.getDay(); // 0=Dom, 6=Sab
 
     // 5. Busca regras de horário para este dia da semana
     const scheduleRules = await this.prisma.scheduleRule.findMany({

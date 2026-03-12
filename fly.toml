@@ -13,6 +13,11 @@ primary_region = 'gru'
   NODE_ENV = 'production'
   PORT = '8080'
   TZ = 'America/Sao_Paulo'
+  UPLOAD_DIR = '/data/uploads'
+
+[mounts]
+  source = 'bela_data'
+  destination = '/data'
 
 [http_service]
   internal_port = 8080
