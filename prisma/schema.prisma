@@ -95,8 +95,9 @@ model Workspace {
   updatedAt DateTime @updatedAt
 
   name     String
-  slug     String @unique
-  timezone String @default("America/Sao_Paulo")
+  slug     String  @unique
+  timezone String  @default("America/Sao_Paulo")
+  isActive Boolean @default(true) // Status do workspace (ativo/inativo)
 
   // Identidade visual básica
   brandName       String? // ex.: "Studio da Ana"

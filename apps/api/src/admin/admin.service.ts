@@ -10,6 +10,10 @@ const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   search: z.string().optional(),
+  status: z.enum(['all', 'active', 'inactive']).optional().default('all'),
+  plan: z.enum(['FREE', 'BASIC', 'PRO', 'ENTERPRISE', 'all']).optional().default('all'),
+  sortBy: z.enum(['createdAt', 'name', 'appointments', 'clients']).optional().default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
 });
 
 const updateWorkspaceAdminSchema = z.object({
@@ -110,36 +114,71 @@ export class AdminService {
   // ==========================================================================
 
   /**
-   * Lista todos os workspaces com paginação e busca
+   * Lista todos os workspaces com paginação, busca e filtros
    */
   async listWorkspaces(query: unknown) {
-    const { page, limit, search } = paginationSchema.parse(query);
+    const { page, limit, search, status, plan, sortBy, sortOrder } = paginationSchema.parse(query);
     const skip = (page - 1) * limit;
 
-    const where = search
-      ? {
-          OR: [
-            { name: { contains: search, mode: 'insensitive' as const } },
-            { slug: { contains: search, mode: 'insensitive' as const } },
-          ],
-        }
-      : {};
+    // Monta filtros
+    const where: any = {};
+    
+    // Filtro de busca
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { slug: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    
+    // Filtro de status
+    if (status === 'active') {
+      where.isActive = true;
+    } else if (status === 'inactive') {
+      where.isActive = false;
+    }
+    
+    // Filtro de plano
+    if (plan && plan !== 'all') {
+      where.plan = plan;
+    }
+
+    // Monta ordenação
+    let orderBy: any = { createdAt: sortOrder };
+    if (sortBy === 'name') {
+      orderBy = { name: sortOrder };
+    } else if (sortBy === 'appointments') {
+      orderBy = { appointments: { _count: sortOrder } };
+    } else if (sortBy === 'clients') {
+      orderBy = { clients: { _count: sortOrder } };
+    }
 
     const [workspaces, total] = await Promise.all([
       this.prisma.workspace.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy,
         select: {
           id: true,
           name: true,
           slug: true,
           plan: true,
+          isActive: true,
           chatbotEnabled: true,
           createdAt: true,
           updatedAt: true,
           whatsappLastConnectionState: true,
+          // Busca o owner (primeiro OWNER do workspace)
+          memberships: {
+            where: { role: 'OWNER' },
+            take: 1,
+            select: {
+              user: {
+                select: { id: true, name: true, email: true },
+              },
+            },
+          },
           _count: {
             select: {
               memberships: true,
@@ -153,13 +192,26 @@ export class AdminService {
       this.prisma.workspace.count({ where }),
     ]);
 
+    // Formata resposta com owner extraído
+    const formattedWorkspaces = workspaces.map(ws => ({
+      ...ws,
+      owner: ws.memberships[0]?.user || null,
+      memberships: undefined, // Remove do retorno
+    }));
+
     return {
-      data: workspaces,
+      data: formattedWorkspaces,
       pagination: {
         page,
         limit,
         total,
         totalPages: Math.ceil(total / limit),
+      },
+      // Estatísticas para o dashboard
+      stats: {
+        total,
+        active: await this.prisma.workspace.count({ where: { ...where, isActive: true } }),
+        inactive: await this.prisma.workspace.count({ where: { ...where, isActive: false } }),
       },
     };
   }
@@ -229,7 +281,7 @@ export class AdminService {
   }
 
   /**
-   * Deleta um workspace (soft delete via desativação de memberships)
+   * Desativa um workspace (soft delete)
    */
   async deleteWorkspace(workspaceId: string) {
     const workspace = await this.prisma.workspace.findUnique({
@@ -240,13 +292,88 @@ export class AdminService {
       throw new NotFoundException('Workspace não encontrado');
     }
 
-    // Soft delete: desativa todas as memberships
-    await this.prisma.membership.updateMany({
-      where: { workspaceId },
-      data: { isActive: false },
-    });
+    // Soft delete: desativa workspace e memberships
+    await this.prisma.$transaction([
+      this.prisma.workspace.update({
+        where: { id: workspaceId },
+        data: { isActive: false },
+      }),
+      this.prisma.membership.updateMany({
+        where: { workspaceId },
+        data: { isActive: false },
+      }),
+    ]);
 
     return { success: true, message: 'Workspace desativado com sucesso' };
+  }
+
+  /**
+   * Exclui permanentemente um workspace e todos os dados relacionados
+   * ATENÇÃO: Esta ação é irreversível!
+   */
+  async permanentDeleteWorkspace(workspaceId: string) {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      include: {
+        _count: {
+          select: {
+            appointments: true,
+            clients: true,
+          },
+        },
+      },
+    });
+
+    if (!workspace) {
+      throw new NotFoundException('Workspace não encontrado');
+    }
+
+    // Verifica se tem dados que devem ser preservados
+    if (workspace._count.appointments > 0 || workspace._count.clients > 0) {
+      throw new BadRequestException(
+        `Não é possível excluir permanentemente: workspace tem ${workspace._count.appointments} agendamentos e ${workspace._count.clients} clientes. Use a desativação.`
+      );
+    }
+
+    // Exclusão em cascata (ordem importa para foreign keys)
+    await this.prisma.$transaction([
+      // Módulos sem dependências
+      this.prisma.messageTemplate.deleteMany({ where: { workspaceId } }),
+      this.prisma.scheduleRule.deleteMany({ where: { workspaceId } }),
+      this.prisma.timeOff.deleteMany({ where: { workspaceId } }),
+      this.prisma.manualBlock.deleteMany({ where: { workspaceId } }),
+      this.prisma.inviteToken.deleteMany({ where: { workspaceId } }),
+      this.prisma.chatUsage.deleteMany({ where: { workspaceId } }),
+      this.prisma.auditLog.deleteMany({ where: { workspaceId } }),
+      this.prisma.notificationJob.deleteMany({ where: { workspaceId } }),
+      
+      // Chatbot
+      this.prisma.chatbotConversation.deleteMany({ where: { workspaceId } }),
+      this.prisma.chatbotTemplate.deleteMany({ where: { workspaceId } }),
+      
+      // Financeiro
+      this.prisma.financialTransaction.deleteMany({ where: { workspaceId } }),
+      this.prisma.financialCategory.deleteMany({ where: { workspaceId } }),
+      
+      // Serviços e bundles
+      this.prisma.serviceBundle.deleteMany({ where: { workspaceId } }),
+      this.prisma.service.deleteMany({ where: { workspaceId } }),
+      
+      // Perfil profissional
+      this.prisma.professionalProfile.deleteMany({ where: { workspaceId } }),
+      
+      // Memberships
+      this.prisma.membership.deleteMany({ where: { workspaceId } }),
+      
+      // Workspace
+      this.prisma.workspace.delete({ where: { id: workspaceId } }),
+    ]);
+
+    return { 
+      success: true, 
+      message: `Workspace "${workspace.name}" excluído permanentemente`,
+      deletedAt: new Date().toISOString(),
+    };
   }
 
   // ==========================================================================

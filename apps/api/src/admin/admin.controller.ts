@@ -91,6 +91,16 @@ export class AdminController {
     return this.adminService.deleteWorkspace(id);
   }
 
+  /**
+   * DELETE /api/v1/admin/workspaces/:id/permanent
+   * Exclui permanentemente um workspace (IRREVERSÍVEL)
+   * Só funciona se workspace não tiver agendamentos ou clientes
+   */
+  @Delete('workspaces/:id/permanent')
+  async permanentDeleteWorkspace(@Param('id') id: string) {
+    return this.adminService.permanentDeleteWorkspace(id);
+  }
+
   // ==========================================================================
   // USERS
   // ==========================================================================
