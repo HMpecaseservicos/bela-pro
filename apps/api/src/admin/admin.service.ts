@@ -937,4 +937,24 @@ export class AdminService {
       },
     };
   }
+
+  // ==========================================================================
+  // MIGRATIONS / FIXES
+  // ==========================================================================
+
+  /**
+   * Atualiza slotIntervalMinutes de todos os workspaces para 30 minutos
+   * Padrão profissional da indústria de beleza
+   */
+  async fixSlotInterval30() {
+    const result = await this.prisma.workspace.updateMany({
+      where: { slotIntervalMinutes: 15 },
+      data: { slotIntervalMinutes: 30 },
+    });
+
+    return {
+      updated: result.count,
+      message: `${result.count} workspaces atualizados para slotIntervalMinutes = 30`,
+    };
+  }
 }

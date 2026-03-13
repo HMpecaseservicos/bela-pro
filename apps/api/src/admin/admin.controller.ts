@@ -335,4 +335,18 @@ export class AdminController {
   async getSystemHealth() {
     return this.adminService.getSystemHealth();
   }
+
+  // ==========================================================================
+  // MIGRATIONS / FIXES
+  // ==========================================================================
+
+  /**
+   * POST /api/v1/admin/fix-slot-interval
+   * Atualiza todos os workspaces com slotIntervalMinutes=15 para 30
+   * Padrão profissional da indústria de beleza
+   */
+  @Post('fix-slot-interval')
+  async fixSlotInterval() {
+    return this.adminService.fixSlotInterval30();
+  }
 }
