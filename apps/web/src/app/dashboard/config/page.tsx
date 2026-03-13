@@ -499,7 +499,7 @@ export default function ConfigPage() {
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(280px, 1fr))', gap: isMobile ? 16 : 20 }}>
             <div>
               <label style={{ display: 'block', marginBottom: 8, fontWeight: 500, color: '#374151', fontSize: isMobile ? 13 : 14 }}>
-                Intervalo entre agendamentos (min)
+                Antecedência mínima (min)
               </label>
               <input
                 type="number"
@@ -508,7 +508,7 @@ export default function ConfigPage() {
                 style={inputStyle}
               />
               <p style={{ margin: '8px 0 0', fontSize: isMobile ? 11 : 12, color: '#94a3b8' }}>
-                Tempo mínimo de antecedência para agendar
+                Cliente precisa agendar com essa antecedência mínima
               </p>
             </div>
 
