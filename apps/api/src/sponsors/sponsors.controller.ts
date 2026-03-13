@@ -108,4 +108,22 @@ export class SponsorsPublicController {
   async trackClick(@Param('id') id: string) {
     return this.sponsorsService.trackClick(id);
   }
+
+  // Postagens públicas dos Diamond sponsors
+  @Get('posts')
+  async getPublicPosts(@Query('limit') limit?: string) {
+    const posts = await this.sponsorsService.getActivePublicPosts(
+      limit ? parseInt(limit, 10) : 10
+    );
+    // Track views
+    for (const p of posts) {
+      this.sponsorsService.trackPostView(p.id).catch(() => {});
+    }
+    return posts;
+  }
+
+  @Post('posts/:postId/click')
+  async trackPostClick(@Param('postId') postId: string) {
+    return this.sponsorsService.trackPostClick(postId);
+  }
 }

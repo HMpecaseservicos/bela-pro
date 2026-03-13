@@ -273,4 +273,69 @@ export class SponsorsService {
 
     return { success: true };
   }
+
+  // ===========================================================================
+  // PUBLIC POSTS (Diamond sponsor content)
+  // ===========================================================================
+
+  /**
+   * Busca postagens ativas de patrocinadores Diamond para exibição pública
+   * Inclui informações básicas do sponsor para exibição
+   */
+  async getActivePublicPosts(limit = 10) {
+    const now = new Date();
+
+    const posts = await this.prisma.sponsorPost.findMany({
+      where: {
+        isActive: true,
+        publishedAt: { lte: now },
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: now } },
+        ],
+        sponsor: {
+          isActive: true,
+          tier: 'DIAMOND',
+        },
+      },
+      include: {
+        sponsor: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            logoLightUrl: true,
+            logoDarkUrl: true,
+            tier: true,
+          },
+        },
+      },
+      orderBy: { publishedAt: 'desc' },
+      take: limit,
+    });
+
+    return posts;
+  }
+
+  /**
+   * Registra visualização de uma postagem
+   */
+  async trackPostView(postId: string) {
+    await this.prisma.sponsorPost.update({
+      where: { id: postId },
+      data: { viewCount: { increment: 1 } },
+    }).catch(() => {});
+    return { success: true };
+  }
+
+  /**
+   * Registra clique em uma postagem
+   */
+  async trackPostClick(postId: string) {
+    await this.prisma.sponsorPost.update({
+      where: { id: postId },
+      data: { clickCount: { increment: 1 } },
+    }).catch(() => {});
+    return { success: true };
+  }
 }

@@ -21,6 +21,16 @@ interface Stats {
   todayCount: number;
 }
 
+interface SponsorPost {
+  id: string;
+  title: string;
+  description?: string;
+  imageUrl?: string;
+  ctaLabel?: string;
+  ctaUrl?: string;
+  sponsor: { id: string; name: string; logoLightUrl?: string; };
+}
+
 const THEME = {
   gold: '#a07a45',
   goldSoft: '#c9a66b',
@@ -47,6 +57,11 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<Stats>({ total: 0, pending: 0, confirmed: 0, completed: 0, todayRevenue: 0, todayCount: 0 });
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  
+  // Sponsor posts banner
+  const [sponsorPosts, setSponsorPosts] = useState<SponsorPost[]>([]);
+  const [currentPostIdx, setCurrentPostIdx] = useState(0);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
@@ -64,7 +79,30 @@ export default function DashboardPage() {
       return;
     }
     fetchAppointments();
+    
+    // Fetch sponsor posts (apenas 1x por sessão)
+    const dismissed = sessionStorage.getItem('sponsor_banner_dismissed');
+    if (!dismissed) {
+      fetch(`${API_URL}/public/sponsors/posts?limit=3`)
+        .then(r => r.ok ? r.json() : [])
+        .then(setSponsorPosts)
+        .catch(() => {});
+    }
   }, []);
+
+  // Auto-rotate sponsor posts
+  useEffect(() => {
+    if (sponsorPosts.length <= 1 || bannerDismissed) return;
+    const interval = setInterval(() => {
+      setCurrentPostIdx(i => (i + 1) % sponsorPosts.length);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [sponsorPosts.length, bannerDismissed]);
+
+  const dismissBanner = () => {
+    setBannerDismissed(true);
+    sessionStorage.setItem('sponsor_banner_dismissed', '1');
+  };
 
   async function fetchAppointments() {
     const token = localStorage.getItem('token');
@@ -147,6 +185,141 @@ export default function DashboardPage() {
         <MetricCard label="Confirmados" value={stats.confirmed} note="preparados" />
         <MetricCard label="Receita do Dia" value={formatPrice(stats.todayRevenue)} note="faturamento" />
       </div>
+
+      {/* ============ BANNER OFERTAS PARCEIROS DIAMOND ============ */}
+      {sponsorPosts.length > 0 && !bannerDismissed && (() => {
+        const post = sponsorPosts[currentPostIdx];
+        if (!post) return null;
+        
+        return (
+          <div style={{
+            marginBottom: 24,
+            background: 'linear-gradient(135deg, rgba(139,92,246,0.04) 0%, rgba(168,85,247,0.02) 100%)',
+            border: '1px solid rgba(139,92,246,0.15)',
+            borderRadius: 16,
+            overflow: 'hidden',
+            position: 'relative',
+          }}>
+            {/* Header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '10px 16px',
+              borderBottom: '1px solid rgba(139,92,246,0.1)',
+              background: 'rgba(139,92,246,0.03)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 14 }}>💎</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#8b5cf6', letterSpacing: 0.5 }}>
+                  Oferta do Parceiro
+                </span>
+                {post.sponsor.logoLightUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={post.sponsor.logoLightUrl} alt={post.sponsor.name}
+                    style={{ height: 18, maxWidth: 70, objectFit: 'contain', marginLeft: 8, opacity: 0.8 }} />
+                )}
+              </div>
+              <button
+                onClick={dismissBanner}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: '#9ca3af', fontSize: 18, lineHeight: 1, padding: 4,
+                }}
+                title="Fechar"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Content */}
+            <div style={{
+              display: 'flex', gap: 16, padding: 16,
+              alignItems: 'center',
+              flexDirection: isMobile ? 'column' : 'row',
+            }}>
+              {post.imageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={post.imageUrl}
+                  alt={post.title}
+                  style={{
+                    width: isMobile ? '100%' : 160,
+                    height: isMobile ? 140 : 100,
+                    objectFit: 'cover',
+                    borderRadius: 10,
+                    flexShrink: 0,
+                  }}
+                />
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h4 style={{
+                  margin: 0, fontSize: 16, fontWeight: 700, color: THEME.textPrimary,
+                  lineHeight: 1.3, marginBottom: 6,
+                }}>
+                  {post.title}
+                </h4>
+                {post.description && (
+                  <p style={{
+                    margin: 0, fontSize: 13, color: THEME.textSecondary, lineHeight: 1.5,
+                    overflow: 'hidden', textOverflow: 'ellipsis',
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                  }}>
+                    {post.description}
+                  </p>
+                )}
+              </div>
+              {post.ctaUrl && (
+                <a
+                  href={post.ctaUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => { fetch(`${API_URL}/public/sponsors/posts/${post.id}/click`, { method: 'POST' }).catch(() => {}); }}
+                  style={{
+                    padding: '10px 20px',
+                    background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+                    color: '#fff',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    borderRadius: 10,
+                    textDecoration: 'none',
+                    whiteSpace: 'nowrap',
+                    boxShadow: '0 4px 14px rgba(139,92,246,0.25)',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    flexShrink: 0,
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(139,92,246,0.35)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(139,92,246,0.25)'; }}
+                >
+                  {post.ctaLabel || 'Ver Oferta'} →
+                </a>
+              )}
+            </div>
+
+            {/* Indicators */}
+            {sponsorPosts.length > 1 && (
+              <div style={{
+                display: 'flex', justifyContent: 'center', gap: 6,
+                paddingBottom: 10,
+              }}>
+                {sponsorPosts.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentPostIdx(i)}
+                    style={{
+                      width: i === currentPostIdx ? 20 : 8,
+                      height: 8,
+                      borderRadius: 4,
+                      background: i === currentPostIdx ? '#8b5cf6' : '#d1d5db',
+                      border: 'none',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s',
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.15fr 0.85fr', gap: 16 }}>
         <section style={{ background: THEME.surface, border: `1px solid ${THEME.border}`, borderRadius: 16, overflow: 'hidden', boxShadow: '0 6px 20px rgba(72, 52, 26, 0.08)' }}>

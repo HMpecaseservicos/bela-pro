@@ -28,7 +28,8 @@ import {
 import { COLORS, API_URL } from './constants';
 import { formatDateFull } from './utils';
 
-interface SponsorBrief { id: string; name: string; tier?: string; logoLightUrl?: string; logoDarkUrl?: string; websiteUrl?: string; ctaUrl?: string; ctaLabel?: string; isFeatured?: boolean; }
+interface SponsorBrief { id: string; name: string; tier?: string; logoLightUrl?: string; logoDarkUrl?: string; websiteUrl?: string; ctaUrl?: string; ctaLabel?: string; isFeatured?: boolean; description?: string; }
+interface SponsorPost { id: string; title: string; description?: string; imageUrl?: string; ctaLabel?: string; ctaUrl?: string; sponsor: { id: string; name: string; logoLightUrl?: string; }; }
 
 export default function BookingPage() {
   const params = useParams();
@@ -37,11 +38,27 @@ export default function BookingPage() {
   // Hydration fix
   const [mounted, setMounted] = useState(false);
   const [sponsors, setSponsors] = useState<SponsorBrief[]>([]);
+  const [sponsorPosts, setSponsorPosts] = useState<SponsorPost[]>([]);
+  const [currentPostIndex, setCurrentPostIndex] = useState(0);
+
   useEffect(() => {
     setMounted(true);
+    // Busca sponsors
     fetch(`${API_URL}/public/sponsors?placement=PUBLIC_BOOKING`)
       .then(r => r.ok ? r.json() : []).then(setSponsors).catch(() => {});
+    // Busca postagens Diamond
+    fetch(`${API_URL}/public/sponsors/posts?limit=5`)
+      .then(r => r.ok ? r.json() : []).then(setSponsorPosts).catch(() => {});
   }, []);
+
+  // Auto-rotate posts
+  useEffect(() => {
+    if (sponsorPosts.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentPostIndex(i => (i + 1) % sponsorPosts.length);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [sponsorPosts.length]);
 
   // Hook com toda a lógica de booking
   const booking = useBooking({ slug });
@@ -377,128 +394,277 @@ export default function BookingPage() {
         onContinue={handleContinue}
       />
 
-      {/* Parceiros & Patrocinadores */}
+      {/* ============================================================= */}
+      {/* SEÇÃO PATROCINADORES — DESIGN PROFISSIONAL COM HIERARQUIA */}
+      {/* ============================================================= */}
       {sponsors.length > 0 && (
         <section style={{
-          padding: '40px 20px 32px',
-          background: 'linear-gradient(180deg, #f9fafb 0%, #f3f4f6 100%)',
-          borderTop: `1px solid ${COLORS.border}`,
+          padding: '48px 20px 40px',
+          background: 'linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%)',
+          borderTop: '1px solid #e5e5e5',
         }}>
-          <div style={{ maxWidth: 800, margin: '0 auto' }}>
-            {/* Header */}
-            <div style={{ textAlign: 'center', marginBottom: 28 }}>
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                padding: '5px 16px', borderRadius: 20,
-                background: 'rgba(0,0,0,0.04)', marginBottom: 10,
-              }}>
-                <span style={{ fontSize: 12 }}>🤝</span>
-                <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: COLORS.textMuted }}>
-                  Parceiros Oficiais
-                </span>
-              </div>
-              <p style={{ fontSize: 12, color: COLORS.textMuted, lineHeight: 1.5, maxWidth: 400, margin: '0 auto' }}>
-                Marcas e fornecedores que confiam na nossa plataforma
-              </p>
-            </div>
+          <div style={{ maxWidth: 900, margin: '0 auto' }}>
 
-            {/* Sponsors Grid */}
-            <div style={{
-              display: 'flex', justifyContent: 'center', alignItems: 'center',
-              gap: 12, flexWrap: 'wrap',
-            }}>
-              {sponsors.slice(0, 8).map(s => {
-                const tierAccent: Record<string, string> = {
-                  DIAMOND: '#7c3aed', GOLD: '#d97706', SILVER: '#6b7280', BRONZE: '#92400e',
-                };
-                const accentColor = tierAccent[s.tier || ''] || COLORS.textMuted;
-                const isDiamond = s.tier === 'DIAMOND';
-                const isGold = s.tier === 'GOLD';
+            {/* ========== DIAMOND SPOTLIGHT ========== */}
+            {(() => {
+              const diamonds = sponsors.filter(s => s.tier === 'DIAMOND');
+              if (diamonds.length === 0) return null;
 
-                return (
-                  <a
-                    key={s.id}
-                    href={s.ctaUrl || s.websiteUrl || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => { fetch(`${API_URL}/public/sponsors/${s.id}/click`, { method: 'POST' }).catch(() => {}); }}
-                    title={s.ctaLabel || s.name}
-                    style={{
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      gap: 6, padding: '14px 18px', borderRadius: 14,
-                      background: '#ffffff',
-                      border: `1.5px solid ${isDiamond ? 'rgba(124,58,237,0.2)' : isGold ? 'rgba(217,119,6,0.15)' : COLORS.border}`,
-                      boxShadow: isDiamond
-                        ? '0 2px 12px rgba(124,58,237,0.08)'
-                        : isGold
-                          ? '0 2px 10px rgba(217,119,6,0.06)'
-                          : '0 1px 4px rgba(0,0,0,0.04)',
-                      minWidth: 100, minHeight: 70,
-                      textDecoration: 'none',
-                      transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
-                      position: 'relative',
-                      cursor: 'pointer',
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.transform = 'translateY(-3px)';
-                      e.currentTarget.style.boxShadow = isDiamond
-                        ? '0 8px 24px rgba(124,58,237,0.15)'
-                        : isGold
-                          ? '0 8px 20px rgba(217,119,6,0.12)'
-                          : '0 6px 16px rgba(0,0,0,0.08)';
-                      e.currentTarget.style.borderColor = accentColor;
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = isDiamond
-                        ? '0 2px 12px rgba(124,58,237,0.08)'
-                        : isGold
-                          ? '0 2px 10px rgba(217,119,6,0.06)'
-                          : '0 1px 4px rgba(0,0,0,0.04)';
-                      e.currentTarget.style.borderColor = isDiamond ? 'rgba(124,58,237,0.2)' : isGold ? 'rgba(217,119,6,0.15)' : COLORS.border;
-                    }}
-                  >
-                    {/* Tier badge for Diamond/Gold */}
-                    {(isDiamond || isGold) && (
-                      <div style={{
-                        position: 'absolute', top: -6, right: -4,
-                        fontSize: 10, lineHeight: 1,
-                      }}>
-                        {isDiamond ? '💎' : '🥇'}
-                      </div>
-                    )}
-
-                    {/* Logo ou Nome */}
-                    {s.logoLightUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={s.logoLightUrl}
-                        alt={s.name}
-                        style={{
-                          height: 28, maxWidth: 90, objectFit: 'contain',
-                          filter: 'none',
-                        }}
-                      />
-                    ) : (
-                      <span style={{
-                        color: COLORS.textPrimary, fontSize: 12, fontWeight: 700,
-                        letterSpacing: '-0.2px', textAlign: 'center', lineHeight: 1.3,
-                      }}>
-                        {s.name}
-                      </span>
-                    )}
-
-                    {/* Tier label */}
-                    <span style={{
-                      fontSize: 8, fontWeight: 700, letterSpacing: 1,
-                      textTransform: 'uppercase', color: accentColor, opacity: 0.7,
+              return (
+                <div style={{ marginBottom: 40 }}>
+                  {/* Header Diamond */}
+                  <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 8,
+                      padding: '8px 20px', borderRadius: 30,
+                      background: 'linear-gradient(135deg, rgba(139,92,246,0.1) 0%, rgba(168,85,247,0.05) 100%)',
+                      border: '1px solid rgba(139,92,246,0.2)',
                     }}>
-                      {s.tier === 'DIAMOND' ? 'Diamond' : s.tier === 'GOLD' ? 'Gold' : s.tier === 'SILVER' ? 'Silver' : 'Bronze'}
+                      <span style={{ fontSize: 16 }}>💎</span>
+                      <span style={{
+                        fontSize: 11, fontWeight: 700, letterSpacing: 2,
+                        textTransform: 'uppercase',
+                        background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+                        WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                      }}>
+                        Parceiro Diamond
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Diamond Cards */}
+                  {diamonds.map(diamond => (
+                    <div key={diamond.id} style={{
+                      background: '#ffffff',
+                      borderRadius: 20,
+                      border: '2px solid transparent',
+                      backgroundImage: 'linear-gradient(#fff, #fff), linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #c084fc 100%)',
+                      backgroundOrigin: 'border-box',
+                      backgroundClip: 'padding-box, border-box',
+                      boxShadow: '0 8px 32px rgba(139,92,246,0.15), 0 2px 8px rgba(0,0,0,0.04)',
+                      overflow: 'hidden',
+                      marginBottom: 16,
+                    }}>
+                      {/* Diamond Header */}
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: 16,
+                        padding: '20px 24px',
+                        borderBottom: '1px solid rgba(139,92,246,0.1)',
+                        background: 'linear-gradient(135deg, rgba(139,92,246,0.03) 0%, rgba(168,85,247,0.01) 100%)',
+                      }}>
+                        {diamond.logoLightUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={diamond.logoLightUrl} alt={diamond.name}
+                            style={{ height: 48, maxWidth: 140, objectFit: 'contain' }} />
+                        ) : (
+                          <span style={{ fontSize: 20, fontWeight: 700, color: '#1f2937' }}>{diamond.name}</span>
+                        )}
+                        <div style={{ flex: 1 }} />
+                        <a
+                          href={diamond.ctaUrl || diamond.websiteUrl || '#'}
+                          target="_blank" rel="noopener noreferrer"
+                          onClick={() => { fetch(`${API_URL}/public/sponsors/${diamond.id}/click`, { method: 'POST' }).catch(() => {}); }}
+                          style={{
+                            padding: '10px 20px', borderRadius: 10,
+                            background: 'linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%)',
+                            color: '#fff', fontSize: 13, fontWeight: 600,
+                            textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6,
+                            boxShadow: '0 4px 14px rgba(139,92,246,0.3)',
+                            transition: 'transform 0.2s, box-shadow 0.2s',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(139,92,246,0.4)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(139,92,246,0.3)'; }}
+                        >
+                          {diamond.ctaLabel || 'Conhecer'} 
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <path d="M5 12h14M12 5l7 7-7 7"/>
+                          </svg>
+                        </a>
+                      </div>
+
+                      {/* Diamond Posts Carousel */}
+                      {sponsorPosts.filter(p => p.sponsor.id === diamond.id).length > 0 && (
+                        <div style={{ padding: '20px 24px' }}>
+                          <p style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
+                            📢 Ofertas & Novidades
+                          </p>
+                          <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
+                            {sponsorPosts.filter(p => p.sponsor.id === diamond.id).map(post => (
+                              <a
+                                key={post.id}
+                                href={post.ctaUrl || '#'}
+                                target="_blank" rel="noopener noreferrer"
+                                onClick={() => { fetch(`${API_URL}/public/sponsors/posts/${post.id}/click`, { method: 'POST' }).catch(() => {}); }}
+                                style={{
+                                  flex: '0 0 260px',
+                                  background: '#f9fafb',
+                                  borderRadius: 12,
+                                  overflow: 'hidden',
+                                  textDecoration: 'none',
+                                  border: '1px solid #e5e7eb',
+                                  transition: 'transform 0.2s, box-shadow 0.2s',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+                              >
+                                {post.imageUrl && (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={post.imageUrl} alt={post.title}
+                                    style={{ width: '100%', height: 120, objectFit: 'cover' }} />
+                                )}
+                                <div style={{ padding: 14 }}>
+                                  <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#1f2937', lineHeight: 1.3 }}>
+                                    {post.title}
+                                  </h4>
+                                  {post.description && (
+                                    <p style={{ margin: '6px 0 0', fontSize: 12, color: '#6b7280', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                                      {post.description}
+                                    </p>
+                                  )}
+                                  {post.ctaLabel && (
+                                    <span style={{ display: 'inline-block', marginTop: 10, fontSize: 12, fontWeight: 600, color: '#8b5cf6' }}>
+                                      {post.ctaLabel} →
+                                    </span>
+                                  )}
+                                </div>
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* ========== GOLD PARTNERS ========== */}
+            {(() => {
+              const golds = sponsors.filter(s => s.tier === 'GOLD');
+              if (golds.length === 0) return null;
+
+              return (
+                <div style={{ marginBottom: 32 }}>
+                  <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, letterSpacing: 2,
+                      textTransform: 'uppercase', color: '#b45309',
+                    }}>
+                      🥇 Parceiros Gold
                     </span>
-                  </a>
-                );
-              })}
-            </div>
+                  </div>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: 16,
+                  }}>
+                    {golds.map(gold => (
+                      <a
+                        key={gold.id}
+                        href={gold.ctaUrl || gold.websiteUrl || '#'}
+                        target="_blank" rel="noopener noreferrer"
+                        onClick={() => { fetch(`${API_URL}/public/sponsors/${gold.id}/click`, { method: 'POST' }).catch(() => {}); }}
+                        style={{
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                          padding: '24px 20px',
+                          background: '#fff',
+                          borderRadius: 16,
+                          border: '2px solid #fcd34d',
+                          boxShadow: '0 4px 16px rgba(217,119,6,0.08)',
+                          textDecoration: 'none',
+                          transition: 'all 0.3s',
+                          minHeight: 100,
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(217,119,6,0.15)'; e.currentTarget.style.borderColor = '#f59e0b'; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(217,119,6,0.08)'; e.currentTarget.style.borderColor = '#fcd34d'; }}
+                      >
+                        {gold.logoLightUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={gold.logoLightUrl} alt={gold.name}
+                            style={{ height: 36, maxWidth: 120, objectFit: 'contain', marginBottom: 8 }} />
+                        ) : (
+                          <span style={{ fontSize: 16, fontWeight: 700, color: '#1f2937', marginBottom: 4 }}>{gold.name}</span>
+                        )}
+                        <span style={{ fontSize: 11, color: '#b45309', fontWeight: 600 }}>
+                          {gold.ctaLabel || 'Ver mais'}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* ========== SILVER & BRONZE ========== */}
+            {(() => {
+              const silvers = sponsors.filter(s => s.tier === 'SILVER');
+              const bronzes = sponsors.filter(s => s.tier === 'BRONZE');
+              if (silvers.length === 0 && bronzes.length === 0) return null;
+
+              return (
+                <div style={{ textAlign: 'center' }}>
+                  {silvers.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <span style={{ fontSize: 9, fontWeight: 600, color: '#9ca3af', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                        Parceiros Silver
+                      </span>
+                      <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 12, marginTop: 10 }}>
+                        {silvers.map(s => (
+                          <a
+                            key={s.id}
+                            href={s.ctaUrl || s.websiteUrl || '#'}
+                            target="_blank" rel="noopener noreferrer"
+                            onClick={() => { fetch(`${API_URL}/public/sponsors/${s.id}/click`, { method: 'POST' }).catch(() => {}); }}
+                            style={{
+                              padding: '10px 18px', borderRadius: 10,
+                              background: '#fff', border: '1px solid #e5e7eb',
+                              textDecoration: 'none',
+                              display: 'flex', alignItems: 'center', gap: 8,
+                              transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = '#f9fafb'; e.currentTarget.style.borderColor = '#9ca3af'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#e5e7eb'; }}
+                          >
+                            {s.logoLightUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={s.logoLightUrl} alt={s.name} style={{ height: 20, maxWidth: 80, objectFit: 'contain' }} />
+                            ) : (
+                              <span style={{ fontSize: 12, fontWeight: 600, color: '#4b5563' }}>{s.name}</span>
+                            )}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {bronzes.length > 0 && (
+                    <div style={{ marginTop: 12 }}>
+                      <span style={{ fontSize: 9, fontWeight: 600, color: '#a1a1aa', letterSpacing: 1.5, textTransform: 'uppercase' }}>
+                        Bronze
+                      </span>
+                      <div style={{ marginTop: 8 }}>
+                        {bronzes.map((s, i) => (
+                          <span key={s.id}>
+                            <a
+                              href={s.ctaUrl || s.websiteUrl || '#'}
+                              target="_blank" rel="noopener noreferrer"
+                              onClick={() => { fetch(`${API_URL}/public/sponsors/${s.id}/click`, { method: 'POST' }).catch(() => {}); }}
+                              style={{ color: '#9ca3af', fontSize: 11, textDecoration: 'none' }}
+                              onMouseEnter={e => { e.currentTarget.style.color = '#6b7280'; e.currentTarget.style.textDecoration = 'underline'; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = '#9ca3af'; e.currentTarget.style.textDecoration = 'none'; }}
+                            >
+                              {s.name}
+                            </a>
+                            {i < bronzes.length - 1 && <span style={{ color: '#d1d5db', margin: '0 8px' }}>•</span>}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
           </div>
         </section>
       )}
