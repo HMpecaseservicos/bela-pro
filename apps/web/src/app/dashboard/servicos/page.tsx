@@ -382,13 +382,23 @@ export default function ServicosPage() {
               </Field>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <Field label="Duracao (min) *">
-                  <input
-                    type="number"
+                <Field label="Duracao *">
+                  <select
                     value={form.durationMinutes}
-                    onChange={(e) => setForm({ ...form, durationMinutes: parseInt(e.target.value, 10) || 0 })}
-                    style={{ width: '100%', border: `1px solid ${THEME.border}`, borderRadius: 10, padding: '11px 12px', background: '#fff', color: THEME.textPrimary }}
-                  />
+                    onChange={(e) => setForm({ ...form, durationMinutes: parseInt(e.target.value, 10) })}
+                    style={{ width: '100%', border: `1px solid ${THEME.border}`, borderRadius: 10, padding: '11px 12px', background: '#fff', color: THEME.textPrimary, cursor: 'pointer' }}
+                  >
+                    <option value={30}>30 minutos</option>
+                    <option value={60}>1 hora</option>
+                    <option value={90}>1h 30min</option>
+                    <option value={120}>2 horas</option>
+                    <option value={150}>2h 30min</option>
+                    <option value={180}>3 horas</option>
+                    <option value={210}>3h 30min</option>
+                    <option value={240}>4 horas</option>
+                    <option value={300}>5 horas</option>
+                    <option value={360}>6 horas</option>
+                  </select>
                 </Field>
                 <Field label="Preco (R$) *">
                   <input

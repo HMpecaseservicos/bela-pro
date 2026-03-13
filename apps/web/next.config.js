@@ -24,6 +24,29 @@ const nextConfig = {
     ];
   },
   
+  // Headers HTTP para controle de cache
+  // IMPORTANTE: Página de booking nunca deve ser cacheada para sempre mostrar versão atualizada
+  async headers() {
+    return [
+      {
+        // Páginas de booking público - NUNCA cachear
+        source: '/:slug/booking',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate' },
+          { key: 'Pragma', value: 'no-cache' },
+          { key: 'Expires', value: '0' },
+        ],
+      },
+      {
+        // API routes - não cachear
+        source: '/api/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, must-revalidate' },
+        ],
+      },
+    ];
+  },
+  
   // Permite imagens de qualquer domínio
   images: {
     remotePatterns: [

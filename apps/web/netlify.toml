@@ -37,6 +37,24 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
+# =============================================================================
+# Cache - Páginas públicas de booking NUNCA devem ser cacheadas
+# Garante que clientes sempre vejam a versão mais recente
+# =============================================================================
+[[headers]]
+  for = "/*/booking"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+    Pragma = "no-cache"
+    Expires = "0"
+
+[[headers]]
+  for = "/*/booking/*"
+  [headers.values]
+    Cache-Control = "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+    Pragma = "no-cache"
+    Expires = "0"
+
 # Cache para assets estáticos
 [[headers]]
   for = "/_next/static/*"

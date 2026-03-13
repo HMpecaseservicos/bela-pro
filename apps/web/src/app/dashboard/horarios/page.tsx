@@ -21,6 +21,22 @@ function timeToMinutes(time: string): number {
   return h * 60 + m;
 }
 
+// PADRÃO BELEZA: Gera opções de horário em múltiplos de 30 minutos
+// Ex: 06:00, 06:30, 07:00, 07:30... até 23:30
+function generateTimeOptions(): { value: number; label: string }[] {
+  const options: { value: number; label: string }[] = [];
+  for (let minutes = 0; minutes <= 1440; minutes += 30) {
+    // 1440 = meia-noite (próximo dia)
+    const h = Math.floor(minutes / 60) % 24;
+    const m = minutes % 60;
+    const label = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    options.push({ value: minutes, label });
+  }
+  return options;
+}
+
+const TIME_OPTIONS = generateTimeOptions();
+
 interface TimeOff {
   id: string;
   startAt: string;
@@ -221,13 +237,12 @@ export default function HorariosPage() {
                   </button>
                 </div>
 
-                {/* Time Inputs */}
+                {/* Time Inputs - PADRÃO BELEZA: Select com múltiplos de 30 min */}
                 {rule?.isActive ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 12, flex: 1 }}>
-                    <input
-                      type="time"
-                      value={minutesToTime(rule.startTimeMinutes)}
-                      onChange={e => updateRule(rule.id, { startTimeMinutes: timeToMinutes(e.target.value) })}
+                    <select
+                      value={rule.startTimeMinutes}
+                      onChange={e => updateRule(rule.id, { startTimeMinutes: Number(e.target.value) })}
                       style={{
                         padding: isMobile ? '10px' : '8px 12px',
                         border: '2px solid #e5e7eb',
@@ -235,21 +250,34 @@ export default function HorariosPage() {
                         fontSize: 14,
                         color: '#1e293b',
                         flex: isMobile ? 1 : 'none',
+                        background: 'white',
+                        cursor: 'pointer',
+                        minWidth: 90,
                       }}
-                    />
+                    >
+                      {TIME_OPTIONS.filter(opt => opt.value < 1440).map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
                     <span style={{ color: '#94a3b8', fontSize: isMobile ? 12 : 14 }}>até</span>
-                    <input
-                      type="time"
-                      value={minutesToTime(rule.endTimeMinutes)}
-                      onChange={e => updateRule(rule.id, { endTimeMinutes: timeToMinutes(e.target.value) })}
+                    <select
+                      value={rule.endTimeMinutes}
+                      onChange={e => updateRule(rule.id, { endTimeMinutes: Number(e.target.value) })}
                       style={{
                         padding: '8px 12px',
                         border: '2px solid #e5e7eb',
                         borderRadius: 8,
                         fontSize: 14,
                         color: '#1e293b',
+                        background: 'white',
+                        cursor: 'pointer',
+                        minWidth: 90,
                       }}
-                    />
+                    >
+                      {TIME_OPTIONS.filter(opt => opt.value > rule.startTimeMinutes).map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
                   </div>
                 ) : (
                   <span style={{ color: '#94a3b8', fontSize: 14 }}>Fechado</span>

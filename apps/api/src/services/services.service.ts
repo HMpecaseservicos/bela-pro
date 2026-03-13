@@ -2,10 +2,17 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { z } from 'zod';
 
+// Validação para área de beleza: durações em múltiplos de 30 minutos
+// Ex: 30, 60, 90, 120, 150, 180... (não permite 15, 45, 75...)
+const validateDurationMultipleOf30 = (val: number) => val % 30 === 0;
+
 const createServiceSchema = z.object({
   name: z.string().min(2).max(100),
   description: z.string().max(500).optional().nullable(),
-  durationMinutes: z.number().int().min(5).max(480),
+  durationMinutes: z.number().int().min(30).max(480)
+    .refine(validateDurationMultipleOf30, {
+      message: 'A duração deve ser múltiplo de 30 minutos (30, 60, 90, 120...)',
+    }),
   priceCents: z.number().int().min(0),
   isActive: z.boolean().optional(),
   showInBooking: z.boolean().optional(),
@@ -15,7 +22,21 @@ const createServiceSchema = z.object({
   categoryTag: z.string().max(50).optional().nullable(),
 });
 
-const updateServiceSchema = createServiceSchema.partial();
+const updateServiceSchema = z.object({
+  name: z.string().min(2).max(100).optional(),
+  description: z.string().max(500).optional().nullable(),
+  durationMinutes: z.number().int().min(30).max(480)
+    .refine(validateDurationMultipleOf30, {
+      message: 'A duração deve ser múltiplo de 30 minutos (30, 60, 90, 120...)',
+    }).optional(),
+  priceCents: z.number().int().min(0).optional(),
+  isActive: z.boolean().optional(),
+  showInBooking: z.boolean().optional(),
+  sortOrder: z.number().int().min(0).optional(),
+  imageUrl: z.string().url().optional().nullable(),
+  badgeText: z.string().max(50).optional().nullable(),
+  categoryTag: z.string().max(50).optional().nullable(),
+});
 
 @Injectable()
 export class ServicesService {

@@ -2,14 +2,35 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { z } from 'zod';
 
+// PADRÃO BELEZA: Horários devem ser em múltiplos de 30 (ex: 07:00, 07:30, 08:00...)
+// Nunca 07:15, 07:45, etc.
+const validateTimeMultipleOf30 = (val: number) => val % 30 === 0;
+
 const createScheduleRuleSchema = z.object({
   dayOfWeek: z.number().int().min(0).max(6), // 0=Dom, 6=Sab
-  startTimeMinutes: z.number().int().min(0).max(1439), // 0 = 00:00, 1439 = 23:59
-  endTimeMinutes: z.number().int().min(0).max(1439),
+  startTimeMinutes: z.number().int().min(0).max(1410) // Até 23:30 (1410 minutos)
+    .refine(validateTimeMultipleOf30, {
+      message: 'Horário de início deve ser em múltiplo de 30 (ex: 07:00, 07:30, 08:00)',
+    }),
+  endTimeMinutes: z.number().int().min(30).max(1440) // Até 24:00 (1440 minutos)
+    .refine(validateTimeMultipleOf30, {
+      message: 'Horário de término deve ser em múltiplo de 30 (ex: 18:00, 18:30, 19:00)',
+    }),
   isActive: z.boolean().optional(),
 });
 
-const updateScheduleRuleSchema = createScheduleRuleSchema.partial();
+const updateScheduleRuleSchema = z.object({
+  dayOfWeek: z.number().int().min(0).max(6).optional(),
+  startTimeMinutes: z.number().int().min(0).max(1410)
+    .refine(validateTimeMultipleOf30, {
+      message: 'Horário de início deve ser em múltiplo de 30 (ex: 07:00, 07:30, 08:00)',
+    }).optional(),
+  endTimeMinutes: z.number().int().min(30).max(1440)
+    .refine(validateTimeMultipleOf30, {
+      message: 'Horário de término deve ser em múltiplo de 30 (ex: 18:00, 18:30, 19:00)',
+    }).optional(),
+  isActive: z.boolean().optional(),
+});
 
 @Injectable()
 export class ScheduleRulesService {

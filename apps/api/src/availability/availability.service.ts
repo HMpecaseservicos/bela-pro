@@ -129,8 +129,9 @@ export class AvailabilityService {
     });
 
     // 8. Gera slots usando slotIntervalMinutes do workspace
+    // PADRÃO BELEZA: Intervalo de 30 minutos, horários sempre redondos (:00 ou :30)
     const slots: TimeSlot[] = [];
-    const slotIntervalMinutes = workspace.slotIntervalMinutes || 15;
+    const slotIntervalMinutes = workspace.slotIntervalMinutes || 30; // Default 30 para área de beleza
     const bufferMinutes = workspace.bufferMinutes || 0;
 
     // Calcula offset do timezone (America/Sao_Paulo = -3 horas = -180 minutos)
@@ -138,7 +139,9 @@ export class AvailabilityService {
     const timezoneOffsetMinutes = this.getTimezoneOffsetMinutes(workspace.timezone || 'America/Sao_Paulo', targetDate);
 
     for (const rule of scheduleRules) {
-      let currentMinutes = rule.startTimeMinutes;
+      // PROFISSIONAL: Arredonda horário de início para próximo slot redondo
+      // Ex: 07:15 → 07:30, 07:45 → 08:00, 07:00 → 07:00
+      let currentMinutes = this.roundUpToSlotInterval(rule.startTimeMinutes, slotIntervalMinutes);
 
       while (currentMinutes + service.durationMinutes <= rule.endTimeMinutes) {
         // Cria o slot no horário UTC (adiciona offset do timezone)
@@ -177,6 +180,18 @@ export class AvailabilityService {
     }
 
     return slots;
+  }
+
+  /**
+   * Arredonda minutos para o próximo múltiplo do intervalo
+   * Ex: roundUpToSlotInterval(455, 30) = 480 (07:35 → 08:00)
+   * Ex: roundUpToSlotInterval(450, 30) = 450 (07:30 → 07:30, já é múltiplo)
+   */
+  private roundUpToSlotInterval(minutes: number, interval: number): number {
+    if (minutes % interval === 0) {
+      return minutes; // Já é múltiplo
+    }
+    return Math.ceil(minutes / interval) * interval;
   }
 
   /**

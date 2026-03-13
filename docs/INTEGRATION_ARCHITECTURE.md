@@ -80,7 +80,7 @@
 // Adicionar ao model Workspace:
 welcomeText     String?  // "Agende seu horário conosco!"
 description     String?  // Descrição do negócio
-slotIntervalMinutes Int @default(15) // 15, 30, 60
+slotIntervalMinutes Int @default(30) // 30, 60 (padrão beleza)
 
 // Adicionar ao model Service:
 showInBooking   Boolean @default(true) // Exibir na página pública?

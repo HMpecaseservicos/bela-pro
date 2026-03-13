@@ -116,7 +116,7 @@ model Workspace {
   bufferMinutes       Int @default(10)
   maxBookingDaysAhead Int @default(60)
   cancelMinMinutes    Int @default(120)
-  slotIntervalMinutes Int @default(15) // Intervalo entre slots: 15, 30, 60
+  slotIntervalMinutes Int @default(30) // Intervalo entre slots: 30 ou 60 (padrão beleza)
 
   // Plano e billing
   plan           WorkspacePlan @default(BASIC) // Plano do workspace
