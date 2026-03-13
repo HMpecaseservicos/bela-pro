@@ -41,15 +41,33 @@ export default function BookingPage() {
   const [sponsorPosts, setSponsorPosts] = useState<SponsorPost[]>([]);
   const [currentPostIndex, setCurrentPostIndex] = useState(0);
 
+  // Hook com toda a lógica de booking (deve ser declarado antes de useEffect)
+  const booking = useBooking({ slug });
+
   useEffect(() => {
     setMounted(true);
-    // Busca sponsors
-    fetch(`${API_URL}/public/sponsors?placement=PUBLIC_BOOKING`)
-      .then(r => r.ok ? r.json() : []).then(setSponsors).catch(() => {});
-    // Busca postagens Diamond
+  }, []);
+
+  // Busca sponsors quando workspace estiver disponível
+  useEffect(() => {
+    if (!booking.workspace?.id) return;
+    
+    // Busca sponsors combinados (locais + globais se habilitado)
+    fetch(`${API_URL}/public/booking/workspace/${booking.workspace.id}/sponsors`)
+      .then(r => r.ok ? r.json() : { sponsors: [] })
+      .then(data => setSponsors(data.sponsors || []))
+      .catch(() => {
+        // Fallback para endpoint global antigo
+        fetch(`${API_URL}/public/sponsors?placement=PUBLIC_BOOKING`)
+          .then(r => r.ok ? r.json() : [])
+          .then(setSponsors)
+          .catch(() => {});
+      });
+    
+    // Busca postagens Diamond (sempre global)
     fetch(`${API_URL}/public/sponsors/posts?limit=5`)
       .then(r => r.ok ? r.json() : []).then(setSponsorPosts).catch(() => {});
-  }, []);
+  }, [booking.workspace?.id]);
 
   // Auto-rotate posts
   useEffect(() => {
@@ -59,9 +77,6 @@ export default function BookingPage() {
     }, 6000);
     return () => clearInterval(interval);
   }, [sponsorPosts.length]);
-
-  // Hook com toda a lógica de booking
-  const booking = useBooking({ slug });
 
   // CSS global
   const globalStyles = `

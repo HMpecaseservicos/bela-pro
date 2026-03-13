@@ -31,6 +31,17 @@ interface SponsorPost {
   sponsor: { id: string; name: string; logoLightUrl?: string; };
 }
 
+interface AdminMessage {
+  id: string;
+  title: string;
+  content: string;
+  type: 'INFO' | 'UPDATE' | 'MAINTENANCE' | 'FEATURE' | 'WARNING' | 'PROMOTION';
+  icon: string | null;
+  actionLabel: string | null;
+  actionUrl: string | null;
+  dismissible: boolean;
+}
+
 const THEME = {
   gold: '#a07a45',
   goldSoft: '#c9a66b',
@@ -62,6 +73,10 @@ export default function DashboardPage() {
   const [sponsorPosts, setSponsorPosts] = useState<SponsorPost[]>([]);
   const [currentPostIdx, setCurrentPostIdx] = useState(0);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  
+  // Admin messages
+  const [adminMessages, setAdminMessages] = useState<AdminMessage[]>([]);
+  const [dismissedMsgIds, setDismissedMsgIds] = useState<Set<string>>(new Set());
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
@@ -88,6 +103,14 @@ export default function DashboardPage() {
         .then(setSponsorPosts)
         .catch(() => {});
     }
+    
+    // Fetch admin messages
+    fetch(`${API_URL}/workspace/admin-messages`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : [])
+      .then(setAdminMessages)
+      .catch(() => {});
   }, []);
 
   // Auto-rotate sponsor posts
@@ -102,6 +125,19 @@ export default function DashboardPage() {
   const dismissBanner = () => {
     setBannerDismissed(true);
     sessionStorage.setItem('sponsor_banner_dismissed', '1');
+  };
+
+  const dismissAdminMessage = async (id: string) => {
+    const token = localStorage.getItem('token');
+    setDismissedMsgIds(prev => new Set([...prev, id]));
+    try {
+      await fetch(`${API_URL}/workspace/admin-messages/${id}/dismiss`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      // Ignorar erros de dismiss
+    }
   };
 
   async function fetchAppointments() {
@@ -185,6 +221,78 @@ export default function DashboardPage() {
         <MetricCard label="Confirmados" value={stats.confirmed} note="preparados" />
         <MetricCard label="Receita do Dia" value={formatPrice(stats.todayRevenue)} note="faturamento" />
       </div>
+
+      {/* ============ MENSAGENS DO ADMIN ============ */}
+      {adminMessages.filter(m => !dismissedMsgIds.has(m.id)).map(msg => {
+        const typeColors: Record<string, { bg: string; border: string; icon: string }> = {
+          INFO: { bg: 'rgba(59,130,246,0.06)', border: 'rgba(59,130,246,0.2)', icon: '#3b82f6' },
+          UPDATE: { bg: 'rgba(139,92,246,0.06)', border: 'rgba(139,92,246,0.2)', icon: '#8b5cf6' },
+          MAINTENANCE: { bg: 'rgba(245,158,11,0.06)', border: 'rgba(245,158,11,0.2)', icon: '#f59e0b' },
+          FEATURE: { bg: 'rgba(34,197,94,0.06)', border: 'rgba(34,197,94,0.2)', icon: '#22c55e' },
+          WARNING: { bg: 'rgba(239,68,68,0.06)', border: 'rgba(239,68,68,0.2)', icon: '#ef4444' },
+          PROMOTION: { bg: 'rgba(236,72,153,0.06)', border: 'rgba(236,72,153,0.2)', icon: '#ec4899' },
+        };
+        const colors = typeColors[msg.type] || typeColors.INFO;
+        const icon = msg.icon || { INFO: '📢', UPDATE: '🚀', MAINTENANCE: '🔧', FEATURE: '✨', WARNING: '⚠️', PROMOTION: '🎁' }[msg.type] || '📢';
+
+        return (
+          <div
+            key={msg.id}
+            style={{
+              marginBottom: 16,
+              background: colors.bg,
+              border: `1px solid ${colors.border}`,
+              borderRadius: 12,
+              padding: '14px 18px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 12,
+            }}
+          >
+            <div style={{ fontSize: 20, lineHeight: 1 }}>{icon}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 600, color: THEME.textPrimary, fontSize: 14, marginBottom: 4 }}>
+                {msg.title}
+              </div>
+              <div style={{ color: THEME.textSecondary, fontSize: 13, lineHeight: 1.5 }}>
+                {msg.content}
+              </div>
+              {msg.actionUrl && msg.actionLabel && (
+                <a
+                  href={msg.actionUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-block',
+                    marginTop: 10,
+                    padding: '6px 14px',
+                    background: colors.icon,
+                    color: '#fff',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    borderRadius: 6,
+                    textDecoration: 'none',
+                  }}
+                >
+                  {msg.actionLabel}
+                </a>
+              )}
+            </div>
+            {msg.dismissible && (
+              <button
+                onClick={() => dismissAdminMessage(msg.id)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: '#9ca3af', fontSize: 18, lineHeight: 1, padding: 4,
+                }}
+                title="Fechar"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        );
+      })}
 
       {/* ============ BANNER OFERTAS PARCEIROS DIAMOND ============ */}
       {sponsorPosts.length > 0 && !bannerDismissed && (() => {

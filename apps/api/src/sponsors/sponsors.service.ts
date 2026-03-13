@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { z } from 'zod';
-import { SponsorTier, SponsorType, SponsorPlacement, Prisma } from '@prisma/client';
+import { SponsorTier, SponsorType, SponsorPlacement, SponsorScope, Prisma } from '@prisma/client';
 
 // =============================================================================
 // ZOD SCHEMAS
@@ -63,13 +63,17 @@ export class SponsorsService {
   async create(raw: unknown, userId: string) {
     const data = createSponsorSchema.parse(raw);
 
-    // Check slug uniqueness
-    const existing = await this.prisma.sponsor.findUnique({ where: { slug: data.slug } });
+    // Check slug uniqueness (apenas entre sponsors GLOBAL)
+    const existing = await this.prisma.sponsor.findFirst({
+      where: { slug: data.slug, scope: SponsorScope.GLOBAL },
+    });
     if (existing) throw new BadRequestException('Slug já está em uso');
 
     return this.prisma.sponsor.create({
       data: {
         ...data,
+        scope: SponsorScope.GLOBAL,
+        workspaceId: null,
         contractStartsAt: data.contractStartsAt ? new Date(data.contractStartsAt) : null,
         contractEndsAt: data.contractEndsAt ? new Date(data.contractEndsAt) : null,
         createdByUserId: userId,
@@ -109,7 +113,10 @@ export class SponsorsService {
   }
 
   async findAll(filters?: { tier?: SponsorTier; sponsorType?: SponsorType; isActive?: boolean; search?: string }) {
-    const where: Prisma.SponsorWhereInput = {};
+    const where: Prisma.SponsorWhereInput = {
+      // Admin gerencia apenas sponsors GLOBAL
+      scope: SponsorScope.GLOBAL,
+    };
 
     if (filters?.tier) where.tier = filters.tier;
     if (filters?.sponsorType) where.sponsorType = filters.sponsorType;
@@ -168,6 +175,9 @@ export class SponsorsService {
     const now = new Date();
     return {
       isActive: true,
+      // Apenas sponsors globais (Super Admin)
+      scope: SponsorScope.GLOBAL,
+      workspaceId: null,
       OR: [
         { contractStartsAt: null },
         { contractStartsAt: { lte: now } },

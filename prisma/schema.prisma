@@ -89,6 +89,12 @@ enum PaymentStatus {
   REFUNDED // Reembolsado (futuro)
 }
 
+// Escopo do patrocinador
+enum SponsorScope {
+  GLOBAL    // Gerenciado pelo Super Admin, aparece em todos os lugares
+  WORKSPACE // Gerenciado pelo dono do workspace, aparece apenas naquela página
+}
+
 model Workspace {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
@@ -143,6 +149,12 @@ model Workspace {
   pixHolderName String? // Nome do titular
   pixCity       String? // Cidade (para QR Code)
 
+  // ==================== PATROCINADORES ====================
+  // Controle de exibição de sponsors na página de booking
+  showGlobalSponsors   Boolean @default(true)  // Mostra sponsors globais (FREE=true, Pagos podem desativar)
+  localSponsorsEnabled Boolean @default(false) // Pode criar sponsors locais (requer plano pago)
+  localSponsorsLimit   Int     @default(0)     // Limite de sponsors locais (0=ilimitado se habilitado)
+
   memberships      Membership[]
   inviteTokens     InviteToken[]
   profile          ProfessionalProfile?
@@ -166,6 +178,9 @@ model Workspace {
 
   // Sistema de planos e billing
   subscription WorkspaceSubscription?
+
+  // Patrocinadores locais do workspace
+  localSponsors Sponsor[]
 
   // Origem do convite (se veio de um convite)
   inviteSource BusinessInvite? @relation("InviteToWorkspace")
@@ -1044,6 +1059,11 @@ model Sponsor {
   slug        String   @unique
   description String?
 
+  // Escopo: GLOBAL (Super Admin) ou WORKSPACE (local)
+  scope       SponsorScope @default(GLOBAL)
+  workspaceId String?
+  workspace   Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
   // Imagens
   logoLightUrl  String?
   logoDarkUrl   String?
@@ -1098,6 +1118,9 @@ model Sponsor {
   @@index([isFeatured])
   @@index([displayOrder])
   @@index([email])
+  @@index([scope])
+  @@index([workspaceId])
+  @@index([workspaceId, isActive])
 }
 
 // =============================================================================
@@ -1308,4 +1331,70 @@ model SponsorPayment {
 
   @@index([status])
   @@index([tier])
+}
+
+// =============================================================================
+// MENSAGENS DO ADMINISTRADOR (Super Admin → Todos os Workspaces)
+// =============================================================================
+
+enum AdminMessageType {
+  INFO          // Informação geral
+  UPDATE        // Atualização do sistema
+  MAINTENANCE   // Manutenção programada
+  FEATURE       // Nova funcionalidade
+  WARNING       // Aviso importante
+  PROMOTION     // Promoção/oferta
+}
+
+model AdminMessage {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Conteúdo
+  title     String
+  content   String   @db.Text
+  type      AdminMessageType @default(INFO)
+
+  // Exibição
+  isActive     Boolean   @default(true)
+  startsAt     DateTime  @default(now())
+  expiresAt    DateTime?
+
+  // Aparência
+  icon         String?   // Emoji ou ícone
+  actionLabel  String?   // Texto do botão (opcional)
+  actionUrl    String?   // URL do botão (opcional)
+  dismissible  Boolean   @default(true)  // Pode ser fechado
+
+  // Segmentação (opcional - futuro)
+  targetPlans  String[]  // Se vazio, todos os planos
+
+  // Tracking
+  viewCount    Int       @default(0)
+
+  // Auditoria
+  createdByUserId String
+
+  // Relações
+  dismissals AdminMessageDismissal[]
+
+  @@index([isActive])
+  @@index([startsAt])
+  @@index([expiresAt])
+}
+
+// Registro de quem viu/dispensou a mensagem
+model AdminMessageDismissal {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  messageId   String
+  workspaceId String
+
+  // Relações
+  message AdminMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, workspaceId])
+  @@index([workspaceId])
 }

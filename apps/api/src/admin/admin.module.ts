@@ -3,6 +3,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
+import { AdminMessagesService } from './admin-messages.service';
+import { AdminMessagesAdminController, AdminMessagesWorkspaceController } from './admin-messages.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
@@ -16,8 +18,8 @@ import { PrismaModule } from '../prisma/prisma.module';
       inject: [ConfigService],
     }),
   ],
-  controllers: [AdminController],
-  providers: [AdminService],
-  exports: [AdminService],
+  controllers: [AdminController, AdminMessagesAdminController, AdminMessagesWorkspaceController],
+  providers: [AdminService, AdminMessagesService],
+  exports: [AdminService, AdminMessagesService],
 })
 export class AdminModule {}
