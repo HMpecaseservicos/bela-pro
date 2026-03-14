@@ -16,6 +16,7 @@ interface InviteData {
   focusType: 'YOUTH_BEAUTY' | 'INCOME_GROWTH' | 'RECOGNITION';
   personalMessage?: string;
   expiresAt: string;
+  trialDays: number; // Dias de trial gratuito
 }
 
 // =============================================================================
@@ -568,6 +569,21 @@ export default function BusinessInviteLandingPage() {
         }}>
           {/* Left — Copy */}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {/* Trial Badge */}
+            <div className="anim-up" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 12,
+              padding: '12px 20px',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              borderRadius: 60,
+              marginBottom: 20, alignSelf: 'flex-start',
+            }}>
+              <span style={{ fontSize: 20 }}>🎁</span>
+              <span style={{ color: '#10b981', fontSize: 15, fontWeight: 700 }}>
+                {invite.trialDays || 7} DIAS GRÁTIS
+              </span>
+            </div>
+
             {/* Badge */}
             <div className="anim-up" style={{
               display: 'inline-flex', alignItems: 'center', gap: 10,
@@ -637,7 +653,7 @@ export default function BusinessInviteLandingPage() {
             {/* CTAs */}
             <div className="anim-up-d4" style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
               <Link href={`/cadastro?ref=${token}`} onClick={handleCtaClick} className="cta-btn">
-                Experimentar 14 dias grátis
+                Experimentar {invite.trialDays || 7} dias grátis
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <line x1="5" y1="12" x2="19" y2="12" />
                   <polyline points="12 5 19 12 12 19" />
@@ -880,7 +896,7 @@ export default function BusinessInviteLandingPage() {
 
           {/* Trust */}
           <div style={{ display: 'flex', justifyContent: 'center', gap: 36, marginTop: 44, flexWrap: 'wrap' }}>
-            {['14 dias grátis', 'Sem cartão', 'Cancele quando quiser'].map((item, i) => (
+            {[`${invite.trialDays || 7} dias grátis`, 'Sem cartão', 'Cancele quando quiser'].map((item, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.gold} strokeWidth="2.5">
                   <polyline points="20 6 9 17 4 12" />

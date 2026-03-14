@@ -1,14 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function CadastroPage() {
+function CadastroForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get('ref'); // Token do convite de empresa
+
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isMobile, setIsMobile] = useState(false);
+  const [inviteInfo, setInviteInfo] = useState<{ trialDays?: number } | null>(null);
   
   const [form, setForm] = useState({
     // Step 1: Personal Info
@@ -30,6 +34,25 @@ export default function CadastroPage() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Buscar info do convite se vier de link de convite
+  useEffect(() => {
+    async function fetchInvite() {
+      if (!inviteToken) return;
+      try {
+        const res = await fetch(`${API_URL}/business-invites/public/${inviteToken}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.data) {
+            setInviteInfo({ trialDays: data.data.trialDays || 7 });
+          }
+        }
+      } catch {
+        // Silencioso - convite pode não existir mais
+      }
+    }
+    fetchInvite();
+  }, [inviteToken, API_URL]);
 
   useEffect(() => {
     // Check if already logged in
@@ -98,6 +121,7 @@ export default function CadastroPage() {
           workspaceName: form.businessName,
           workspaceSlug: form.businessSlug,
           phone: form.phone || null,
+          inviteToken: inviteToken || null, // Token do convite de empresa
         }),
       });
 
@@ -176,6 +200,25 @@ export default function CadastroPage() {
         boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
         border: '1px solid rgba(201, 166, 108, 0.2)',
       }}>
+        {/* Banner de Trial - quando vem de convite */}
+        {inviteInfo && inviteInfo.trialDays && (
+          <div style={{
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            color: 'white',
+            padding: isMobile ? 12 : 16,
+            borderRadius: 12,
+            marginBottom: isMobile ? 16 : 24,
+            textAlign: 'center',
+          }}>
+            <div style={{ fontSize: isMobile ? 18 : 22, fontWeight: 700 }}>
+              🎉 {inviteInfo.trialDays} DIAS GRÁTIS!
+            </div>
+            <div style={{ fontSize: isMobile ? 12 : 14, opacity: 0.9, marginTop: 4 }}>
+              Acesso completo a todas as funcionalidades
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: isMobile ? 24 : 32 }}>
           <div style={{
@@ -384,5 +427,23 @@ export default function CadastroPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CadastroPage() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #2c2620 0%, #1f1b17 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        <div style={{ color: 'white', fontSize: 18 }}>Carregando...</div>
+      </div>
+    }>
+      <CadastroForm />
+    </Suspense>
   );
 }

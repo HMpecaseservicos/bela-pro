@@ -77,6 +77,13 @@ export default function DashboardPage() {
   // Admin messages
   const [adminMessages, setAdminMessages] = useState<AdminMessage[]>([]);
   const [dismissedMsgIds, setDismissedMsgIds] = useState<Set<string>>(new Set());
+  
+  // Trial banner
+  const [subscription, setSubscription] = useState<{
+    status: string;
+    trialEndsAt: string | null;
+    plan?: { name: string };
+  } | null>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
@@ -110,6 +117,14 @@ export default function DashboardPage() {
     })
       .then(r => r.ok ? r.json() : [])
       .then(setAdminMessages)
+      .catch(() => {});
+    
+    // Fetch subscription (para banner de trial)
+    fetch(`${API_URL}/billing/my-subscription`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(setSubscription)
       .catch(() => {});
   }, []);
 
@@ -221,6 +236,66 @@ export default function DashboardPage() {
         <MetricCard label="Confirmados" value={stats.confirmed} note="preparados" />
         <MetricCard label="Receita do Dia" value={formatPrice(stats.todayRevenue)} note="faturamento" />
       </div>
+
+      {/* ============ BANNER DE TRIAL ============ */}
+      {subscription?.status === 'TRIAL' && subscription.trialEndsAt && (() => {
+        const trialEnd = new Date(subscription.trialEndsAt);
+        const daysLeft = Math.max(0, Math.ceil((trialEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+        const isExpiring = daysLeft <= 3;
+        
+        return (
+          <div style={{
+            marginBottom: 20,
+            background: isExpiring 
+              ? 'linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(249,115,22,0.04) 100%)'
+              : 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(5,150,105,0.04) 100%)',
+            border: `1px solid ${isExpiring ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)'}`,
+            borderRadius: 14,
+            padding: '16px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14,
+          }}>
+            <div style={{
+              width: 44, height: 44, borderRadius: 12,
+              background: isExpiring ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 22,
+            }}>
+              {isExpiring ? '⏰' : '🎁'}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, color: THEME.textPrimary, fontSize: 15, marginBottom: 2 }}>
+                {isExpiring 
+                  ? `⚠️ Seu trial termina em ${daysLeft} dia${daysLeft !== 1 ? 's' : ''}!`
+                  : `🎉 Você está no período gratuito!`}
+              </div>
+              <div style={{ color: THEME.textSecondary, fontSize: 13 }}>
+                {isExpiring 
+                  ? 'Escolha um plano para continuar usando o Bela Pro'
+                  : `Restam ${daysLeft} dias para explorar todas as funcionalidades`}
+              </div>
+            </div>
+            <a
+              href="/dashboard/plano"
+              style={{
+                padding: '10px 18px',
+                background: isExpiring 
+                  ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' 
+                  : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: '#fff',
+                fontSize: 13,
+                fontWeight: 600,
+                borderRadius: 8,
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {isExpiring ? 'Escolher plano' : 'Ver planos'}
+            </a>
+          </div>
+        );
+      })()}
 
       {/* ============ MENSAGENS DO ADMIN ============ */}
       {adminMessages.filter(m => !dismissedMsgIds.has(m.id)).map(msg => {

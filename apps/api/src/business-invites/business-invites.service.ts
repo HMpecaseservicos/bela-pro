@@ -14,6 +14,7 @@ const createInviteSchema = z.object({
   personalMessage: z.string().max(500).optional(),
   notes: z.string().max(500).optional(),
   expiresInDays: z.number().int().min(1).max(365).optional(),
+  trialDays: z.number().int().min(1).max(90).default(7), // Dias de trial
 });
 
 const createPublicInviteSchema = z.object({
@@ -23,6 +24,7 @@ const createPublicInviteSchema = z.object({
   personalMessage: z.string().max(500).optional(),
   notes: z.string().max(500).optional(),
   expiresInDays: z.number().int().min(1).max(365).optional(),
+  trialDays: z.number().int().min(1).max(90).default(7), // Dias de trial
 });
 
 const updateInviteSchema = z.object({
@@ -36,6 +38,7 @@ const updateInviteSchema = z.object({
   notes: z.string().max(500).optional(),
   campaignName: z.string().min(1).max(200).optional(),
   slug: z.string().max(100).optional(),
+  trialDays: z.number().int().min(1).max(90).optional(), // Dias de trial
 });
 
 export type CreateInviteDto = z.infer<typeof createInviteSchema>;
@@ -98,6 +101,7 @@ export class BusinessInvitesService {
         city: data.city,
         focusType: data.focusType || 'RECOGNITION',
         personalMessage: data.personalMessage,
+        trialDays: data.trialDays || 7,
         notes: data.notes,
         expiresAt,
         sentById,
@@ -147,6 +151,7 @@ export class BusinessInvitesService {
         slug,
         focusType: data.focusType || 'RECOGNITION',
         personalMessage: data.personalMessage,
+        trialDays: data.trialDays || 7,
         notes: data.notes,
         expiresAt,
         sentById,

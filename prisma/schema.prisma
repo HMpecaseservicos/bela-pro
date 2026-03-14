@@ -981,6 +981,9 @@ model BusinessInvite {
   focusType       InviteFocusType @default(RECOGNITION) // Qual dor focar
   personalMessage String? // Mensagem personalizada do admin
 
+  // Trial gratuito
+  trialDays Int @default(7) // Dias de teste grátis oferecidos pelo convite
+
   // Rastreamento
   status       BusinessInviteStatus @default(PENDING)
   viewCount    Int                  @default(0) // Quantas vezes acessou o link

@@ -19,6 +19,7 @@ interface BusinessInvite {
   focusType: 'YOUTH_BEAUTY' | 'INCOME_GROWTH' | 'RECOGNITION';
   personalMessage?: string;
   notes?: string;
+  trialDays?: number; // Dias de trial gratuito
   status: 'PENDING' | 'VIEWED' | 'CLICKED_CTA' | 'REGISTERED' | 'ACTIVATED' | 'EXPIRED' | 'CANCELLED';
   viewCount: number;
   totalClicks?: number;
@@ -492,13 +493,13 @@ export default function AdminConvitesPage() {
   const [form, setForm] = useState({
     businessName: '', contactName: '', phone: '', email: '', city: '',
     focusType: 'RECOGNITION' as 'YOUTH_BEAUTY' | 'INCOME_GROWTH' | 'RECOGNITION',
-    personalMessage: '', notes: '', expiresInDays: 7,
+    personalMessage: '', notes: '', expiresInDays: 7, trialDays: 7,
   });
 
   const [publicForm, setPublicForm] = useState({
     campaignName: '', slug: '',
     focusType: 'RECOGNITION' as 'YOUTH_BEAUTY' | 'INCOME_GROWTH' | 'RECOGNITION',
-    personalMessage: '', notes: '', expiresInDays: 30,
+    personalMessage: '', notes: '', expiresInDays: 30, trialDays: 7,
   });
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
@@ -648,6 +649,7 @@ export default function AdminConvitesPage() {
         personalMessage: invite.personalMessage || '',
         notes: invite.notes || '',
         expiresInDays: 30,
+        trialDays: invite.trialDays || 7,
       });
     } else {
       setForm({
@@ -660,6 +662,7 @@ export default function AdminConvitesPage() {
         personalMessage: invite.personalMessage || '',
         notes: invite.notes || '',
         expiresInDays: 7,
+        trialDays: invite.trialDays || 7,
       });
     }
     setShowEditModal(true);
@@ -742,11 +745,11 @@ export default function AdminConvitesPage() {
   }
 
   function resetForm() {
-    setForm({ businessName: '', contactName: '', phone: '', email: '', city: '', focusType: 'RECOGNITION', personalMessage: '', notes: '', expiresInDays: 7 });
+    setForm({ businessName: '', contactName: '', phone: '', email: '', city: '', focusType: 'RECOGNITION', personalMessage: '', notes: '', expiresInDays: 7, trialDays: 7 });
   }
 
   function resetPublicForm() {
-    setPublicForm({ campaignName: '', slug: '', focusType: 'RECOGNITION', personalMessage: '', notes: '', expiresInDays: 30 });
+    setPublicForm({ campaignName: '', slug: '', focusType: 'RECOGNITION', personalMessage: '', notes: '', expiresInDays: 30, trialDays: 7 });
   }
 
   // ---- Styles ----
@@ -1070,6 +1073,16 @@ export default function AdminConvitesPage() {
                       </select>
                     </div>
                     <div>
+                      <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>🎁 Trial Gratuito</label>
+                      <select value={publicForm.trialDays}
+                        onChange={(e) => setPublicForm({ ...publicForm, trialDays: Number(e.target.value) })} style={inputStyle}>
+                        <option value={7}>7 dias</option><option value={14}>14 dias</option>
+                        <option value={30}>30 dias</option><option value={60}>60 dias</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 14 }}>
+                    <div>
                       <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Notas internas</label>
                       <input type="text" value={publicForm.notes}
                         onChange={(e) => setPublicForm({ ...publicForm, notes: e.target.value })}
@@ -1118,7 +1131,7 @@ export default function AdminConvitesPage() {
                         placeholder="email@exemplo.com" style={inputStyle} />
                     </div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
                     <div>
                       <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Cidade</label>
                       <input type="text" value={form.city}
@@ -1131,6 +1144,14 @@ export default function AdminConvitesPage() {
                         onChange={(e) => setForm({ ...form, expiresInDays: Number(e.target.value) })} style={inputStyle}>
                         <option value={3}>3 dias</option><option value={7}>7 dias</option>
                         <option value={14}>14 dias</option><option value={30}>30 dias</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>🎁 Trial Gratuito</label>
+                      <select value={form.trialDays}
+                        onChange={(e) => setForm({ ...form, trialDays: Number(e.target.value) })} style={inputStyle}>
+                        <option value={7}>7 dias</option><option value={14}>14 dias</option>
+                        <option value={30}>30 dias</option><option value={60}>60 dias</option>
                       </select>
                     </div>
                   </div>

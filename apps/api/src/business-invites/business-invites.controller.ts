@@ -53,6 +53,7 @@ export class BusinessInvitesController {
         focusType: invite.focusType,
         personalMessage: invite.personalMessage,
         expiresAt: invite.expiresAt,
+        trialDays: invite.trialDays || 7, // Dias de trial gratuito
       },
     };
   }

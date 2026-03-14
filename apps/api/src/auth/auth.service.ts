@@ -17,6 +17,7 @@ const signupSchema = z.object({
   email: z.string().email().max(120),
   password: z.string().min(6).max(200),
   phone: z.string().optional().nullable(),
+  inviteToken: z.string().optional().nullable(), // Token do convite (BusinessInvite)
 });
 
 const loginSchema = z.object({
@@ -49,6 +50,21 @@ export class AuthService {
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
       throw new BadRequestException('E-mail já cadastrado.');
+    }
+
+    // Buscar convite se inviteToken fornecido
+    let invite = null;
+    if (data.inviteToken) {
+      invite = await this.prisma.businessInvite.findFirst({
+        where: {
+          OR: [
+            { token: data.inviteToken },
+            { slug: data.inviteToken },
+          ],
+          status: { notIn: ['EXPIRED', 'CANCELLED'] },
+          expiresAt: { gt: new Date() },
+        },
+      });
     }
 
     const passwordHash = await hash(data.password);
@@ -84,7 +100,55 @@ export class AuthService {
         },
       });
 
-      return { workspace, user };
+      // Se veio de convite, criar subscription com trial
+      if (invite) {
+        // Buscar plano padrão (primeiro plano ativo ou criar básico)
+        let defaultPlan = await tx.subscriptionPlan.findFirst({
+          where: { isActive: true },
+          orderBy: { sortOrder: 'asc' },
+        });
+
+        if (defaultPlan) {
+          const trialDays = invite.trialDays || 7;
+          const now = new Date();
+          const trialEndsAt = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
+
+          await tx.workspaceSubscription.create({
+            data: {
+              workspaceId: workspace.id,
+              planId: defaultPlan.id,
+              billingCycle: 'MONTHLY',
+              status: 'TRIAL',
+              trialEndsAt,
+              currentPeriodStart: now,
+              currentPeriodEnd: trialEndsAt,
+              notes: `Convite: ${invite.token}`,
+            },
+          });
+        }
+
+        // Atualizar convite como convertido
+        if (invite.inviteType === 'PERSONAL') {
+          await tx.businessInvite.update({
+            where: { id: invite.id },
+            data: {
+              status: 'REGISTERED',
+              registeredAt: new Date(),
+              convertedWorkspaceId: workspace.id,
+            },
+          });
+        } else {
+          // PUBLIC: incrementar contador
+          await tx.businessInvite.update({
+            where: { id: invite.id },
+            data: {
+              totalRegistrations: { increment: 1 },
+            },
+          });
+        }
+      }
+
+      return { workspace, user, invite };
     });
 
     const accessToken = await this.signAccessToken({
@@ -98,6 +162,7 @@ export class AuthService {
       access_token: accessToken,
       accessToken, // backwards compatibility
       workspace: { id: created.workspace.id, slug: created.workspace.slug, name: created.workspace.name },
+      trialDays: created.invite?.trialDays || null,
       user: { id: created.user.id, name: created.user.name, email: created.user.email },
     };
   }
