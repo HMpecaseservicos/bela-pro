@@ -52,7 +52,7 @@ INSERT INTO "SubscriptionPlan" (
   false, false, false, false,
   false, false,
   false, false, 0,
-  ARRAY['Agenda básica', 'Até 50 clientes', 'Até 5 serviços', 'Página de agendamento', 'App mobile'],
+  ARRAY['Agenda básica', 'Página de agendamento', 'App mobile'],
   1, true, false, true, 0,
   NOW(), NOW()
 ) ON CONFLICT ("slug") DO UPDATE SET
@@ -86,7 +86,7 @@ INSERT INTO "SubscriptionPlan" (
   true, true, true, false,
   true, true,
   true, true, 2,
-  ARRAY['Tudo do Gratuito', 'Clientes ilimitados', 'Serviços ilimitados', 'Sem anúncios', 'Chatbot WhatsApp', 'Lembretes automáticos', 'Módulo financeiro', 'Até 3 na equipe', 'Até 2 patrocinadores próprios'],
+  ARRAY['Sem anúncios globais', 'Lembretes automáticos', 'Até 2 patrocinadores próprios'],
   2, true, true, false, 7,
   NOW(), NOW()
 ) ON CONFLICT ("slug") DO UPDATE SET
@@ -129,7 +129,7 @@ INSERT INTO "SubscriptionPlan" (
   true, true, true, true,
   true, true,
   true, true, 0,
-  ARRAY['Tudo do Profissional', 'Equipe ilimitada', 'Pagamento PIX integrado', 'Patrocinadores ilimitados', 'Relatórios avançados', 'Suporte prioritário', 'Multi-agenda'],
+  ARRAY['Patrocinadores ilimitados', 'Relatórios avançados', 'Suporte prioritário', 'Multi-agenda'],
   3, true, false, false, 14,
   NOW(), NOW()
 ) ON CONFLICT ("slug") DO UPDATE SET
@@ -164,7 +164,7 @@ INSERT INTO "SubscriptionPlan" (
   true, true, true, true,
   true, true,
   true, true, 0,
-  ARRAY['Tudo do Business', 'API personalizada', 'Integrações customizadas', 'Gerente de conta dedicado', 'SLA garantido', 'White-label opcional', 'Multi-unidades'],
+  ARRAY['API personalizada', 'Integrações customizadas', 'Gerente de conta dedicado', 'SLA garantido', 'White-label opcional', 'Multi-unidades'],
   4, true, false, false, 30,
   NOW(), NOW()
 ) ON CONFLICT ("slug") DO UPDATE SET

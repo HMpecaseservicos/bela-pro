@@ -487,29 +487,51 @@ export default function PlanoPage() {
 
               {/* Features */}
               <div style={{ marginBottom: 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, color: '#94a3b8', fontSize: 13 }}>
-                  <span style={{ color: '#10b981' }}>✓</span>
-                  {plan.maxAppointments ? `${plan.maxAppointments} agendamentos/mês` : 'Agendamentos ilimitados'}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, color: '#94a3b8', fontSize: 13 }}>
-                  <span style={{ color: '#10b981' }}>✓</span>
-                  {plan.maxClients ? `${plan.maxClients} clientes` : 'Clientes ilimitados'}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, color: '#94a3b8', fontSize: 13 }}>
-                  <span style={{ color: '#10b981' }}>✓</span>
-                  {plan.maxTeamMembers ? `${plan.maxTeamMembers} membros da equipe` : 'Equipe ilimitada'}
-                </div>
+                {/* Limites - mostra apenas se tem limite (plano free) */}
+                {plan.maxAppointments && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, color: '#94a3b8', fontSize: 13 }}>
+                    <span style={{ color: '#10b981' }}>✓</span>
+                    {plan.maxAppointments} agendamentos/mês
+                  </div>
+                )}
+                {plan.maxClients && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, color: '#94a3b8', fontSize: 13 }}>
+                    <span style={{ color: '#10b981' }}>✓</span>
+                    {plan.maxClients} clientes
+                  </div>
+                )}
+                {plan.maxTeamMembers && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, color: '#94a3b8', fontSize: 13 }}>
+                    <span style={{ color: '#10b981' }}>✓</span>
+                    {plan.maxTeamMembers} membros da equipe
+                  </div>
+                )}
 
+                {/* Ilimitados - apenas para planos pagos */}
+                {!plan.maxAppointments && !plan.isFree && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, color: '#94a3b8', fontSize: 13 }}>
+                    <span style={{ color: '#10b981' }}>✓</span>
+                    Agendamentos ilimitados
+                  </div>
+                )}
+                {!plan.maxClients && !plan.isFree && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, color: '#94a3b8', fontSize: 13 }}>
+                    <span style={{ color: '#10b981' }}>✓</span>
+                    Clientes ilimitados
+                  </div>
+                )}
+                {!plan.maxTeamMembers && !plan.isFree && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, color: '#94a3b8', fontSize: 13 }}>
+                    <span style={{ color: '#10b981' }}>✓</span>
+                    Equipe ilimitada
+                  </div>
+                )}
+
+                {/* Recursos booleanos - apenas se habilitado */}
                 {plan.chatbotEnabled && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, color: '#94a3b8', fontSize: 13 }}>
                     <span style={{ color: '#10b981' }}>✓</span>
                     Chatbot WhatsApp
-                  </div>
-                )}
-                {plan.whatsappEnabled && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, color: '#94a3b8', fontSize: 13 }}>
-                    <span style={{ color: '#10b981' }}>✓</span>
-                    Integração WhatsApp
                   </div>
                 )}
                 {plan.financialEnabled && (
@@ -525,6 +547,7 @@ export default function PlanoPage() {
                   </div>
                 )}
 
+                {/* Features customizadas do plano */}
                 {plan.features.map((feature, idx) => (
                   <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, color: '#94a3b8', fontSize: 13 }}>
                     <span style={{ color: '#10b981' }}>✓</span>
