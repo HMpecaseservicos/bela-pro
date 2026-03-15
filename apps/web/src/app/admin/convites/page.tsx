@@ -388,6 +388,10 @@ function DetailsModal({ invite, onClose }: { invite: BusinessInvite; onClose: ()
           </div>
         </div>
         <div>
+          <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 2 }}>🎁 Trial Gratuito</div>
+          <div style={{ fontSize: 14, color: '#10b981', fontWeight: 600 }}>{invite.trialDays || 7} dias</div>
+        </div>
+        <div>
           <div style={{ fontSize: 11, color: T.textMuted, marginBottom: 2 }}>Visualizações</div>
           <div style={{ fontSize: 14, color: T.textPrimary, fontWeight: 500 }}>{invite.viewCount}</div>
         </div>
@@ -586,8 +590,8 @@ export default function AdminConvitesPage() {
     try {
       const isPublic = selectedInvite.inviteType === 'PUBLIC';
       const body = isPublic
-        ? { campaignName: publicForm.campaignName, slug: publicForm.slug, focusType: publicForm.focusType, personalMessage: publicForm.personalMessage, notes: publicForm.notes }
-        : { businessName: form.businessName, contactName: form.contactName, phone: form.phone, email: form.email, city: form.city, focusType: form.focusType, personalMessage: form.personalMessage, notes: form.notes };
+        ? { campaignName: publicForm.campaignName, slug: publicForm.slug, focusType: publicForm.focusType, personalMessage: publicForm.personalMessage, notes: publicForm.notes, trialDays: publicForm.trialDays }
+        : { businessName: form.businessName, contactName: form.contactName, phone: form.phone, email: form.email, city: form.city, focusType: form.focusType, personalMessage: form.personalMessage, notes: form.notes, trialDays: form.trialDays };
 
       const res = await fetch(`${API_URL}/business-invites/${selectedInvite.id}`, {
         method: 'PUT', headers: authHeaders(), body: JSON.stringify(body),
@@ -931,12 +935,22 @@ export default function AdminConvitesPage() {
                           {invite.inviteType === 'PUBLIC' ? (
                             <>
                               <div style={{ fontWeight: 600, color: T.textPrimary, fontSize: 14 }}>{invite.campaignName}</div>
-                              <div style={{ fontSize: 11, color: T.textMuted }}>/{invite.slug || invite.token.slice(0, 8)}</div>
+                              <div style={{ fontSize: 11, color: T.textMuted, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                /{invite.slug || invite.token.slice(0, 8)}
+                                <span style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', padding: '2px 6px', borderRadius: 6, fontWeight: 600 }}>
+                                  🎁 {invite.trialDays || 7} dias grátis
+                                </span>
+                              </div>
                             </>
                           ) : (
                             <>
                               <div style={{ fontWeight: 600, color: T.textPrimary, fontSize: 14 }}>{invite.businessName}</div>
-                              <div style={{ fontSize: 11, color: T.textMuted }}>{invite.contactName} • {invite.phone}</div>
+                              <div style={{ fontSize: 11, color: T.textMuted, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                {invite.contactName} • {invite.phone}
+                                <span style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', padding: '2px 6px', borderRadius: 6, fontWeight: 600 }}>
+                                  🎁 {invite.trialDays || 7} dias grátis
+                                </span>
+                              </div>
                             </>
                           )}
                         </td>
@@ -1204,10 +1218,20 @@ export default function AdminConvitesPage() {
                       onChange={(e) => setPublicForm({ ...publicForm, slug: e.target.value })} style={inputStyle} />
                   </div>
                 </div>
-                <div>
-                  <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Notas</label>
-                  <input type="text" value={publicForm.notes}
-                    onChange={(e) => setPublicForm({ ...publicForm, notes: e.target.value })} style={inputStyle} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div>
+                    <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>🎁 Trial Gratuito</label>
+                    <select value={publicForm.trialDays}
+                      onChange={(e) => setPublicForm({ ...publicForm, trialDays: Number(e.target.value) })} style={inputStyle}>
+                      <option value={7}>7 dias</option><option value={14}>14 dias</option>
+                      <option value={30}>30 dias</option><option value={60}>60 dias</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Notas</label>
+                    <input type="text" value={publicForm.notes}
+                      onChange={(e) => setPublicForm({ ...publicForm, notes: e.target.value })} style={inputStyle} />
+                  </div>
                 </div>
 
               </div>
@@ -1244,15 +1268,25 @@ export default function AdminConvitesPage() {
                       onChange={(e) => setForm({ ...form, city: e.target.value })} style={inputStyle} />
                   </div>
                   <div>
+                    <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>🎁 Trial Gratuito</label>
+                    <select value={form.trialDays}
+                      onChange={(e) => setForm({ ...form, trialDays: Number(e.target.value) })} style={inputStyle}>
+                      <option value={7}>7 dias</option><option value={14}>14 dias</option>
+                      <option value={30}>30 dias</option><option value={60}>60 dias</option>
+                    </select>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                  <div>
                     <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Mensagem pessoal</label>
                     <input type="text" value={form.personalMessage}
                       onChange={(e) => setForm({ ...form, personalMessage: e.target.value })} style={inputStyle} />
                   </div>
-                </div>
-                <div>
-                  <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Notas</label>
-                  <input type="text" value={form.notes}
-                    onChange={(e) => setForm({ ...form, notes: e.target.value })} style={inputStyle} />
+                  <div>
+                    <label style={{ color: T.textMuted, fontSize: 11, marginBottom: 3, display: 'block' }}>Notas</label>
+                    <input type="text" value={form.notes}
+                      onChange={(e) => setForm({ ...form, notes: e.target.value })} style={inputStyle} />
+                  </div>
                 </div>
 
               </div>
@@ -1301,7 +1335,11 @@ export default function AdminConvitesPage() {
       {showShareModal && shareData && (
         <Modal onClose={() => setShowShareModal(false)}>
           <h2 style={{ color: T.textPrimary, marginBottom: 16, fontFamily: 'Playfair Display, serif', fontSize: 20 }}>🔗 Compartilhar Campanha</h2>
-          <p style={{ color: T.textMuted, marginBottom: 16, fontSize: 13 }}>{shareData.campaignName}</p>
+          <p style={{ color: T.textMuted, marginBottom: 8, fontSize: 13 }}>{shareData.campaignName}</p>
+          <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, padding: '8px 12px', marginBottom: 16, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 14 }}>🎁</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#059669' }}>Oferta de teste gratuito inclusa</span>
+          </div>
           <div style={{ background: T.surface, borderRadius: 10, padding: '12px 14px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 13, color: T.textPrimary, flex: 1, wordBreak: 'break-all' }}>{shareData.inviteLink}</span>
             <button onClick={() => { navigator.clipboard.writeText(shareData.inviteLink); toast('Link copiado!', 'success'); }}
