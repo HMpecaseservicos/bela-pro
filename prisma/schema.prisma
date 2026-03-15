@@ -178,6 +178,7 @@ model Workspace {
 
   // Sistema de planos e billing
   subscription WorkspaceSubscription?
+  paymentIntents SubscriptionPaymentIntent[]
 
   // Patrocinadores locais do workspace
   localSponsors Sponsor[]
@@ -783,10 +784,13 @@ model SubscriptionPlan {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name        String // Ex: "Básico", "Profissional", "Premium"
+  // Identificação do plano
+  slug        String  @unique // Identificador único: "free", "pro", "business", "enterprise"
+  name        String // Ex: "Gratuito", "Profissional", "Business"
   description String? // Descrição do plano
+  tier        PlanTier @default(FREE) // Nível do plano para comparações
 
-  // Preços por ciclo (em centavos)
+  // Preços por ciclo (em centavos) - 0 para plano gratuito
   priceMonthly    Int // Preço mensal
   priceQuarterly  Int? // Preço trimestral
   priceSemiannual Int? // Preço semestral
@@ -796,26 +800,46 @@ model SubscriptionPlan {
   maxAppointments   Int? // Limite de agendamentos/mês (null = ilimitado)
   maxClients        Int? // Limite de clientes
   maxTeamMembers    Int? // Limite de membros da equipe
-  chatbotEnabled    Boolean @default(true) // Chatbot incluso?
-  whatsappEnabled   Boolean @default(true) // WhatsApp incluso?
-  financialEnabled  Boolean @default(true) // Módulo financeiro incluso?
-  pixPaymentEnabled Boolean @default(true) // Pagamento PIX incluso?
+  maxServices       Int? // Limite de serviços
+  chatbotEnabled    Boolean @default(false) // Chatbot incluso?
+  whatsappEnabled   Boolean @default(false) // WhatsApp incluso?
+  financialEnabled  Boolean @default(false) // Módulo financeiro incluso?
+  pixPaymentEnabled Boolean @default(false) // Pagamento PIX incluso?
+  reportsEnabled    Boolean @default(false) // Relatórios avançados?
+  remindersEnabled  Boolean @default(false) // Lembretes automáticos?
+
+  // ==================== CONTROLE DE SPONSORS ====================
+  hideGlobalSponsors   Boolean @default(false) // Pode ocultar sponsors globais
+  localSponsorsEnabled Boolean @default(false) // Pode criar sponsors locais
+  localSponsorsLimit   Int     @default(0)     // Limite (0=ilimitado se habilitado)
 
   // Recursos extras (JSON flexível)
-  features String[] // Lista de recursos ("Suporte prioritário", etc.)
+  features String[] // Lista de recursos descritivos
 
   // Ordenação e visibilidade
   sortOrder     Int     @default(0) // Ordem de exibição
   isActive      Boolean @default(true) // Plano ativo para venda?
   isHighlighted Boolean @default(false) // Destacar como "recomendado"?
+  isFree        Boolean @default(false) // Plano gratuito (sem cobrança)?
 
   // Trial
-  trialDays Int @default(7) // Dias de teste grátis
+  trialDays Int @default(0) // Dias de teste (0 = sem trial para plano free)
 
   // Relações
   subscriptions WorkspaceSubscription[]
+  paymentIntents SubscriptionPaymentIntent[]
 
   @@index([isActive, sortOrder])
+  @@index([tier])
+  @@index([slug])
+}
+
+// Nível do plano para comparações e lógica de upgrade
+enum PlanTier {
+  FREE       // Gratuito com anúncios
+  PRO        // Profissional
+  BUSINESS   // Business
+  ENTERPRISE // Enterprise
 }
 
 // Assinatura de um workspace
@@ -910,6 +934,44 @@ model InvoicePayment {
   notes      String? // Observações
 
   @@index([invoiceId])
+}
+
+// Intent de pagamento para upgrade de plano (PIX)
+model SubscriptionPaymentIntent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  planId String
+  plan   SubscriptionPlan @relation(fields: [planId], references: [id])
+
+  billingCycle BillingCycle @default(MONTHLY)
+  amountCents  Int // Valor a pagar
+
+  // Status do intent
+  status PaymentIntentStatus @default(PENDING)
+
+  // PIX
+  pixCode   String? // Código PIX copia e cola
+  pixQrCode String? // QR Code em base64
+
+  // Datas
+  expiresAt    DateTime // Quando o PIX expira
+  confirmedAt  DateTime? // Quando foi confirmado
+  confirmedByUserId String? // Admin que confirmou (se manual)
+
+  @@index([workspaceId])
+  @@index([status, expiresAt])
+}
+
+enum PaymentIntentStatus {
+  PENDING   // Aguardando pagamento
+  CONFIRMED // Pago e confirmado
+  EXPIRED   // Expirou sem pagamento
+  CANCELLED // Cancelado
 }
 
 // Configurações globais do sistema de pagamento (Super Admin)

@@ -23,12 +23,25 @@ interface BillingDashboard {
   }>;
 }
 
+interface PendingPayment {
+  id: string;
+  createdAt: string;
+  amountCents: number;
+  billingCycle: string;
+  status: string;
+  expiresAt: string;
+  workspace: { id: string; name: string; slug: string };
+  plan: { id: string; name: string };
+}
+
 export default function AdminBillingSettingsPage() {
   const [dashboard, setDashboard] = useState<BillingDashboard | null>(null);
   const [settings, setSettings] = useState<Record<string, string>>({});
+  const [pendingPayments, setPendingPayments] = useState<PendingPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'pix' | 'config'>('dashboard');
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'payments' | 'pix' | 'config'>('dashboard');
 
   // Form states
   const [pixKeyType, setPixKeyType] = useState('');
@@ -41,7 +54,7 @@ export default function AdminBillingSettingsPage() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
   useEffect(() => {
-    Promise.all([fetchDashboard(), fetchSettings()]).finally(() => setLoading(false));
+    Promise.all([fetchDashboard(), fetchSettings(), fetchPendingPayments()]).finally(() => setLoading(false));
   }, []);
 
   async function fetchDashboard() {
@@ -56,6 +69,43 @@ export default function AdminBillingSettingsPage() {
       }
     } catch (err) {
       console.error(err);
+    }
+  }
+
+  async function fetchPendingPayments() {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/billing/payment/pending`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPendingPayments(data);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function confirmPayment(intentId: string) {
+    setConfirmingId(intentId);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/billing/payment/confirm/${intentId}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Erro ao confirmar');
+      }
+      alert('Pagamento confirmado com sucesso!');
+      fetchPendingPayments();
+      fetchDashboard();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setConfirmingId(null);
     }
   }
 
@@ -173,6 +223,22 @@ export default function AdminBillingSettingsPage() {
       <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
         <button onClick={() => setActiveTab('dashboard')} style={tabStyle(activeTab === 'dashboard')}>
           📊 Dashboard
+        </button>
+        <button onClick={() => setActiveTab('payments')} style={tabStyle(activeTab === 'payments')}>
+          💳 Pagamentos Pendentes
+          {pendingPayments.length > 0 && (
+            <span style={{
+              marginLeft: 8,
+              padding: '2px 8px',
+              background: '#f59e0b',
+              color: '#0f172a',
+              borderRadius: 10,
+              fontSize: 11,
+              fontWeight: 700,
+            }}>
+              {pendingPayments.length}
+            </span>
+          )}
         </button>
         <button onClick={() => setActiveTab('pix')} style={tabStyle(activeTab === 'pix')}>
           💠 PIX do Sistema
@@ -305,6 +371,136 @@ export default function AdminBillingSettingsPage() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payments Tab - Pagamentos Pendentes */}
+      {activeTab === 'payments' && (
+        <div style={{
+          background: '#1e293b',
+          borderRadius: 16,
+          padding: 28,
+          border: '1px solid #334155',
+        }}>
+          <h3 style={{ margin: '0 0 24px', color: '#f8fafc', fontSize: 18, display: 'flex', alignItems: 'center', gap: 12 }}>
+            💳 Pagamentos PIX Pendentes
+            <button
+              onClick={fetchPendingPayments}
+              style={{
+                padding: '6px 12px',
+                background: '#334155',
+                border: 'none',
+                borderRadius: 6,
+                color: '#94a3b8',
+                fontSize: 12,
+                cursor: 'pointer',
+              }}
+            >
+              🔄 Atualizar
+            </button>
+          </h3>
+
+          {pendingPayments.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 40, color: '#64748b' }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
+              <p style={{ fontSize: 16 }}>Nenhum pagamento pendente</p>
+              <p style={{ fontSize: 13 }}>Todos os pagamentos foram confirmados</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: 16 }}>
+              {pendingPayments.map((payment) => {
+                const isExpired = new Date(payment.expiresAt) < new Date();
+                return (
+                  <div
+                    key={payment.id}
+                    style={{
+                      background: '#0f172a',
+                      borderRadius: 12,
+                      padding: 20,
+                      border: isExpired ? '1px solid #dc2626' : '1px solid #334155',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                          <span style={{ color: '#f8fafc', fontSize: 16, fontWeight: 600 }}>
+                            {payment.workspace.name}
+                          </span>
+                          {isExpired && (
+                            <span style={{
+                              padding: '2px 8px',
+                              background: '#7f1d1d',
+                              color: '#fecaca',
+                              borderRadius: 6,
+                              fontSize: 10,
+                              fontWeight: 600,
+                            }}>
+                              EXPIRADO
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ color: '#94a3b8', fontSize: 13, marginBottom: 4 }}>
+                          Plano: <strong style={{ color: '#f59e0b' }}>{payment.plan.name}</strong>
+                          {' • '}
+                          Ciclo: {payment.billingCycle === 'MONTHLY' ? 'Mensal' : 
+                                   payment.billingCycle === 'QUARTERLY' ? 'Trimestral' :
+                                   payment.billingCycle === 'SEMIANNUAL' ? 'Semestral' : 'Anual'}
+                        </div>
+                        <div style={{ color: '#64748b', fontSize: 12 }}>
+                          Criado em: {new Date(payment.createdAt).toLocaleString('pt-BR')}
+                          {' • '}
+                          Expira em: {new Date(payment.expiresAt).toLocaleString('pt-BR')}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 24, fontWeight: 700, color: '#10b981' }}>
+                          {formatPrice(payment.amountCents)}
+                        </div>
+                        <button
+                          onClick={() => confirmPayment(payment.id)}
+                          disabled={confirmingId === payment.id || isExpired}
+                          style={{
+                            marginTop: 12,
+                            padding: '10px 20px',
+                            background: isExpired 
+                              ? '#334155' 
+                              : confirmingId === payment.id 
+                                ? '#334155'
+                                : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            border: 'none',
+                            borderRadius: 8,
+                            color: isExpired || confirmingId === payment.id ? '#64748b' : 'white',
+                            fontWeight: 600,
+                            fontSize: 13,
+                            cursor: isExpired || confirmingId === payment.id ? 'default' : 'pointer',
+                          }}
+                        >
+                          {confirmingId === payment.id 
+                            ? '⏳ Confirmando...' 
+                            : isExpired 
+                              ? 'Expirado'
+                              : '✓ Confirmar Pagamento'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div style={{
+            marginTop: 24,
+            padding: 16,
+            background: '#0f172a',
+            borderRadius: 12,
+            border: '1px solid #334155',
+          }}>
+            <p style={{ margin: 0, color: '#94a3b8', fontSize: 13, lineHeight: 1.6 }}>
+              ℹ️ <strong>Importante:</strong> Verifique se o pagamento PIX foi recebido na sua conta antes de confirmar. 
+              Após confirmação, o plano do workspace será ativado automaticamente.
+            </p>
           </div>
         </div>
       )}

@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface Plan {
   id: string;
   name: string;
+  slug: string;
   description: string | null;
+  tier: 'FREE' | 'PRO' | 'BUSINESS' | 'ENTERPRISE';
   priceMonthly: number;
   priceQuarterly: number | null;
   priceSemiannual: number | null;
@@ -13,13 +15,20 @@ interface Plan {
   maxAppointments: number | null;
   maxClients: number | null;
   maxTeamMembers: number | null;
+  maxServices: number | null;
   chatbotEnabled: boolean;
   whatsappEnabled: boolean;
   financialEnabled: boolean;
   pixPaymentEnabled: boolean;
+  reportsEnabled: boolean;
+  remindersEnabled: boolean;
+  hideGlobalSponsors: boolean;
+  localSponsorsEnabled: boolean;
+  localSponsorsLimit: number;
   features: string[];
   trialDays: number;
   isHighlighted: boolean;
+  isFree: boolean;
 }
 
 interface Subscription {
@@ -32,16 +41,38 @@ interface Subscription {
   plan: Plan;
 }
 
+interface PaymentIntent {
+  intentId: string;
+  plan: { id: string; name: string };
+  billingCycle: string;
+  amount: number;
+  amountFormatted: string;
+  pixCode: string;
+  pixQrCode: string | null;
+  expiresAt: string;
+  expiresInMinutes: number;
+}
+
 export default function PlanoPage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedCycle, setSelectedCycle] = useState<'MONTHLY' | 'QUARTERLY' | 'SEMIANNUAL' | 'ANNUAL'>('MONTHLY');
+  
+  // Estado do pagamento PIX
+  const [paymentIntent, setPaymentIntent] = useState<PaymentIntent | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'creating' | 'waiting' | 'confirmed' | 'error'>('idle');
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
   useEffect(() => {
     fetchData();
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
   }, []);
 
   async function fetchData() {
@@ -70,6 +101,115 @@ export default function PlanoPage() {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  // ==================== FUNÇÕES DE PAGAMENTO ====================
+
+  async function handleSelectPlan(plan: Plan) {
+    const token = localStorage.getItem('token');
+    const headers = { 
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    };
+
+    // Plano gratuito - ativa direto
+    if (plan.isFree || plan.priceMonthly === 0) {
+      try {
+        const res = await fetch(`${API_URL}/billing/upgrade`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ planId: plan.id, billingCycle: selectedCycle }),
+        });
+        if (res.ok) {
+          await fetchData();
+          alert('Plano ativado com sucesso!');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Erro ao ativar plano gratuito');
+      }
+      return;
+    }
+
+    // Plano pago - gera PIX
+    setPaymentStatus('creating');
+    setPaymentError(null);
+
+    try {
+      const res = await fetch(`${API_URL}/billing/payment/create-intent`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ planId: plan.id, billingCycle: selectedCycle }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || 'Erro ao gerar PIX');
+      }
+
+      const intent: PaymentIntent = await res.json();
+      setPaymentIntent(intent);
+      setPaymentStatus('waiting');
+
+      // Iniciar polling
+      startPolling(intent.intentId);
+    } catch (err: any) {
+      setPaymentError(err.message || 'Erro ao criar pagamento');
+      setPaymentStatus('error');
+    }
+  }
+
+  function startPolling(intentId: string) {
+    if (pollingRef.current) clearInterval(pollingRef.current);
+
+    pollingRef.current = setInterval(async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/billing/payment/status/${intentId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          
+          if (data.status === 'CONFIRMED') {
+            clearInterval(pollingRef.current!);
+            pollingRef.current = null;
+            setPaymentStatus('confirmed');
+            setTimeout(() => {
+              fetchData();
+              closePaymentModal();
+            }, 3000);
+          } else if (data.status === 'EXPIRED' || data.status === 'CANCELLED') {
+            clearInterval(pollingRef.current!);
+            pollingRef.current = null;
+            setPaymentError('Pagamento expirado. Tente novamente.');
+            setPaymentStatus('error');
+          }
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+      }
+    }, 5000); // Polling a cada 5 segundos
+  }
+
+  function closePaymentModal() {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+    setPaymentIntent(null);
+    setPaymentStatus('idle');
+    setPaymentError(null);
+    setCopied(false);
+  }
+
+  async function copyPixCode() {
+    if (paymentIntent?.pixCode) {
+      await navigator.clipboard.writeText(paymentIntent.pixCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   }
 
@@ -410,7 +550,8 @@ export default function PlanoPage() {
 
               {/* Botão */}
               <button
-                disabled={isCurrentPlan}
+                onClick={() => !isCurrentPlan && handleSelectPlan(plan)}
+                disabled={isCurrentPlan || paymentStatus === 'creating'}
                 style={{
                   width: '100%',
                   padding: 14,
@@ -425,9 +566,10 @@ export default function PlanoPage() {
                   fontWeight: 600,
                   fontSize: 14,
                   cursor: isCurrentPlan ? 'default' : 'pointer',
+                  opacity: paymentStatus === 'creating' ? 0.7 : 1,
                 }}
               >
-                {isCurrentPlan ? 'Plano atual' : subscription ? 'Mudar para este plano' : 'Começar agora'}
+                {isCurrentPlan ? 'Plano atual' : subscription ? 'Mudar para este plano' : plan.trialDays > 0 ? 'Testar grátis' : 'Começar agora'}
               </button>
             </div>
           );
@@ -459,6 +601,224 @@ export default function PlanoPage() {
           💬 Dúvidas sobre os planos? Entre em contato pelo WhatsApp ou email.
         </p>
       </div>
+
+      {/* Modal de Pagamento PIX */}
+      {(paymentStatus === 'waiting' || paymentStatus === 'confirmed' || paymentStatus === 'error') && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: 20,
+        }}>
+          <div style={{
+            background: '#1e293b',
+            borderRadius: 20,
+            padding: 32,
+            maxWidth: 420,
+            width: '100%',
+            border: '1px solid #334155',
+            textAlign: 'center',
+            position: 'relative',
+          }}>
+            {/* Botão fechar */}
+            <button
+              onClick={closePaymentModal}
+              style={{
+                position: 'absolute',
+                top: 16,
+                right: 16,
+                background: 'transparent',
+                border: 'none',
+                color: '#64748b',
+                fontSize: 24,
+                cursor: 'pointer',
+                padding: 4,
+              }}
+            >
+              ×
+            </button>
+
+            {paymentStatus === 'confirmed' ? (
+              // Confirmado
+              <>
+                <div style={{
+                  width: 80,
+                  height: 80,
+                  background: '#10b981',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 20px',
+                  fontSize: 40,
+                }}>
+                  ✓
+                </div>
+                <h2 style={{ margin: '0 0 12px', color: '#f8fafc', fontSize: 24 }}>
+                  Pagamento Confirmado!
+                </h2>
+                <p style={{ color: '#94a3b8', margin: 0 }}>
+                  Seu plano foi ativado com sucesso.
+                </p>
+              </>
+            ) : paymentStatus === 'error' ? (
+              // Erro
+              <>
+                <div style={{
+                  width: 80,
+                  height: 80,
+                  background: '#ef4444',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 20px',
+                  fontSize: 40,
+                }}>
+                  ✕
+                </div>
+                <h2 style={{ margin: '0 0 12px', color: '#f8fafc', fontSize: 24 }}>
+                  Erro no Pagamento
+                </h2>
+                <p style={{ color: '#f87171', margin: '0 0 20px' }}>
+                  {paymentError}
+                </p>
+                <button
+                  onClick={closePaymentModal}
+                  style={{
+                    padding: '12px 32px',
+                    background: '#1e40af',
+                    border: 'none',
+                    borderRadius: 10,
+                    color: 'white',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Tentar novamente
+                </button>
+              </>
+            ) : paymentIntent ? (
+              // Aguardando PIX
+              <>
+                <div style={{
+                  width: 60,
+                  height: 60,
+                  background: '#10b981',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 16px',
+                  fontSize: 28,
+                }}>
+                  💳
+                </div>
+
+                <h2 style={{ margin: '0 0 8px', color: '#f8fafc', fontSize: 22 }}>
+                  Pague via PIX
+                </h2>
+                <p style={{ color: '#94a3b8', margin: '0 0 20px', fontSize: 14 }}>
+                  Escaneie o QR Code ou copie o código
+                </p>
+
+                {/* Valor */}
+                <div style={{
+                  padding: '16px 24px',
+                  background: '#0f172a',
+                  borderRadius: 12,
+                  marginBottom: 20,
+                }}>
+                  <div style={{ color: '#64748b', fontSize: 12, marginBottom: 4 }}>
+                    {paymentIntent.plan.name} - {getCycleLabel(paymentIntent.billingCycle)}
+                  </div>
+                  <div style={{ fontSize: 32, fontWeight: 700, color: '#10b981' }}>
+                    {paymentIntent.amountFormatted}
+                  </div>
+                </div>
+
+                {/* QR Code */}
+                <div style={{
+                  background: 'white',
+                  borderRadius: 12,
+                  padding: 16,
+                  display: 'inline-block',
+                  marginBottom: 20,
+                }}>
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(paymentIntent.pixCode)}`}
+                    alt="QR Code PIX"
+                    style={{ width: 180, height: 180, display: 'block' }}
+                  />
+                </div>
+
+                {/* Código PIX */}
+                <div style={{
+                  background: '#0f172a',
+                  borderRadius: 10,
+                  padding: 12,
+                  marginBottom: 16,
+                  position: 'relative',
+                }}>
+                  <div style={{
+                    fontSize: 10,
+                    fontFamily: 'monospace',
+                    color: '#94a3b8',
+                    wordBreak: 'break-all',
+                    lineHeight: 1.4,
+                    maxHeight: 60,
+                    overflow: 'hidden',
+                  }}>
+                    {paymentIntent.pixCode}
+                  </div>
+                </div>
+
+                <button
+                  onClick={copyPixCode}
+                  style={{
+                    width: '100%',
+                    padding: 14,
+                    background: copied ? '#10b981' : '#f59e0b',
+                    border: 'none',
+                    borderRadius: 10,
+                    color: '#0f172a',
+                    fontWeight: 700,
+                    fontSize: 14,
+                    cursor: 'pointer',
+                    marginBottom: 16,
+                  }}
+                >
+                  {copied ? '✓ Código copiado!' : '📋 Copiar código PIX'}
+                </button>
+
+                {/* Timer */}
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 16px',
+                  background: 'rgba(245, 158, 11, 0.1)',
+                  borderRadius: 20,
+                  border: '1px solid rgba(245, 158, 11, 0.3)',
+                }}>
+                  <span>⏳</span>
+                  <span style={{ color: '#f59e0b', fontSize: 12, fontWeight: 500 }}>
+                    Expira em {paymentIntent.expiresInMinutes} minutos
+                  </span>
+                </div>
+
+                <p style={{ marginTop: 16, color: '#64748b', fontSize: 12 }}>
+                  Após o pagamento, aguarde a confirmação automática.
+                </p>
+              </>
+            ) : null}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

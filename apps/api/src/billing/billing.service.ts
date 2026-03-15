@@ -1,13 +1,15 @@
 import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, SubscriptionStatus, InvoiceStatus, BillingCycle } from '@prisma/client';
+import { Prisma, SubscriptionStatus, InvoiceStatus, BillingCycle, PlanTier } from '@prisma/client';
 import { z } from 'zod';
 
 // ==================== SCHEMAS DE VALIDAÇÃO ====================
 
 const createPlanSchema = z.object({
   name: z.string().min(2).max(50),
+  slug: z.string().min(2).max(50).optional(), // Auto-gerado se não fornecido
   description: z.string().max(500).optional(),
+  tier: z.enum(['FREE', 'PRO', 'BUSINESS', 'ENTERPRISE']).default('PRO'),
   priceMonthly: z.number().int().min(0),
   priceQuarterly: z.number().int().min(0).optional(),
   priceSemiannual: z.number().int().min(0).optional(),
@@ -15,14 +17,21 @@ const createPlanSchema = z.object({
   maxAppointments: z.number().int().min(1).optional().nullable(),
   maxClients: z.number().int().min(1).optional().nullable(),
   maxTeamMembers: z.number().int().min(1).optional().nullable(),
-  chatbotEnabled: z.boolean().default(true),
-  whatsappEnabled: z.boolean().default(true),
-  financialEnabled: z.boolean().default(true),
-  pixPaymentEnabled: z.boolean().default(true),
+  maxServices: z.number().int().min(1).optional().nullable(),
+  chatbotEnabled: z.boolean().default(false),
+  whatsappEnabled: z.boolean().default(false),
+  financialEnabled: z.boolean().default(false),
+  pixPaymentEnabled: z.boolean().default(false),
+  reportsEnabled: z.boolean().default(false),
+  remindersEnabled: z.boolean().default(false),
+  hideGlobalSponsors: z.boolean().default(false),
+  localSponsorsEnabled: z.boolean().default(false),
+  localSponsorsLimit: z.number().int().min(0).default(0),
   features: z.array(z.string()).default([]),
-  trialDays: z.number().int().min(0).default(7),
+  trialDays: z.number().int().min(0).default(0),
   isHighlighted: z.boolean().default(false),
   isActive: z.boolean().default(true),
+  isFree: z.boolean().default(false),
 });
 
 const updatePlanSchema = createPlanSchema.partial();
@@ -86,6 +95,15 @@ export class BillingService {
   async createPlan(data: unknown) {
     const input = createPlanSchema.parse(data);
 
+    // Gerar slug se não fornecido
+    const slug = input.slug || this.generateSlug(input.name);
+
+    // Verificar se slug já existe
+    const existing = await this.prisma.subscriptionPlan.findUnique({ where: { slug } });
+    if (existing) {
+      throw new BadRequestException(`Já existe um plano com o slug "${slug}"`);
+    }
+
     // Determinar próxima ordem
     const lastPlan = await this.prisma.subscriptionPlan.findFirst({
       orderBy: { sortOrder: 'desc' },
@@ -94,9 +112,19 @@ export class BillingService {
     return this.prisma.subscriptionPlan.create({
       data: {
         ...input,
+        slug,
         sortOrder: (lastPlan?.sortOrder ?? 0) + 1,
       },
     });
+  }
+
+  private generateSlug(name: string): string {
+    return name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      .replace(/[^a-z0-9]+/g, '-')     // Substitui caracteres especiais por -
+      .replace(/^-|-$/g, '');          // Remove - do início e fim
   }
 
   async updatePlan(id: string, data: unknown) {
@@ -756,5 +784,397 @@ export class BillingService {
     }
 
     return `${prefix}${String(number).padStart(5, '0')}`;
+  }
+
+  // ==================== PLANO AUTOMÁTICO & FEATURES ====================
+
+  /**
+   * Busca o plano gratuito padrão
+   * NOTA: Os campos novos (isFree, slug, tier, etc) serão adicionados via migration
+   */
+  async getFreePlan() {
+    // Busca pelo campo isFree (após migration)
+    let plan = await this.prisma.subscriptionPlan.findFirst({
+      where: { isActive: true, priceMonthly: 0 } as any, // isFree após migration
+    });
+
+    // Fallback: busca pelo preço zero
+    if (!plan) {
+      plan = await this.prisma.subscriptionPlan.findFirst({
+        where: { isActive: true, priceMonthly: 0 },
+        orderBy: { sortOrder: 'asc' },
+      });
+    }
+
+    // Se ainda não existe, pega o mais barato
+    if (!plan) {
+      plan = await this.prisma.subscriptionPlan.findFirst({
+        where: { isActive: true },
+        orderBy: { priceMonthly: 'asc' },
+      });
+    }
+
+    return plan;
+  }
+
+  /**
+   * Cria assinatura gratuita automática para novo workspace
+   */
+  async createFreeSubscription(workspaceId: string) {
+    const freePlan = await this.getFreePlan();
+    if (!freePlan) {
+      this.logger.warn('Nenhum plano gratuito encontrado');
+      return null;
+    }
+
+    // Verificar se já tem assinatura
+    const existing = await this.prisma.workspaceSubscription.findUnique({
+      where: { workspaceId },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    const now = new Date();
+    const periodEnd = new Date(now);
+    periodEnd.setFullYear(periodEnd.getFullYear() + 10); // Plano free não expira
+
+    const subscription = await this.prisma.workspaceSubscription.create({
+      data: {
+        workspaceId,
+        planId: freePlan.id,
+        status: 'ACTIVE',
+        billingCycle: 'MONTHLY',
+        currentPeriodStart: now,
+        currentPeriodEnd: periodEnd,
+        notes: 'Plano gratuito automático',
+      },
+      include: { plan: true },
+    });
+
+    // Sincronizar workspace com as configurações do plano
+    await this.syncWorkspaceWithPlan(workspaceId);
+
+    this.logger.log(`✨ Assinatura gratuita criada para workspace ${workspaceId}`);
+    return subscription;
+  }
+
+  /**
+   * Obtém informações completas do plano do workspace
+   * Inclui compatibilidade com campos antigos e novos do schema
+   */
+  async getWorkspacePlanInfo(workspaceId: string) {
+    const subscription = await this.prisma.workspaceSubscription.findUnique({
+      where: { workspaceId },
+      include: {
+        plan: true,
+        workspace: {
+          select: {
+            id: true,
+            name: true,
+            showGlobalSponsors: true,
+            localSponsorsEnabled: true,
+            localSponsorsLimit: true,
+          },
+        },
+      },
+    });
+
+    if (!subscription) {
+      // Retorna info de plano gratuito mesmo sem assinatura
+      const freePlan = await this.getFreePlan();
+      const planAny = freePlan as any;
+      return {
+        hasSubscription: false,
+        status: 'FREE' as const,
+        plan: freePlan,
+        isPremium: false,
+        isTrialing: false,
+        features: {
+          chatbotEnabled: freePlan?.chatbotEnabled ?? false,
+          whatsappEnabled: freePlan?.whatsappEnabled ?? false,
+          financialEnabled: freePlan?.financialEnabled ?? false,
+          pixPaymentEnabled: freePlan?.pixPaymentEnabled ?? false,
+          reportsEnabled: planAny?.reportsEnabled ?? false,
+          remindersEnabled: planAny?.remindersEnabled ?? false,
+          hideGlobalSponsors: planAny?.hideGlobalSponsors ?? false,
+          localSponsorsEnabled: planAny?.localSponsorsEnabled ?? false,
+          localSponsorsLimit: planAny?.localSponsorsLimit ?? 0,
+          maxAppointments: freePlan?.maxAppointments || 100,
+          maxClients: freePlan?.maxClients || 50,
+          maxTeamMembers: freePlan?.maxTeamMembers || 1,
+          maxServices: planAny?.maxServices || 5,
+        },
+        showAds: true, // FREE vê anúncios
+      };
+    }
+
+    const plan = subscription.plan;
+    const planAny = plan as any;
+    const isActive = subscription.status === 'ACTIVE';
+    const isTrialing = subscription.status === 'TRIAL';
+    const isFree = planAny.isFree ?? (plan.priceMonthly === 0);
+    const isPremium = isActive && !isFree;
+
+    // Verificar se trial expirou
+    const trialExpired = isTrialing && subscription.trialEndsAt && new Date() > subscription.trialEndsAt;
+
+    return {
+      hasSubscription: true,
+      subscriptionId: subscription.id,
+      status: subscription.status,
+      plan: {
+        id: plan.id,
+        slug: planAny.slug || plan.name.toLowerCase().replace(/\s+/g, '-'),
+        name: plan.name,
+        tier: planAny.tier || (isFree ? 'FREE' : 'PRO'),
+        priceMonthly: plan.priceMonthly,
+        isFree,
+      },
+      billingCycle: subscription.billingCycle,
+      currentPeriodEnd: subscription.currentPeriodEnd,
+      trialEndsAt: subscription.trialEndsAt,
+      trialExpired,
+      isPremium,
+      isTrialing,
+      features: {
+        chatbotEnabled: plan.chatbotEnabled,
+        whatsappEnabled: plan.whatsappEnabled,
+        financialEnabled: plan.financialEnabled,
+        pixPaymentEnabled: plan.pixPaymentEnabled,
+        reportsEnabled: planAny.reportsEnabled ?? false,
+        remindersEnabled: planAny.remindersEnabled ?? false,
+        hideGlobalSponsors: planAny.hideGlobalSponsors ?? false,
+        localSponsorsEnabled: planAny.localSponsorsEnabled ?? false,
+        localSponsorsLimit: planAny.localSponsorsLimit ?? 0,
+        maxAppointments: plan.maxAppointments,
+        maxClients: plan.maxClients,
+        maxTeamMembers: plan.maxTeamMembers,
+        maxServices: planAny.maxServices || null,
+      },
+      featuresList: plan.features || [],
+      showAds: !isPremium && !isTrialing, // FREE ou trial expirado vê anúncios
+    };
+  }
+
+  /**
+   * Verifica se uma feature específica está habilitada para o workspace
+   */
+  async checkFeature(workspaceId: string, feature: string): Promise<boolean> {
+    const info = await this.getWorkspacePlanInfo(workspaceId);
+    
+    // Features que não dependem de status
+    const featureMap: Record<string, boolean> = {
+      chatbot: info.features.chatbotEnabled,
+      whatsapp: info.features.whatsappEnabled,
+      financial: info.features.financialEnabled,
+      pix: info.features.pixPaymentEnabled,
+      reports: info.features.reportsEnabled,
+      reminders: info.features.remindersEnabled,
+      localSponsors: info.features.localSponsorsEnabled,
+      hideAds: info.features.hideGlobalSponsors,
+    };
+
+    return featureMap[feature] ?? false;
+  }
+
+  /**
+   * Sincroniza configurações do workspace baseado no plano ativo
+   */
+  async syncWorkspaceWithPlan(workspaceId: string) {
+    const subscription = await this.prisma.workspaceSubscription.findUnique({
+      where: { workspaceId },
+      include: { plan: true },
+    });
+
+    if (!subscription) {
+      // Sem assinatura = configurações de plano free
+      await this.prisma.workspace.update({
+        where: { id: workspaceId },
+        data: {
+          showGlobalSponsors: true, // Free vê anúncios
+          localSponsorsEnabled: false,
+          localSponsorsLimit: 0,
+        },
+      });
+      return;
+    }
+
+    const plan = subscription.plan;
+    const planAny = plan as any;
+    const isActive = ['ACTIVE', 'TRIAL'].includes(subscription.status);
+
+    const hideGlobalSponsors = planAny.hideGlobalSponsors ?? false;
+    const localSponsorsEnabled = planAny.localSponsorsEnabled ?? false;
+    const localSponsorsLimit = planAny.localSponsorsLimit ?? 0;
+
+    await this.prisma.workspace.update({
+      where: { id: workspaceId },
+      data: {
+        // Se plano permite ocultar e está ativo, oculta
+        showGlobalSponsors: isActive ? !hideGlobalSponsors : true,
+        // Sponsors locais habilitados pelo plano
+        localSponsorsEnabled: isActive ? localSponsorsEnabled : false,
+        localSponsorsLimit,
+      },
+    });
+
+    this.logger.log(`🔄 Workspace ${workspaceId} sincronizado com plano ${plan.name}`);
+  }
+
+  /**
+   * Atualiza assinatura e sincroniza workspace (usado após pagamento)
+   */
+  async upgradePlan(workspaceId: string, newPlanId: string, billingCycle: BillingCycle = 'MONTHLY') {
+    const plan = await this.findPlanById(newPlanId);
+    
+    const subscription = await this.prisma.workspaceSubscription.findUnique({
+      where: { workspaceId },
+    });
+
+    const now = new Date();
+    const periodEnd = this.calculatePeriodEnd(now, billingCycle);
+
+    if (subscription) {
+      // Atualizar assinatura existente
+      await this.prisma.workspaceSubscription.update({
+        where: { workspaceId },
+        data: {
+          planId: newPlanId,
+          billingCycle,
+          status: 'ACTIVE',
+          currentPeriodStart: now,
+          currentPeriodEnd: periodEnd,
+          trialEndsAt: null, // Remove trial ao fazer upgrade
+        },
+      });
+    } else {
+      // Criar nova assinatura
+      await this.prisma.workspaceSubscription.create({
+        data: {
+          workspaceId,
+          planId: newPlanId,
+          billingCycle,
+          status: 'ACTIVE',
+          currentPeriodStart: now,
+          currentPeriodEnd: periodEnd,
+        },
+      });
+    }
+
+    // Sincronizar workspace com novo plano
+    await this.syncWorkspaceWithPlan(workspaceId);
+
+    this.logger.log(`⬆️ Workspace ${workspaceId} fez upgrade para ${plan.name}`);
+
+    return this.getWorkspacePlanInfo(workspaceId);
+  }
+
+  /**
+   * Inicia período de trial para um workspace
+   */
+  async startTrial(workspaceId: string, planId: string) {
+    const plan = await this.findPlanById(planId);
+    
+    if (plan.trialDays <= 0) {
+      throw new BadRequestException('Este plano não oferece período de teste');
+    }
+
+    const subscription = await this.prisma.workspaceSubscription.findUnique({
+      where: { workspaceId },
+    });
+
+    // Verificar se já usou trial
+    if (subscription && subscription.trialEndsAt) {
+      throw new BadRequestException('Período de teste já utilizado');
+    }
+
+    const now = new Date();
+    const trialEndsAt = new Date(now.getTime() + plan.trialDays * 24 * 60 * 60 * 1000);
+
+    if (subscription) {
+      await this.prisma.workspaceSubscription.update({
+        where: { workspaceId },
+        data: {
+          planId,
+          status: 'TRIAL',
+          trialEndsAt,
+          currentPeriodStart: now,
+          currentPeriodEnd: trialEndsAt,
+        },
+      });
+    } else {
+      await this.prisma.workspaceSubscription.create({
+        data: {
+          workspaceId,
+          planId,
+          status: 'TRIAL',
+          billingCycle: 'MONTHLY',
+          trialEndsAt,
+          currentPeriodStart: now,
+          currentPeriodEnd: trialEndsAt,
+        },
+      });
+    }
+
+    await this.syncWorkspaceWithPlan(workspaceId);
+
+    this.logger.log(`🎁 Trial iniciado para workspace ${workspaceId} - ${plan.trialDays} dias`);
+
+    return this.getWorkspacePlanInfo(workspaceId);
+  }
+
+  /**
+   * Lista planos disponíveis para upgrade (públicos)
+   * Compatível com schema antigo e novo
+   */
+  async getAvailablePlans() {
+    const plans = await this.prisma.subscriptionPlan.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: 'asc' },
+    });
+
+    return plans.map((plan: any) => ({
+      id: plan.id,
+      slug: plan.slug || plan.name.toLowerCase().replace(/\s+/g, '-'),
+      name: plan.name,
+      description: plan.description,
+      tier: plan.tier || (plan.priceMonthly === 0 ? 'FREE' : 'PRO'),
+      priceMonthly: plan.priceMonthly,
+      priceQuarterly: plan.priceQuarterly,
+      priceSemiannual: plan.priceSemiannual,
+      priceAnnual: plan.priceAnnual,
+      features: plan.features || [],
+      isHighlighted: plan.isHighlighted || false,
+      isFree: plan.isFree ?? (plan.priceMonthly === 0),
+      trialDays: plan.trialDays || 0,
+      maxAppointments: plan.maxAppointments,
+      maxClients: plan.maxClients,
+      maxTeamMembers: plan.maxTeamMembers,
+      maxServices: plan.maxServices || null,
+      chatbotEnabled: plan.chatbotEnabled ?? false,
+      whatsappEnabled: plan.whatsappEnabled ?? false,
+      financialEnabled: plan.financialEnabled ?? false,
+      pixPaymentEnabled: plan.pixPaymentEnabled ?? false,
+      reportsEnabled: plan.reportsEnabled ?? false,
+      remindersEnabled: plan.remindersEnabled ?? false,
+      hideGlobalSponsors: plan.hideGlobalSponsors ?? false,
+      localSponsorsEnabled: plan.localSponsorsEnabled ?? false,
+      localSponsorsLimit: plan.localSponsorsLimit ?? 0,
+      // Formatações
+      priceMonthlyFormatted: this.formatCurrency(plan.priceMonthly),
+      priceQuarterlyFormatted: plan.priceQuarterly ? this.formatCurrency(plan.priceQuarterly) : null,
+      priceSemiannualFormatted: plan.priceSemiannual ? this.formatCurrency(plan.priceSemiannual) : null,
+      priceAnnualFormatted: plan.priceAnnual ? this.formatCurrency(plan.priceAnnual) : null,
+      annualSavings: plan.priceAnnual ? (plan.priceMonthly * 12) - plan.priceAnnual : 0,
+    }));
+  }
+
+  private formatCurrency(cents: number): string {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(cents / 100);
   }
 }

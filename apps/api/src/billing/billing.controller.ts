@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BillingService } from './billing.service';
+import { SubscriptionPaymentService } from './subscription-payment.service';
 
 // Guard para verificar se é Super Admin
 function requireSuperAdmin(req: any) {
@@ -24,22 +25,122 @@ function requireSuperAdmin(req: any) {
 @Controller('api/v1/billing')
 @UseGuards(JwtAuthGuard)
 export class BillingController {
-  constructor(private readonly billingService: BillingService) {}
+  constructor(
+    private readonly billingService: BillingService,
+    private readonly paymentService: SubscriptionPaymentService,
+  ) {}
 
   // ==================== ENDPOINTS PARA USUÁRIOS COMUNS ====================
 
-  // Lista planos disponíveis (para qualquer usuário autenticado)
+  /**
+   * Lista planos disponíveis publicamente (para exibir na página de upgrade)
+   */
   @Get('available-plans')
   async getAvailablePlans() {
-    // Retorna apenas planos ativos, ordenados por sortOrder
-    return this.billingService.findAllPlans(false);
+    return this.billingService.getAvailablePlans();
   }
 
-  // Retorna assinatura do workspace do usuário
+  /**
+   * Retorna informações completas do plano do workspace atual
+   * Inclui features habilitadas, status, limites, etc.
+   */
+  @Get('my-plan')
+  async getMyPlanInfo(@Req() req: any) {
+    const workspaceId = req.user.workspaceId;
+    return this.billingService.getWorkspacePlanInfo(workspaceId);
+  }
+
+  /**
+   * Retorna assinatura do workspace do usuário (legacy)
+   */
   @Get('my-subscription')
   async getMySubscription(@Req() req: any) {
     const workspaceId = req.user.workspaceId;
     return this.billingService.findSubscriptionByWorkspace(workspaceId);
+  }
+
+  /**
+   * Verifica se uma feature específica está disponível
+   */
+  @Get('check-feature/:feature')
+  async checkFeature(@Req() req: any, @Param('feature') feature: string) {
+    const workspaceId = req.user.workspaceId;
+    const hasFeature = await this.billingService.checkFeature(workspaceId, feature);
+    return { feature, available: hasFeature };
+  }
+
+  /**
+   * Inicia período de trial em um plano específico
+   */
+  @Post('start-trial/:planId')
+  async startTrial(@Req() req: any, @Param('planId') planId: string) {
+    const workspaceId = req.user.workspaceId;
+    return this.billingService.startTrial(workspaceId, planId);
+  }
+
+  /**
+   * Faz upgrade de plano (após pagamento confirmado)
+   */
+  @Post('upgrade')
+  async upgradePlan(
+    @Req() req: any,
+    @Body() body: { planId: string; billingCycle?: 'MONTHLY' | 'QUARTERLY' | 'SEMIANNUAL' | 'ANNUAL' }
+  ) {
+    const workspaceId = req.user.workspaceId;
+    // TODO: Verificar se pagamento foi confirmado (integrar com PIX/gateway)
+    return this.billingService.upgradePlan(workspaceId, body.planId, body.billingCycle);
+  }
+
+  /**
+   * Sincroniza workspace com plano atual (útil após mudanças manuais)
+   */
+  @Post('sync')
+  async syncWorkspace(@Req() req: any) {
+    const workspaceId = req.user.workspaceId;
+    await this.billingService.syncWorkspaceWithPlan(workspaceId);
+    return { success: true };
+  }
+
+  // ==================== PAGAMENTOS PIX (Usuário) ====================
+
+  /**
+   * Cria intent de pagamento PIX para upgrade
+   */
+  @Post('payment/create-intent')
+  async createPaymentIntent(
+    @Req() req: any,
+    @Body() body: { planId: string; billingCycle?: 'MONTHLY' | 'QUARTERLY' | 'SEMIANNUAL' | 'ANNUAL' }
+  ) {
+    const workspaceId = req.user.workspaceId;
+    return this.paymentService.createPaymentIntent(workspaceId, body.planId, body.billingCycle);
+  }
+
+  /**
+   * Verifica status de um pagamento (polling)
+   */
+  @Get('payment/status/:intentId')
+  async checkPaymentStatus(@Req() req: any, @Param('intentId') intentId: string) {
+    return this.paymentService.checkPaymentStatus(intentId);
+  }
+
+  // ==================== PAGAMENTOS PIX (Super Admin) ====================
+
+  /**
+   * Lista pagamentos pendentes de confirmação
+   */
+  @Get('payment/pending')
+  async listPendingPayments(@Req() req: any) {
+    requireSuperAdmin(req);
+    return this.paymentService.listPendingPayments();
+  }
+
+  /**
+   * Confirma pagamento manualmente (após verificar PIX)
+   */
+  @Post('payment/confirm/:intentId')
+  async confirmPayment(@Req() req: any, @Param('intentId') intentId: string) {
+    requireSuperAdmin(req);
+    return this.paymentService.confirmPayment(intentId, req.user.userId);
   }
 
   // ==================== PLANOS (Super Admin) ====================

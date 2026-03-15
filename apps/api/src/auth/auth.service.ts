@@ -100,29 +100,41 @@ export class AuthService {
         },
       });
 
-      // Se veio de convite, criar subscription com trial
+      // ==================== SUBSCRIPTION AUTOMÁTICA ====================
+      // Buscar plano: se veio de convite, usa trial de plano pago; senão, plano gratuito
+      
       if (invite) {
-        // Buscar plano padrão (primeiro plano ativo ou criar básico)
-        let defaultPlan = await tx.subscriptionPlan.findFirst({
-          where: { isActive: true },
+        // Veio de convite: buscar plano pago e ativar trial
+        let paidPlan = await tx.subscriptionPlan.findFirst({
+          where: { isActive: true, isFree: false },
           orderBy: { sortOrder: 'asc' },
         });
 
-        if (defaultPlan) {
-          const trialDays = invite.trialDays || 7;
+        if (paidPlan) {
+          const trialDays = invite.trialDays || paidPlan.trialDays || 7;
           const now = new Date();
           const trialEndsAt = new Date(now.getTime() + trialDays * 24 * 60 * 60 * 1000);
 
           await tx.workspaceSubscription.create({
             data: {
               workspaceId: workspace.id,
-              planId: defaultPlan.id,
+              planId: paidPlan.id,
               billingCycle: 'MONTHLY',
               status: 'TRIAL',
               trialEndsAt,
               currentPeriodStart: now,
               currentPeriodEnd: trialEndsAt,
-              notes: `Convite: ${invite.token}`,
+              notes: `Convite: ${invite.token} | Trial: ${trialDays} dias`,
+            },
+          });
+
+          // Sincronizar workspace com configurações do plano pago (sem anúncios, com features)
+          await tx.workspace.update({
+            where: { id: workspace.id },
+            data: {
+              showGlobalSponsors: !paidPlan.hideGlobalSponsors,
+              localSponsorsEnabled: paidPlan.localSponsorsEnabled,
+              localSponsorsLimit: paidPlan.localSponsorsLimit,
             },
           });
         }
@@ -143,6 +155,55 @@ export class AuthService {
             where: { id: invite.id },
             data: {
               totalRegistrations: { increment: 1 },
+            },
+          });
+        }
+      } else {
+        // Sem convite: criar com plano GRATUITO
+        let freePlan = await tx.subscriptionPlan.findFirst({
+          where: { isActive: true, isFree: true },
+          orderBy: { sortOrder: 'asc' },
+        });
+
+        // Se não existe plano gratuito, tenta pelo slug
+        if (!freePlan) {
+          freePlan = await tx.subscriptionPlan.findFirst({
+            where: { isActive: true, slug: 'gratuito' },
+          });
+        }
+
+        // Se ainda não existe, pega o mais barato
+        if (!freePlan) {
+          freePlan = await tx.subscriptionPlan.findFirst({
+            where: { isActive: true },
+            orderBy: { priceMonthly: 'asc' },
+          });
+        }
+
+        if (freePlan) {
+          const now = new Date();
+          const periodEnd = new Date(now);
+          periodEnd.setFullYear(periodEnd.getFullYear() + 10); // Plano free não expira
+
+          await tx.workspaceSubscription.create({
+            data: {
+              workspaceId: workspace.id,
+              planId: freePlan.id,
+              billingCycle: 'MONTHLY',
+              status: 'ACTIVE',
+              currentPeriodStart: now,
+              currentPeriodEnd: periodEnd,
+              notes: 'Plano gratuito automático',
+            },
+          });
+
+          // Workspace com plano free: vê anúncios globais, sem sponsors locais
+          await tx.workspace.update({
+            where: { id: workspace.id },
+            data: {
+              showGlobalSponsors: true,
+              localSponsorsEnabled: false,
+              localSponsorsLimit: 0,
             },
           });
         }
