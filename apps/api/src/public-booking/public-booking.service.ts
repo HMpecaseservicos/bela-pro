@@ -25,13 +25,17 @@ export class PublicBookingService {
     const data = createPublicBookingSchema.parse(input);
     const startAt = new Date(data.startAt);
 
-    // Valida que workspace existe
-    const workspace = await this.prisma.workspace.findUnique({
-      where: { id: data.workspaceId },
+    // Valida que workspace existe e está ativo
+    // SECURITY: Apenas workspaces ativos podem receber novos agendamentos
+    const workspace = await this.prisma.workspace.findFirst({
+      where: {
+        id: data.workspaceId,
+        isActive: true,
+      },
     });
 
     if (!workspace) {
-      throw new BadRequestException('Workspace não encontrado.');
+      throw new BadRequestException('Workspace não encontrado ou inativo.');
     }
 
     // Valida que serviço existe e pertence ao workspace

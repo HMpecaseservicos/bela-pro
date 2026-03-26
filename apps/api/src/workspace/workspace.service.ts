@@ -35,10 +35,14 @@ export class WorkspaceService {
   /**
    * Busca workspace por slug (para página pública)
    * Retorna TODAS as configurações necessárias para renderizar a página
+   * SECURITY: Apenas workspaces ativos podem ser acessados publicamente
    */
   async findBySlug(slug: string) {
-    const workspace = await this.prisma.workspace.findUnique({
-      where: { slug },
+    const workspace = await this.prisma.workspace.findFirst({
+      where: {
+        slug,
+        isActive: true,
+      },
       select: {
         id: true,
         name: true,
@@ -72,7 +76,7 @@ export class WorkspaceService {
     });
 
     if (!workspace) {
-      throw new NotFoundException('Workspace não encontrado.');
+      throw new NotFoundException('Workspace não encontrado ou inativo.');
     }
 
     return workspace;
@@ -81,6 +85,7 @@ export class WorkspaceService {
   /**
    * Lista serviços públicos do workspace
    * Respeita: isActive, showInBooking, sortOrder
+   * SECURITY: Apenas serviços de workspaces ativos são retornados
    */
   async getPublicServices(workspaceId: string) {
     return this.prisma.service.findMany({
@@ -88,6 +93,9 @@ export class WorkspaceService {
         workspaceId,
         isActive: true,
         showInBooking: true,
+        workspace: {
+          isActive: true,
+        },
       },
       select: {
         id: true,

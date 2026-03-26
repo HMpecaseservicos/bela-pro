@@ -25,8 +25,12 @@ export class AvailabilityService {
     date: string, // formato: YYYY-MM-DD
   ): Promise<TimeSlot[]> {
     // 1. Busca workspace para pegar configurações
-    const workspace = await this.prisma.workspace.findUnique({
-      where: { id: workspaceId },
+    // SECURITY: Apenas workspaces ativos podem ter slots disponíveis
+    const workspace = await this.prisma.workspace.findFirst({
+      where: {
+        id: workspaceId,
+        isActive: true,
+      },
       select: {
         minLeadTimeMinutes: true,
         bufferMinutes: true,
@@ -37,7 +41,7 @@ export class AvailabilityService {
     });
 
     if (!workspace) {
-      throw new BadRequestException('Workspace não encontrado.');
+      throw new BadRequestException('Workspace não encontrado ou inativo.');
     }
 
     // 2. Valida que serviço existe e pertence ao workspace
