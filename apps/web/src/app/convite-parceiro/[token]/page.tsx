@@ -772,7 +772,9 @@ export default function SponsorInviteLandingPage() {
                           )}
                         </div>
 
-                        <div style={{ padding: '8px 14px', borderRadius: 8, background: isSelected ? tm.color : 'transparent', border: `1px solid ${isSelected ? tm.color : C.border}`, color: isSelected ? C.bg : C.textMuted, fontSize: 12, fontWeight: 700, textAlign: 'center', transition: 'all 0.3s' }}>
+                        <div
+                          onClick={(e) => { e.stopPropagation(); setForm(prev => ({ ...prev, selectedTier: tierKey })); }}
+                          style={{ padding: '8px 14px', borderRadius: 8, background: isSelected ? tm.color : 'transparent', border: `1px solid ${isSelected ? tm.color : C.border}`, color: isSelected ? C.bg : C.textMuted, fontSize: 12, fontWeight: 700, textAlign: 'center', transition: 'all 0.3s' }}>
                           {isSelected ? '✓ Selecionado' : 'Selecionar'}
                         </div>
                       </div>
@@ -780,6 +782,14 @@ export default function SponsorInviteLandingPage() {
                   })}
                 </div>
               )}
+
+              {/* CTA após cards de plano */}
+              <div style={{ textAlign: 'center', marginBottom: 48 }}>
+                <button onClick={goToForm} className="cta-btn" style={{ fontSize: 17, padding: '22px 48px' }}>
+                  Continuar com {TIER_META[form.selectedTier]?.name || 'plano selecionado'} →
+                </button>
+                <p style={{ color: C.textMuted, fontSize: 12, marginTop: 12 }}>Você poderá revisar tudo antes de confirmar</p>
+              </div>
 
               {/* Value anchoring */}
               <div style={{ maxWidth: 600, margin: '0 auto', padding: '32px', borderRadius: 20, background: C.bgGlass, border: `1px solid ${C.border}` }}>
