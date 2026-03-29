@@ -1,0 +1,2 @@
+-- Migration placeholder: ecommerce_customer_portal
+-- This migration was registered in production but had no schema changes.
