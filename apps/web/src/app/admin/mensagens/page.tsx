@@ -95,7 +95,7 @@ export default function AdminMensagensPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setMessages(data);
+        setMessages(Array.isArray(data) ? data : []);
       }
     } catch {
       setError('Erro ao carregar mensagens');

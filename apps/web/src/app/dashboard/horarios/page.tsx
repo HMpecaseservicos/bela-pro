@@ -87,8 +87,8 @@ export default function HorariosPage() {
         return;
       }
       
-      if (rulesRes.ok) setRules(await rulesRes.json());
-      if (timeOffsRes.ok) setTimeOffs(await timeOffsRes.json());
+      if (rulesRes.ok) { const d = await rulesRes.json(); setRules(Array.isArray(d) ? d : []); }
+      if (timeOffsRes.ok) { const d = await timeOffsRes.json(); setTimeOffs(Array.isArray(d) ? d : []); }
     } catch {
       // Handle error
     }

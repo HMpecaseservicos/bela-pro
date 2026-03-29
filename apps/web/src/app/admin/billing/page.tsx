@@ -80,7 +80,7 @@ export default function AdminBillingSettingsPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setPendingPayments(data);
+        setPendingPayments(Array.isArray(data) ? data : []);
       }
     } catch (err) {
       console.error(err);

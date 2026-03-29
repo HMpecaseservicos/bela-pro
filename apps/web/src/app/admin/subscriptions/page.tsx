@@ -71,7 +71,7 @@ export default function AdminSubscriptionsPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setPlans(data);
+        setPlans(Array.isArray(data) ? data : []);
       }
     } catch (err) {
       console.error(err);
@@ -95,7 +95,7 @@ export default function AdminSubscriptionsPage() {
       if (!res.ok) throw new Error('Erro ao carregar');
 
       const data = await res.json();
-      setSubscriptions(data.subscriptions);
+      setSubscriptions(Array.isArray(data.subscriptions) ? data.subscriptions : []);
       setTotalPages(data.pagination?.totalPages || 1);
     } catch (err) {
       console.error(err);

@@ -185,7 +185,7 @@ export default function AgendaPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setExistingClients(data);
+        setExistingClients(Array.isArray(data) ? data : []);
       }
     } catch (err) {
       console.error('Error fetching clients:', err);
@@ -211,7 +211,7 @@ export default function AgendaPage() {
       if (res.status === 401) { localStorage.removeItem('token'); window.location.href = '/login'; return; }
       if (!res.ok) throw new Error();
       const data = await res.json();
-      setAppointments(data);
+      setAppointments(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching appointments:', err);
     }
@@ -241,7 +241,7 @@ export default function AgendaPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setAvailableServices(data.filter((s: any) => s.isActive));
+        setAvailableServices(Array.isArray(data) ? data.filter((s: any) => s.isActive) : []);
       }
     } catch (err) {
       console.error('Error fetching services:', err);

@@ -68,7 +68,7 @@ export default function EquipePage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setPendingInvites(data);
+        setPendingInvites(Array.isArray(data) ? data : []);
       }
     } catch {
       // Ignore - might not have permission
@@ -103,7 +103,7 @@ export default function EquipePage() {
       }
       if (res.ok) {
         const data = await res.json();
-        setMembers(data);
+        setMembers(Array.isArray(data) ? data : []);
       }
     } catch (err) {
       console.error(err);

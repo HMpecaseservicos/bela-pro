@@ -96,7 +96,8 @@ export default function AdminSettingsPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setAccessLogs(data.items || data || []);
+        const items = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
+        setAccessLogs(items);
       }
     } catch (err) {
       console.error(err);

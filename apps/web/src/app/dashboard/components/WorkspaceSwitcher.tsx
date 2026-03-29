@@ -44,11 +44,12 @@ export default function WorkspaceSwitcher() {
 
       if (res.ok) {
         const data: Workspace[] = await res.json();
-        setWorkspaces(data);
+        const items = Array.isArray(data) ? data : [];
+        setWorkspaces(items);
 
         // Determine current workspace from token payload
         const currentWorkspaceId = localStorage.getItem('workspaceId');
-        const current = data.find(w => w.workspaceId === currentWorkspaceId) || data[0];
+        const current = items.find(w => w.workspaceId === currentWorkspaceId) || items[0];
         setCurrentWorkspace(current);
         
         if (current) {

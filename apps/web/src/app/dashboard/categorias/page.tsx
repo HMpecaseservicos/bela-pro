@@ -64,7 +64,7 @@ export default function CategoriasPage() {
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      setCategories(data);
+      setCategories(Array.isArray(data) ? data : []);
     } catch {
       // keep state
     }

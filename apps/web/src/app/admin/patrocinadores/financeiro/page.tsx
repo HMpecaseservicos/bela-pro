@@ -98,12 +98,13 @@ export default function SponsorFinanceiroPage() {
       }
 
       const data = await res.json();
-      setPayments(data);
+      const items = Array.isArray(data) ? data : [];
+      setPayments(items);
 
       // Calculate stats
-      const totalCents = data.reduce((sum: number, p: PendingPayment) => sum + p.amountCents, 0);
+      const totalCents = items.reduce((sum: number, p: PendingPayment) => sum + p.amountCents, 0);
       setStats({
-        pending: data.length,
+        pending: items.length,
         totalPending: totalCents,
       });
     } catch (err) {

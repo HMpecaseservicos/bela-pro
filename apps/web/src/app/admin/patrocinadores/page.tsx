@@ -243,7 +243,7 @@ export default function PatrocinadoresPage() {
       const res = await fetch(`${API_URL}/admin/sponsors?${params}`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
-      if (res.ok) setSponsors(await res.json());
+      if (res.ok) { const d = await res.json(); setSponsors(Array.isArray(d) ? d : []); }
     } catch { /* ignore */ } finally { setLoading(false); }
   }, [filters]);
 
@@ -255,7 +255,7 @@ export default function PatrocinadoresPage() {
       const res = await fetch(`${API_URL}/admin/sponsor-invites`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
-      if (res.ok) setInvites(await res.json());
+      if (res.ok) { const d = await res.json(); setInvites(Array.isArray(d) ? d : []); }
     } catch { /* ignore */ }
   }, []);
 
@@ -267,7 +267,7 @@ export default function PatrocinadoresPage() {
       const res = await fetch(`${API_URL}/admin/sponsor-contracts`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
-      if (res.ok) setContracts(await res.json());
+      if (res.ok) { const d = await res.json(); setContracts(Array.isArray(d) ? d : []); }
     } catch { /* ignore */ }
   }, []);
 

@@ -103,7 +103,7 @@ export default function PatrocinadoresPage() {
 
       if (sponsorsRes.ok) {
         const data = await sponsorsRes.json();
-        setSponsors(data);
+        setSponsors(Array.isArray(data) ? data : []);
       }
       
       if (settingsRes.ok) {

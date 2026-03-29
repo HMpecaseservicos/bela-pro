@@ -87,7 +87,7 @@ export default function PlanoPage() {
 
       if (plansRes.ok) {
         const plansData = await plansRes.json();
-        setPlans(plansData);
+        setPlans(Array.isArray(plansData) ? plansData : []);
       }
 
       if (subRes.ok) {

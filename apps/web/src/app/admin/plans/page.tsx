@@ -45,7 +45,7 @@ export default function AdminPlansPage() {
       });
       if (!res.ok) throw new Error('Erro ao carregar planos');
       const data = await res.json();
-      setPlans(data);
+      setPlans(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
     } finally {

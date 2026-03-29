@@ -74,7 +74,7 @@ export default function NovaTransacaoPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setCategories(data);
+        setCategories(Array.isArray(data) ? data : []);
       }
     } catch (err) {
       console.error('Erro ao carregar categorias:', err);
@@ -89,7 +89,7 @@ export default function NovaTransacaoPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setClients(data);
+        setClients(Array.isArray(data) ? data : []);
       }
     } catch (err) {
       console.error('Erro ao carregar clientes:', err);

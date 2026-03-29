@@ -42,7 +42,7 @@ export default function AdminUsersPage() {
 
       const data = await res.json();
       // API returns { data: users[], pagination: {...} }
-      const usersData = data.data || data.users || data;
+      const usersData = Array.isArray(data.data) ? data.data : Array.isArray(data.users) ? data.users : Array.isArray(data) ? data : [];
       setUsers(usersData.map((u: any) => ({
         ...u,
         // Get first workspace from memberships
