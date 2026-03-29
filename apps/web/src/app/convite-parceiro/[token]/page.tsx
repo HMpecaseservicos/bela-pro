@@ -111,8 +111,9 @@ const DURATION_OPTIONS = [
 // CSS
 // =============================================================================
 
+const FONT_URL = 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&display=swap';
+
 const GLOBAL_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
@@ -314,6 +315,7 @@ export default function SponsorInviteLandingPage() {
   const [step, setStep] = useState<'landing' | 'tier' | 'form' | 'contract' | 'payment' | 'success'>('landing');
   const [tierDetails, setTierDetails] = useState<Record<string, TierDetail> | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [result, setResult] = useState<{ contractNumber: string; isDiamond: boolean; pendingPayment?: boolean; payment?: PaymentInfo; paymentId?: string } | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [contractAccepted, setContractAccepted] = useState(false);
@@ -335,6 +337,8 @@ export default function SponsorInviteLandingPage() {
     acceptedTerms: false,
     signedByName: '',
   });
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     async function load() {
@@ -490,10 +494,10 @@ export default function SponsorInviteLandingPage() {
   const currentTierDetail = tierDetails?.[form.selectedTier];
   const isUniversal = invite.isUniversal;
   const recipientFirst = invite.contactName ? invite.contactName.split(' ')[0] : '';
-  const daysLeft = Math.max(0, Math.ceil((new Date(invite.expiresAt).getTime() - Date.now()) / 86400000));
-  const contractStartDate = new Date();
-  const contractEndDate = new Date();
-  contractEndDate.setMonth(contractEndDate.getMonth() + form.durationMonths);
+  const daysLeft = mounted ? Math.max(0, Math.ceil((new Date(invite.expiresAt).getTime() - Date.now()) / 86400000)) : 0;
+  const contractStartDate = mounted ? new Date() : new Date(0);
+  const contractEndDate = mounted ? new Date() : new Date(0);
+  if (mounted) contractEndDate.setMonth(contractEndDate.getMonth() + form.durationMonths);
 
   const scrollToPlans = () => {
     document.getElementById('plans-section')?.scrollIntoView({ behavior: 'smooth' });
@@ -538,6 +542,7 @@ export default function SponsorInviteLandingPage() {
   // ==========================================================================
   return (
     <div style={{ minHeight: '100vh', background: C.bg, color: C.textPrimary, fontFamily: FONT.sans, overflowX: 'hidden' }}>
+      <link rel="stylesheet" href={FONT_URL} />
       <style>{GLOBAL_CSS}</style>
 
       {/* Ambient */}

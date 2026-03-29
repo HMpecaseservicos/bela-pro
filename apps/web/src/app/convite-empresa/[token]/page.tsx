@@ -51,8 +51,9 @@ const FONT = {
 // CSS
 // =============================================================================
 
+const FONT_URL = 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap';
+
 const GLOBAL_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; }
 
@@ -545,6 +546,7 @@ export default function BusinessInviteLandingPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: FONT.sans, color: C.textPrimary, overflowX: 'hidden' }}>
+      <link rel="stylesheet" href={FONT_URL} />
       <style>{GLOBAL_CSS}</style>
 
       {/* ===== NAV STICKY ===== */}
