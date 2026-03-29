@@ -3,6 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { getImageUrl } from '@/lib/utils';
 
+interface ServiceCategory {
+  id: string;
+  name: string;
+  iconEmoji: string | null;
+  color: string | null;
+}
+
 interface Service {
   id: string;
   name: string;
@@ -13,6 +20,8 @@ interface Service {
   imageUrl: string | null;
   badgeText: string | null;
   categoryTag: string | null;
+  categoryId: string | null;
+  category: ServiceCategory | null;
 }
 
 const defaultForm = {
@@ -22,7 +31,7 @@ const defaultForm = {
   priceCents: 5000,
   imageUrl: '',
   badgeText: '',
-  categoryTag: '',
+  categoryId: '',
 };
 
 const THEME = {
@@ -38,6 +47,7 @@ const THEME = {
 
 export default function ServicosPage() {
   const [services, setServices] = useState<Service[]>([]);
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -57,7 +67,22 @@ export default function ServicosPage() {
 
   useEffect(() => {
     fetchServices();
+    fetchCategories();
   }, []);
+
+  async function fetchCategories() {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${API_URL}/service-categories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setCategories(data);
+    } catch {
+      // keep state
+    }
+  }
 
   async function fetchServices() {
     const token = localStorage.getItem('token');
@@ -90,7 +115,7 @@ export default function ServicosPage() {
           priceCents: form.priceCents,
           imageUrl: form.imageUrl || null,
           badgeText: form.badgeText || null,
-          categoryTag: form.categoryTag || null,
+          categoryId: form.categoryId || null,
         }),
       });
       setShowForm(false);
@@ -157,7 +182,7 @@ export default function ServicosPage() {
       priceCents: service.priceCents,
       imageUrl: service.imageUrl || '',
       badgeText: service.badgeText || '',
-      categoryTag: service.categoryTag || '',
+      categoryId: service.categoryId || '',
     });
     setEditingId(service.id);
     setShowForm(true);
@@ -248,6 +273,23 @@ export default function ServicosPage() {
                 <div>
                   <h3 style={{ margin: 0, color: THEME.textPrimary, fontSize: 18, fontWeight: 700 }}>{service.name}</h3>
                   {service.description && <p style={{ margin: '6px 0 0', color: THEME.textSecondary, fontSize: 12 }}>{service.description}</p>}
+                  {service.category && (
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      marginTop: 6,
+                      padding: '3px 8px',
+                      borderRadius: 6,
+                      background: service.category.color || THEME.border,
+                      color: service.category.color ? '#fff' : THEME.textSecondary,
+                      fontSize: 11,
+                      fontWeight: 600,
+                    }}>
+                      {service.category.iconEmoji && <span>{service.category.iconEmoji}</span>}
+                      {service.category.name}
+                    </span>
+                  )}
                 </div>
                 <span
                   style={{
@@ -413,7 +455,18 @@ export default function ServicosPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <Field label="Categoria">
-                  <Input value={form.categoryTag} onChange={(value) => setForm({ ...form, categoryTag: value })} placeholder="Ex: Cabelo" />
+                  <select
+                    value={form.categoryId}
+                    onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+                    style={{ width: '100%', border: `1px solid ${THEME.border}`, borderRadius: 10, padding: '11px 12px', background: '#fff', color: THEME.textPrimary, cursor: 'pointer' }}
+                  >
+                    <option value="">Sem categoria</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.iconEmoji ? `${cat.iconEmoji} ` : ''}{cat.name}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
                 <Field label="Badge">
                   <Input value={form.badgeText} onChange={(value) => setForm({ ...form, badgeText: value })} placeholder="Ex: Destaque" />

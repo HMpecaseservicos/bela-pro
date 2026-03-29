@@ -47,6 +47,15 @@ export class WorkspaceController {
   }
 
   /**
+   * GET /workspace/:workspaceId/categories
+   * Público - lista categorias de serviços para agendamento
+   */
+  @Get(':workspaceId/categories')
+  async getCategories(@Param('workspaceId') workspaceId: string) {
+    return this.workspaceService.getPublicCategories(workspaceId);
+  }
+
+  /**
    * GET /workspace/:workspaceId
    * Autenticado - retorna dados completos para o painel admin
    * SECURITY: Valida que workspaceId do URL corresponde ao do token

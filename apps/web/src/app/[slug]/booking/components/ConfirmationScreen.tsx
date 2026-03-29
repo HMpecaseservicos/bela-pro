@@ -6,7 +6,7 @@ import { formatPrice, formatDateFull, formatTime, getServiceEmoji } from '../uti
 
 interface ConfirmationScreenProps {
   workspace: Workspace;
-  service: Service;
+  services: Service[];
   selectedDate: string;
   selectedSlot: string;
   primaryColor?: string;
@@ -15,13 +15,14 @@ interface ConfirmationScreenProps {
 
 export function ConfirmationScreen({
   workspace,
-  service,
+  services,
   selectedDate,
   selectedSlot,
   primaryColor = COLORS.primaryFallback,
   onNewBooking,
 }: ConfirmationScreenProps) {
-  const emoji = getServiceEmoji(service.name);
+  const emoji = services.length === 1 ? getServiceEmoji(services[0].name) : '✨';
+  const totalPrice = services.reduce((sum, s) => sum + s.priceCents, 0);
   const gradientBg = `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColorSimple(primaryColor, -40)} 100%)`;
   const address = workspace.profile?.addressLine;
 
@@ -107,11 +108,11 @@ export function ConfirmationScreen({
             marginBottom: 24,
           }}
         >
-          {/* Serviço */}
+          {/* Serviço(s) */}
           <div
             style={{
               display: 'flex',
-              alignItems: 'center',
+              alignItems: 'flex-start',
               gap: 10,
               marginBottom: 16,
               paddingBottom: 16,
@@ -119,7 +120,7 @@ export function ConfirmationScreen({
             }}
           >
             <span style={{ fontSize: 24 }}>{emoji}</span>
-            <div>
+            <div style={{ flex: 1 }}>
               <p
                 style={{
                   fontSize: 16,
@@ -128,8 +129,17 @@ export function ConfirmationScreen({
                   margin: 0,
                 }}
               >
-                {service.name}
+                {services.length === 1 ? services[0].name : `${services.length} serviços`}
               </p>
+              {services.length > 1 && (
+                <div style={{ marginTop: 4 }}>
+                  {services.map(s => (
+                    <p key={s.id} style={{ fontSize: 13, color: COLORS.textSecondary, margin: '2px 0' }}>
+                      • {s.name}
+                    </p>
+                  ))}
+                </div>
+              )}
               <p
                 style={{
                   fontSize: 18,
@@ -138,7 +148,7 @@ export function ConfirmationScreen({
                   margin: '4px 0 0',
                 }}
               >
-                {formatPrice(service.priceCents)}
+                {formatPrice(totalPrice)}
               </p>
             </div>
           </div>
@@ -175,9 +185,11 @@ export function ConfirmationScreen({
           {/* Adicionar ao calendário (Google Calendar) */}
           <button
             onClick={() => {
+              const totalDuration = services.reduce((sum, s) => sum + s.durationMinutes, 0);
               const startDate = new Date(selectedSlot);
-              const endDate = new Date(startDate.getTime() + service.durationMinutes * 60000);
-              const title = encodeURIComponent(`${service.name} - ${workspace.brandName || workspace.name}`);
+              const endDate = new Date(startDate.getTime() + totalDuration * 60000);
+              const serviceNames = services.map(s => s.name).join(' + ');
+              const title = encodeURIComponent(`${serviceNames} - ${workspace.brandName || workspace.name}`);
               const details = encodeURIComponent(`Agendamento via BELA PRO`);
               const location = encodeURIComponent(address || '');
               const dates = `${startDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z/${endDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z`;
@@ -207,6 +219,26 @@ export function ConfirmationScreen({
             <span>📆</span>
             Adicionar ao calendário
           </button>
+
+          {/* Link para gerenciar agendamento */}
+          <a
+            href={`/${workspace.slug}/gerenciar`}
+            style={{
+              width: '100%',
+              padding: 14,
+              background: COLORS.surface,
+              color: COLORS.textSecondary,
+              border: `1px solid ${COLORS.border}`,
+              borderRadius: RADIUS.md,
+              fontSize: 14,
+              fontWeight: 500,
+              textDecoration: 'none',
+              textAlign: 'center',
+              display: 'block',
+            }}
+          >
+            Precisa remarcar? Gerenciar agendamento
+          </a>
 
           {/* Novo agendamento */}
           <button

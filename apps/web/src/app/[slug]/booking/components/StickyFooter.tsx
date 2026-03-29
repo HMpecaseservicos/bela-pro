@@ -5,7 +5,9 @@ import { CTA_LABELS, COLORS, RADIUS } from '../constants';
 import { formatPrice, getServiceEmoji } from '../utils';
 
 interface StickyFooterProps {
-  selectedService: Service | null;
+  selectedServices: Service[];
+  totalDuration: number;
+  totalPrice: number;
   currentStep: BookingStep;
   canProceed: boolean;
   loading: boolean;
@@ -14,20 +16,24 @@ interface StickyFooterProps {
 }
 
 export function StickyFooter({
-  selectedService,
+  selectedServices,
+  totalDuration,
+  totalPrice,
   currentStep,
   canProceed,
   loading,
   primaryColor = COLORS.primaryFallback,
   onContinue,
 }: StickyFooterProps) {
-  // Não mostrar na etapa 1 até selecionar um serviço
-  // Na etapa 4, o botão está no formulário
-  if (!selectedService || currentStep === 4) {
+  // Não mostrar na etapa 1 (botão inline agora) ou na etapa 4
+  if (selectedServices.length === 0 || currentStep === 1 || currentStep === 4) {
     return null;
   }
 
-  const emoji = getServiceEmoji(selectedService.name);
+  const emoji = selectedServices.length === 1 ? getServiceEmoji(selectedServices[0].name) : '✨';
+  const serviceLabel = selectedServices.length === 1 
+    ? selectedServices[0].name 
+    : `${selectedServices.length} serviços`;
   const ctaLabel = CTA_LABELS[currentStep] || 'Continuar';
   const gradientBg = `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColorSimple(primaryColor, -40)} 100%)`;
 
@@ -58,15 +64,20 @@ export function StickyFooter({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 18 }}>{emoji}</span>
-            <span 
-              style={{ 
-                fontSize: 14, 
-                fontWeight: 600, 
-                color: COLORS.textPrimary,
-              }}
-            >
-              {selectedService.name}
-            </span>
+            <div>
+              <span 
+                style={{ 
+                  fontSize: 14, 
+                  fontWeight: 600, 
+                  color: COLORS.textPrimary,
+                }}
+              >
+                {serviceLabel}
+              </span>
+              <span style={{ fontSize: 12, color: COLORS.textSecondary, marginLeft: 8 }}>
+                • {totalDuration} min
+              </span>
+            </div>
           </div>
           <span 
             style={{ 
@@ -75,7 +86,7 @@ export function StickyFooter({
               color: primaryColor,
             }}
           >
-            {formatPrice(selectedService.priceCents)}
+            {formatPrice(totalPrice)}
           </span>
         </div>
 

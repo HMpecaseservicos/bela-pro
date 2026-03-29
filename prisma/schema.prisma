@@ -155,11 +155,12 @@ model Workspace {
   localSponsorsEnabled Boolean @default(false) // Pode criar sponsors locais (requer plano pago)
   localSponsorsLimit   Int     @default(0)     // Limite de sponsors locais (0=ilimitado se habilitado)
 
-  memberships      Membership[]
-  inviteTokens     InviteToken[]
-  profile          ProfessionalProfile?
-  services         Service[]
-  bundles          ServiceBundle[]
+  memberships        Membership[]
+  inviteTokens       InviteToken[]
+  profile            ProfessionalProfile?
+  services           Service[]
+  serviceCategories  ServiceCategory[]
+  bundles            ServiceBundle[]
   clients          Client[]
   appointments     Appointment[]
   scheduleRules    ScheduleRule[]
@@ -183,6 +184,9 @@ model Workspace {
   // Patrocinadores locais do workspace
   localSponsors Sponsor[]
 
+  // Pagamentos PIX do workspace
+  payments Payment[]
+
   // Origem do convite (se veio de um convite)
   inviteSource BusinessInvite? @relation("InviteToWorkspace")
 }
@@ -200,6 +204,11 @@ model User {
 
   // Super Admin: acesso global a todos os workspaces
   isSuperAdmin Boolean @default(false)
+
+  // Two-Factor Authentication (2FA/TOTP)
+  twoFactorEnabled Boolean  @default(false)
+  twoFactorSecret  String?  // TOTP secret (encrypted)
+  twoFactorBackupCodes String[] // Backup codes (hashed)
 
   memberships Membership[]
   auditLogs   AuditLog[]
@@ -286,7 +295,11 @@ model Service {
   // Campos premium para exibição
   imageUrl    String? // Foto real do serviço
   badgeText   String? // Badge ("Mais pedido", "Novidade")
-  categoryTag String? // Categoria ("sobrancelha", "unhas")
+  categoryTag String? // DEPRECATED: migrar para categoryId
+
+  // Categoria do serviço
+  categoryId String?
+  category   ServiceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   appointmentServices AppointmentService[]
   bundleItems         ServiceBundleItem[]
@@ -294,6 +307,26 @@ model Service {
   @@unique([workspaceId, name])
   @@index([workspaceId, isActive])
   @@index([workspaceId, showInBooking, sortOrder])
+}
+
+model ServiceCategory {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  name      String  // "Cabelo", "Unhas", "Sobrancelha"
+  iconEmoji String? // "💇", "💅", "👁️"
+  color     String? // Cor hex opcional para destaque
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+
+  services Service[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, sortOrder])
 }
 
 model ServiceBundle {
@@ -413,6 +446,9 @@ model Payment {
   appointmentId String      @unique
   appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
 
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
   // Valores
   amountCents       Int // Valor a pagar em centavos
   serviceTotalCents Int // Valor total do serviço (referência)
@@ -423,6 +459,7 @@ model Payment {
   // PIX (cópia e cola gerado)
   pixCode     String? @db.Text // Código PIX "copia e cola" ou payload BR Code
   pixQrBase64 String? @db.Text // QR Code em base64 (opcional)
+  pixTxId     String? @unique  // ID de transação PIX (usado no webhook)
 
   // Controle de expiração
   expiresAt DateTime // Quando o pagamento expira
@@ -431,11 +468,16 @@ model Payment {
   paidAt      DateTime? // Quando foi confirmado
   confirmedBy String? // ID do usuário que confirmou
 
+  // Webhook PIX
+  webhookReceivedAt DateTime? // Quando o webhook PIX foi recebido
+  webhookPayload    String? @db.Text // Payload recebido do webhook (para auditoria)
+
   // Notas
   notes String? // Observações (ex: "comprovante recebido via WhatsApp")
 
   @@index([status])
   @@index([expiresAt])
+  @@index([workspaceId])
 }
 
 model ScheduleRule {
@@ -1463,3 +1505,4 @@ model AdminMessageDismissal {
   @@unique([messageId, workspaceId])
   @@index([workspaceId])
 }
+

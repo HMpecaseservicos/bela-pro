@@ -159,6 +159,12 @@ export class BusinessInvitesController {
     return this.invitesService.cancel(id);
   }
 
+  @Delete(':id/permanent')
+  @UseGuards(JwtAuthGuard, SuperAdminGuard)
+  async deletePermanent(@Param('id') id: string) {
+    return this.invitesService.deletePermanent(id);
+  }
+
   @Post(':id/reactivate')
   @UseGuards(JwtAuthGuard, SuperAdminGuard)
   async reactivate(@Param('id') id: string, @Body() body: { expiresInDays?: number }) {

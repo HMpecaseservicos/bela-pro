@@ -81,6 +81,7 @@ export class WorkspaceService {
   /**
    * Lista serviços públicos do workspace
    * Respeita: isActive, showInBooking, sortOrder
+   * Inclui categoria para agrupamento no frontend
    */
   async getPublicServices(workspaceId: string) {
     return this.prisma.service.findMany({
@@ -98,6 +99,40 @@ export class WorkspaceService {
         imageUrl: true,
         badgeText: true,
         categoryTag: true,
+        categoryId: true,
+        category: {
+          select: {
+            id: true,
+            name: true,
+            iconEmoji: true,
+            color: true,
+            sortOrder: true,
+          },
+        },
+      },
+      orderBy: [
+        { category: { sortOrder: 'asc' } },
+        { sortOrder: 'asc' },
+        { name: 'asc' },
+      ],
+    });
+  }
+
+  /**
+   * Lista categorias públicas do workspace (para a página de booking)
+   */
+  async getPublicCategories(workspaceId: string) {
+    return this.prisma.serviceCategory.findMany({
+      where: {
+        workspaceId,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        iconEmoji: true,
+        color: true,
+        sortOrder: true,
       },
       orderBy: [
         { sortOrder: 'asc' },

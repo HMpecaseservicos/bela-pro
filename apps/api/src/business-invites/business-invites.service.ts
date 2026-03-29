@@ -403,6 +403,23 @@ export class BusinessInvitesService {
   }
 
   /**
+   * Exclui permanentemente um convite (apenas se CANCELLED ou EXPIRED)
+   */
+  async deletePermanent(id: string) {
+    const invite = await this.findById(id);
+
+    if (!['CANCELLED', 'EXPIRED'].includes(invite.status)) {
+      throw new BadRequestException('Apenas convites cancelados ou expirados podem ser excluídos permanentemente');
+    }
+
+    await this.prisma.businessInvite.delete({
+      where: { id },
+    });
+
+    return { message: 'Convite excluído permanentemente' };
+  }
+
+  /**
    * Reativa um convite expirado/cancelado
    */
   async reactivate(id: string, expiresInDays: number = 7) {

@@ -16,7 +16,7 @@ interface InviteData {
   focusType: 'YOUTH_BEAUTY' | 'INCOME_GROWTH' | 'RECOGNITION';
   personalMessage?: string;
   expiresAt: string;
-  trialDays: number; // Dias de trial gratuito
+  trialDays: number;
 }
 
 // =============================================================================
@@ -38,6 +38,8 @@ const C = {
   borderGold: 'rgba(201,165,92,0.25)',
   heroGradient: 'radial-gradient(ellipse 120% 80% at 50% 0%, rgba(201,165,92,0.12) 0%, transparent 60%)',
   sectionAlt: '#080808',
+  dangerText: '#f87171',
+  successText: '#5fba7d',
 };
 
 const FONT = {
@@ -46,11 +48,13 @@ const FONT = {
 };
 
 // =============================================================================
-// CSS ANIMATIONS (injected once)
+// CSS
 // =============================================================================
 
 const GLOBAL_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; }
 
   @keyframes fadeUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -60,6 +64,7 @@ const GLOBAL_CSS = `
   @keyframes spin { to { transform: rotate(360deg); } }
   @keyframes scaleIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
   @keyframes glowPulse { 0%,100% { box-shadow: 0 0 30px rgba(201,165,92,0.15); } 50% { box-shadow: 0 0 60px rgba(201,165,92,0.3); } }
+  @keyframes ctaPulse { 0%,100% { box-shadow: 0 8px 32px rgba(201,165,92,0.3); } 50% { box-shadow: 0 8px 48px rgba(201,165,92,0.5); } }
 
   .anim-up { animation: fadeUp 0.8s ease both; }
   .anim-up-d1 { animation: fadeUp 0.8s ease 0.1s both; }
@@ -95,20 +100,20 @@ const GLOBAL_CSS = `
     text-decoration: none;
     letter-spacing: 0.3px;
     transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
-    box-shadow: 0 8px 32px rgba(201,165,92,0.3);
+    animation: ctaPulse 3s ease-in-out infinite;
   }
   .cta-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 12px 48px rgba(201,165,92,0.45);
   }
 
-  .cta-btn-outline {
+  .cta-btn-secondary {
     display: inline-flex;
     align-items: center;
     gap: 10px;
     padding: 16px 36px;
     background: transparent;
-    border: 1px solid rgba(201,165,92,0.35);
+    border: 1.5px solid rgba(201,165,92,0.35);
     border-radius: 60px;
     color: #c9a55c;
     font-weight: 600;
@@ -118,14 +123,14 @@ const GLOBAL_CSS = `
     text-decoration: none;
     transition: all 0.3s ease;
   }
-  .cta-btn-outline:hover {
+  .cta-btn-secondary:hover {
     background: rgba(201,165,92,0.08);
     border-color: rgba(201,165,92,0.5);
   }
 
   .feature-card {
     position: relative;
-    padding: 40px 32px;
+    padding: 36px 28px;
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(255,255,255,0.06);
     border-radius: 20px;
@@ -135,9 +140,7 @@ const GLOBAL_CSS = `
   .feature-card::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
+    top: 0; left: 0; right: 0;
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(201,165,92,0.3), transparent);
     opacity: 0;
@@ -151,7 +154,7 @@ const GLOBAL_CSS = `
   .feature-card:hover::before { opacity: 1; }
 
   .testimonial-card {
-    padding: 36px;
+    padding: 32px;
     background: rgba(255,255,255,0.03);
     border: 1px solid rgba(255,255,255,0.06);
     border-radius: 20px;
@@ -162,108 +165,131 @@ const GLOBAL_CSS = `
     background: rgba(255,255,255,0.05);
   }
 
-  .stat-item { text-align: center; }
+  .loss-card {
+    padding: 28px;
+    background: rgba(248,113,113,0.04);
+    border: 1px solid rgba(248,113,113,0.12);
+    border-radius: 16px;
+    transition: all 0.3s ease;
+  }
+  .loss-card:hover {
+    background: rgba(248,113,113,0.07);
+    border-color: rgba(248,113,113,0.2);
+  }
+
+  .compare-bad { background: rgba(248,113,113,0.04); border: 1px solid rgba(248,113,113,0.1); }
+  .compare-good { background: rgba(95,186,125,0.04); border: 1px solid rgba(95,186,125,0.15); }
+
+  .faq-item {
+    padding: 24px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  .faq-item:hover {
+    background: rgba(255,255,255,0.04);
+    border-color: rgba(201,165,92,0.15);
+  }
 
   .nav-fixed {
     position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    padding: 16px 32px;
+    padding: 14px 24px;
     display: flex; justify-content: space-between; align-items: center;
-    background: rgba(10,10,10,0.8);
+    background: rgba(10,10,10,0.85);
     backdrop-filter: blur(20px);
     border-bottom: 1px solid rgba(255,255,255,0.05);
-    transition: all 0.3s;
+  }
+
+  .mobile-cta-bar {
+    display: none;
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+    padding: 12px 16px;
+    background: rgba(10,10,10,0.95);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    justify-content: center;
   }
 
   @media (max-width: 768px) {
     .hero-grid { grid-template-columns: 1fr !important; text-align: center; }
     .hero-grid > div:first-child { align-items: center; }
     .features-grid { grid-template-columns: 1fr !important; }
-    .stats-grid { grid-template-columns: 1fr 1fr !important; }
+    .stats-grid { grid-template-columns: 1fr 1fr 1fr !important; gap: 16px !important; }
     .testimonials-grid { grid-template-columns: 1fr !important; }
-    .demo-grid { grid-template-columns: 1fr !important; }
-    .cta-btn { padding: 18px 36px; font-size: 15px; }
+    .loss-grid { grid-template-columns: 1fr !important; }
+    .compare-grid { grid-template-columns: 1fr !important; }
+    .cta-btn { padding: 18px 32px; font-size: 15px; }
     .final-cta-row { flex-direction: column !important; }
+    .mobile-cta-bar { display: flex; }
+    .hide-mobile { display: none !important; }
+    .nav-cta { display: none !important; }
+    .price-compare { flex-direction: column !important; }
+    body { padding-bottom: 70px; }
   }
 `;
 
 // =============================================================================
-// ANIMATED MOCKUP — Dashboard Preview (glass style)
+// DASHBOARD MOCKUP
 // =============================================================================
 
 function DashboardMockup() {
   return (
-    <div style={{
-      position: 'relative',
-      width: '100%',
-      maxWidth: 480,
-      animation: 'float 6s ease-in-out infinite',
-    }}>
-      {/* Main window */}
+    <div style={{ position: 'relative', width: '100%', maxWidth: 440 }}>
       <div style={{
         background: 'rgba(255,255,255,0.05)',
         border: `1px solid ${C.border}`,
-        borderRadius: 16,
-        overflow: 'hidden',
+        borderRadius: 16, overflow: 'hidden',
         backdropFilter: 'blur(20px)',
       }}>
-        {/* Title bar */}
         <div style={{
-          padding: '12px 16px',
-          borderBottom: `1px solid ${C.border}`,
-          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '10px 14px', borderBottom: `1px solid ${C.border}`,
+          display: 'flex', alignItems: 'center', gap: 6,
         }}>
-          <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff5f57' }} />
-          <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#febb2e' }} />
-          <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#28c840' }} />
-          <div style={{ flex: 1, textAlign: 'center', fontSize: 11, color: C.textMuted, fontFamily: FONT.sans }}>
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff5f57' }} />
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#febb2e' }} />
+          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#28c840' }} />
+          <div style={{ flex: 1, textAlign: 'center', fontSize: 10, color: C.textMuted, fontFamily: FONT.sans }}>
             app.belapro.com.br
           </div>
         </div>
-
-        {/* Dashboard content */}
-        <div style={{ padding: 20 }}>
-          {/* Metrics row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
+        <div style={{ padding: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 16 }}>
             {[
               { label: 'Hoje', val: '8', sub: 'agendamentos', color: C.gold },
               { label: 'Receita', val: 'R$ 1.240', sub: 'hoje', color: '#5fba7d' },
               { label: 'Clientes', val: '156', sub: 'ativos', color: '#6b8dde' },
             ].map((m, i) => (
               <div key={i} style={{
-                padding: '14px 12px', borderRadius: 12,
+                padding: '12px 10px', borderRadius: 10,
                 background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`,
               }}>
-                <div style={{ fontSize: 10, color: C.textMuted, fontFamily: FONT.sans, marginBottom: 4 }}>{m.label}</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: m.color, fontFamily: FONT.serif }}>{m.val}</div>
-                <div style={{ fontSize: 9, color: C.textMuted, marginTop: 2 }}>{m.sub}</div>
+                <div style={{ fontSize: 9, color: C.textMuted, fontFamily: FONT.sans, marginBottom: 3 }}>{m.label}</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: m.color, fontFamily: FONT.serif }}>{m.val}</div>
+                <div style={{ fontSize: 8, color: C.textMuted, marginTop: 2 }}>{m.sub}</div>
               </div>
             ))}
           </div>
-
-          {/* Appointments preview */}
-          <div style={{ fontSize: 11, color: C.textMuted, marginBottom: 10, fontFamily: FONT.sans, fontWeight: 500, letterSpacing: 1 }}>
+          <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 8, fontFamily: FONT.sans, fontWeight: 500, letterSpacing: 1 }}>
             PRÓXIMOS HORÁRIOS
           </div>
           {[
-            { t: '09:00', n: 'Ana Paula', s: 'Atendimento', status: true },
-            { t: '10:30', n: 'Mariana S.', s: 'Procedimento', status: true },
-            { t: '13:00', n: 'Juliana M.', s: 'Consulta', status: false },
-            { t: '15:00', n: 'Beatriz R.', s: 'Retorno', status: true },
+            { t: '09:00', n: 'Ana Paula', s: 'Unha em Gel' },
+            { t: '10:30', n: 'Mariana S.', s: 'Extensão de Cílios' },
+            { t: '13:00', n: 'Juliana M.', s: 'Manicure + Pedicure' },
           ].map((a, i) => (
             <div key={i} style={{
-              display: 'flex', alignItems: 'center', gap: 12,
-              padding: '10px 0',
-              borderBottom: i < 3 ? `1px solid ${C.border}` : 'none',
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '8px 0',
+              borderBottom: i < 2 ? `1px solid ${C.border}` : 'none',
             }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: C.gold, width: 42, fontFamily: FONT.sans }}>{a.t}</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: C.gold, width: 38, fontFamily: FONT.sans }}>{a.t}</span>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 500, color: C.textPrimary, fontFamily: FONT.sans }}>{a.n}</div>
-                <div style={{ fontSize: 11, color: C.textMuted }}>{a.s}</div>
+                <div style={{ fontSize: 12, fontWeight: 500, color: C.textPrimary, fontFamily: FONT.sans }}>{a.n}</div>
+                <div style={{ fontSize: 10, color: C.textMuted }}>{a.s}</div>
               </div>
-              <div style={{
-                width: 7, height: 7, borderRadius: '50%',
-                background: a.status ? '#5fba7d' : '#f5a623',
-              }} />
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#5fba7d' }} />
             </div>
           ))}
         </div>
@@ -271,127 +297,149 @@ function DashboardMockup() {
 
       {/* Floating notification */}
       <div style={{
-        position: 'absolute', top: -16, right: -16,
+        position: 'absolute', top: -14, right: -14,
         background: 'rgba(17,17,17,0.95)', border: `1px solid ${C.borderGold}`,
-        borderRadius: 14, padding: '12px 18px',
-        display: 'flex', alignItems: 'center', gap: 10,
+        borderRadius: 12, padding: '10px 14px',
+        display: 'flex', alignItems: 'center', gap: 8,
         backdropFilter: 'blur(12px)',
         animation: 'glowPulse 3s ease-in-out infinite',
       }}>
         <div style={{
-          width: 32, height: 32, borderRadius: '50%',
+          width: 28, height: 28, borderRadius: '50%',
           background: 'rgba(95,186,125,0.15)', border: '1px solid rgba(95,186,125,0.3)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12,
         }}>✓</div>
         <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: C.textPrimary, fontFamily: FONT.sans }}>Agendamento confirmado</div>
-          <div style={{ fontSize: 10, color: C.textMuted }}>Ana Paula • agora</div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.textPrimary, fontFamily: FONT.sans }}>Agendamento confirmado</div>
+          <div style={{ fontSize: 9, color: C.textMuted }}>Ana Paula • agora</div>
         </div>
       </div>
 
-      {/* Floating revenue */}
+      {/* Floating Pix */}
       <div style={{
-        position: 'absolute', bottom: 20, left: -24,
+        position: 'absolute', bottom: 16, left: -20,
         background: 'rgba(17,17,17,0.95)', border: `1px solid ${C.border}`,
-        borderRadius: 14, padding: '14px 18px',
+        borderRadius: 12, padding: '10px 14px',
         backdropFilter: 'blur(12px)',
         animation: 'float 5s ease-in-out 1s infinite',
       }}>
-        <div style={{ fontSize: 10, color: C.textMuted, fontFamily: FONT.sans, marginBottom: 4 }}>Receita mensal</div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: '#5fba7d', fontFamily: FONT.serif }}>R$ 8.450</div>
-        <div style={{ fontSize: 10, color: C.gold, marginTop: 2 }}>↑ 23% vs mês anterior</div>
+        <div style={{ fontSize: 9, color: C.textMuted, fontFamily: FONT.sans, marginBottom: 3 }}>Pix recebido</div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: '#5fba7d', fontFamily: FONT.serif }}>R$ 120,00</div>
+        <div style={{ fontSize: 9, color: C.gold, marginTop: 2 }}>Sinal automático</div>
       </div>
     </div>
   );
 }
 
 // =============================================================================
-// FEATURES DATA
+// DATA
 // =============================================================================
 
 const FEATURES = [
   {
     icon: '📅',
     title: 'Agenda Inteligente',
-    desc: 'Visão completa do seu dia, semana e mês. Agendamentos, confirmações e cancelamentos em tempo real.',
+    desc: 'Veja seu dia, semana e mês numa tela só. Arrastar horário, confirmar, bloquear — tudo em 1 toque.',
     details: ['Arrastar e reorganizar', 'Confirmação automática', 'Bloqueio de horários'],
   },
   {
     icon: '🔗',
     title: 'Link de Agendamento',
-    desc: 'Seus clientes agendam online 24h. Compartilhe no Instagram, WhatsApp e redes sociais.',
-    details: ['Página personalizada', 'Serviços com preço e duração', 'Integração com WhatsApp'],
+    desc: 'Coloque na bio do Instagram e os clientes agendam sozinhos, 24h. Acabou o "manda mensagem pra agendar".',
+    details: ['Página com sua marca', 'Serviços com preço e duração', 'Agenda em tempo real'],
+  },
+  {
+    icon: '💳',
+    title: 'Pix Automático',
+    desc: 'Cobre sinal ou valor total via Pix direto pelo app. QR Code instantâneo. Sem mais "vou mandar o comprovante".',
+    details: ['QR Code na hora', 'Sinal configurável', 'Confirmação automática'],
+  },
+  {
+    icon: '🤖',
+    title: 'Robô no WhatsApp',
+    desc: 'Confirma horários, lembra clientes e responde dúvidas 24h. Funciona até quando a cliente agenda às 23h.',
+    details: ['Lembretes automáticos', 'Respostas inteligentes', 'Zero trabalho manual'],
   },
   {
     icon: '👥',
     title: 'Gestão de Clientes',
-    desc: 'Cadastro completo com histórico de atendimentos e classificação automática.',
-    details: ['Histórico completo', 'Notas e observações', 'Classificação automática'],
+    desc: 'Histórico completo: quando veio, o que fez, quanto pagou. Descubra quem é VIP e quem sumiu.',
+    details: ['Histórico completo', 'Notas por cliente', 'Classificação automática'],
   },
   {
     icon: '💰',
     title: 'Controle Financeiro',
-    desc: 'Receitas, despesas e lucro real em um painel visual. Gráficos e relatórios que facilitam decisões.',
-    details: ['Receitas automáticas', 'Gráficos de evolução', 'Categorias personalizadas'],
-  },
-  {
-    icon: '💳',
-    title: 'Pagamento via PIX',
-    desc: 'Receba sinal ou pagamento total via PIX direto da plataforma. QR Code gerado automaticamente.',
-    details: ['QR Code instantâneo', 'Sinal configurável', 'Confirmação automática'],
-  },
-  {
-    icon: '🤖',
-    title: 'Chatbot WhatsApp',
-    desc: 'Atendimento automatizado via WhatsApp. Confirma, reagenda e responde clientes sem você levantar o dedo.',
-    details: ['Respostas automáticas', 'Lembretes automáticos', 'Disponível 24/7'],
+    desc: 'Saiba exatamente quanto entra e quanto sai. Gráficos claros que mostram se o mês tá bom ou se precisa correr.',
+    details: ['Receita automática', 'Gráficos de evolução', 'Relatório mensal'],
   },
 ];
 
-// =============================================================================
-// STATS
-// =============================================================================
+const LOSSES = [
+  {
+    icon: '📱',
+    title: '3-5 clientes/mês esquecem o horário',
+    desc: 'Porque você confirma no WhatsApp e a mensagem se perde entre 200 conversas.',
+  },
+  {
+    icon: '⏰',
+    title: '4-6 horas/semana respondendo mensagens',
+    desc: '"Qual horário tem?", "Quanto custa?", "Pode encaixar amanhã?" — sempre as mesmas perguntas.',
+  },
+  {
+    icon: '💸',
+    title: 'R$ 800-1.500/mês em agendamentos perdidos',
+    desc: 'Cliente não aparece, horário vago, sinal não cobrado. Prejuízo invisível todo mês.',
+  },
+];
+
+const COMPARE = [
+  { bad: 'Agenda no caderno ou no WhatsApp', good: 'Agenda digital completa no celular' },
+  { bad: 'Cliente esquece o horário e não vem', good: 'Lembrete automático por WhatsApp' },
+  { bad: '"Quanto custa?" 50x por dia no direct', good: 'Link de agendamento com preços online' },
+  { bad: 'Cobra por Pix "quando lembra"', good: 'Pix automático com QR Code' },
+  { bad: 'Não sabe quanto ganhou no mês', good: 'Relatório financeiro em tempo real' },
+  { bad: 'Perde cliente e nem percebe', good: 'Alerta de cliente sumido' },
+];
 
 const STATS = [
-  { value: '500+', label: 'Profissionais ativos', icon: '👩‍💼' },
-  { value: '15.000+', label: 'Agendamentos / mês', icon: '📅' },
+  { value: '200+', label: 'Profissionais já usam', icon: '👩‍💼' },
+  { value: '5.000+', label: 'Agendamentos realizados', icon: '📅' },
   { value: '4.9★', label: 'Avaliação média', icon: '⭐' },
-  { value: 'R$ 2M+', label: 'Gerenciados / mês', icon: '💰' },
 ];
-
-// =============================================================================
-// TESTIMONIALS
-// =============================================================================
 
 const TESTIMONIALS = [
   {
-    text: 'Antes eu anotava tudo em caderno e sempre perdia informação. Agora tenho tudo organizado no celular. Me sinto profissional de verdade.',
-    author: 'Marina Silva',
-    role: 'Profissional autônoma • São Paulo',
+    text: 'Eu perdia pelo menos 3 clientes por semana porque esqueciam o horário. Depois que coloquei o lembrete automático do Bela Pro, meu no-show caiu pra quase zero. Fiz conta: tô ganhando R$ 600 a mais todo mês.',
+    author: 'Marina S.',
+    role: 'Nail Designer • São Paulo',
     avatar: 'MS',
   },
   {
-    text: 'O link de agendamento mudou minha vida! Coloquei no Instagram e os clientes agendam sozinhos. Minha agenda nunca ficou tão cheia.',
-    author: 'Priscila Santos',
-    role: 'Empreendedora • Rio de Janeiro',
-    avatar: 'PS',
+    text: 'Coloquei o link de agendamento na bio do Instagram e em 1 semana recebi 14 agendamentos sem trocar uma mensagem. Chorei de emoção, juro.',
+    author: 'Priscila R.',
+    role: 'Lash Artist • Rio de Janeiro',
+    avatar: 'PR',
   },
   {
-    text: 'Finalmente sei exatamente quanto eu ganho no mês. Os relatórios são claros e me ajudam a investir certo no meu negócio.',
-    author: 'Fernanda Costa',
-    role: 'Consultora de imagem • Belo Horizonte',
+    text: 'Eu achava que controlava bem minhas finanças no caderninho. Quando vi o relatório do Bela Pro, descobri que tava deixando R$ 400/mês na mesa por não cobrar sinal. Nunca mais.',
+    author: 'Fernanda C.',
+    role: 'Esteticista • Belo Horizonte',
     avatar: 'FC',
   },
 ];
 
-// =============================================================================
-// HOW IT WORKS
-// =============================================================================
-
 const STEPS = [
-  { num: '01', title: 'Crie sua conta', desc: 'Em menos de 2 minutos. Sem cartão de crédito, sem burocracia.' },
-  { num: '02', title: 'Configure seus serviços', desc: 'Adicione seus serviços, preços e horários de funcionamento.' },
-  { num: '03', title: 'Compartilhe o link', desc: 'Divulgue seu link no Instagram, WhatsApp e comece a receber agendamentos.' },
+  { num: '01', title: 'Crie sua conta', desc: 'Nome, e-mail e senha. Sem cartão de crédito. Leva 30 segundos.' },
+  { num: '02', title: 'Adicione seus serviços', desc: 'Coloque nome, preço e duração de cada serviço que você faz.' },
+  { num: '03', title: 'Compartilhe o link', desc: 'Cole na bio do Instagram, mande no WhatsApp. Pronto — seus clientes já podem agendar.' },
+];
+
+const FAQS = [
+  { q: 'Preciso de cartão de crédito para testar?', a: 'Não. Os dias de trial são 100% grátis, sem pedir cartão.' },
+  { q: 'Funciona no celular?', a: 'Sim. O Bela Pro funciona direto no navegador do celular, tablet ou computador. Não precisa instalar nada.' },
+  { q: 'Posso cancelar a qualquer momento?', a: 'Sim. Sem multa, sem taxa, sem burocracia.' },
+  { q: 'Meus clientes precisam baixar app?', a: 'Não. Eles acessam o link de agendamento pelo navegador, sem cadastro.' },
+  { q: 'E se eu não entender como usar?', a: 'Nosso suporte humano te ajuda por WhatsApp. Nada de robô respondendo.' },
 ];
 
 // =============================================================================
@@ -407,6 +455,7 @@ export default function BusinessInviteLandingPage() {
   const [error, setError] = useState<string | null>(null);
   const [expired, setExpired] = useState(false);
   const [sponsors, setSponsors] = useState<{ id: string; name: string; logoLightUrl?: string; logoDarkUrl?: string; websiteUrl?: string; ctaUrl?: string; tier: string }[]>([]);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
   const heroRef = useRef<HTMLElement>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
@@ -421,7 +470,7 @@ export default function BusinessInviteLandingPage() {
     try {
       const res = await fetch(`${API_URL}/public/sponsors?placement=INVITE_LANDING`);
       if (res.ok) setSponsors(await res.json());
-    } catch { /* silencioso */ }
+    } catch { /* silent */ }
   }
 
   async function fetchInvite() {
@@ -444,117 +493,82 @@ export default function BusinessInviteLandingPage() {
   async function handleCtaClick() {
     try {
       await fetch(`${API_URL}/business-invites/public/${token}/cta-click`, { method: 'POST' });
-    } catch {
-      // silencioso
-    }
+    } catch { /* silent */ }
   }
 
-  // ---------- LOADING ----------
+  // ---- LOADING ----
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', background: C.bg,
-      }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: C.bg }}>
         <style>{GLOBAL_CSS}</style>
-        <div style={{
-          width: 48, height: 48,
-          border: `3px solid ${C.border}`, borderTopColor: C.gold,
-          borderRadius: '50%', animation: 'spin 0.8s linear infinite',
-        }} />
+        <div style={{ width: 48, height: 48, border: `3px solid ${C.border}`, borderTopColor: C.gold, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       </div>
     );
   }
 
-  // ---------- EXPIRED ----------
+  // ---- EXPIRED ----
   if (expired) {
     return (
-      <div style={{
-        minHeight: '100vh', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', background: C.bg, padding: 40, textAlign: 'center',
-      }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: C.bg, padding: 40, textAlign: 'center' }}>
         <style>{GLOBAL_CSS}</style>
-        <div className="anim-scale" style={{
-          width: 90, height: 90, borderRadius: '50%',
-          background: 'rgba(201,165,92,0.1)', border: `1px solid ${C.borderGold}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28, fontSize: 40,
-        }}>⏰</div>
-        <h1 className="anim-up" style={{ fontSize: 32, fontWeight: 700, color: C.textPrimary, marginBottom: 12, fontFamily: FONT.serif }}>
-          Este convite expirou
-        </h1>
+        <div className="anim-scale" style={{ width: 90, height: 90, borderRadius: '50%', background: 'rgba(201,165,92,0.1)', border: `1px solid ${C.borderGold}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28, fontSize: 40 }}>⏰</div>
+        <h1 className="anim-up" style={{ fontSize: 32, fontWeight: 700, color: C.textPrimary, marginBottom: 12, fontFamily: FONT.serif }}>Este convite expirou</h1>
         <p className="anim-up-d1" style={{ color: C.textSecondary, maxWidth: 420, marginBottom: 36, lineHeight: 1.7, fontFamily: FONT.sans }}>
           Não se preocupe! Você ainda pode conhecer o Bela Pro e transformar a gestão do seu negócio.
         </p>
-        <Link href="/cadastro" className="cta-btn anim-up-d2">
-          Criar minha conta grátis
-        </Link>
+        <Link href="/cadastro" className="cta-btn anim-up-d2">Criar minha conta grátis</Link>
       </div>
     );
   }
 
-  // ---------- ERROR ----------
+  // ---- ERROR ----
   if (error || !invite) {
     return (
-      <div style={{
-        minHeight: '100vh', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', background: C.bg, padding: 40, textAlign: 'center',
-      }}>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: C.bg, padding: 40, textAlign: 'center' }}>
         <style>{GLOBAL_CSS}</style>
-        <div className="anim-scale" style={{
-          width: 90, height: 90, borderRadius: '50%',
-          background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28, fontSize: 40,
-        }}>🔍</div>
-        <h1 className="anim-up" style={{ fontSize: 32, fontWeight: 700, color: C.textPrimary, marginBottom: 12, fontFamily: FONT.serif }}>
-          Convite não encontrado
-        </h1>
+        <div className="anim-scale" style={{ width: 90, height: 90, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28, fontSize: 40 }}>🔍</div>
+        <h1 className="anim-up" style={{ fontSize: 32, fontWeight: 700, color: C.textPrimary, marginBottom: 12, fontFamily: FONT.serif }}>Convite não encontrado</h1>
         <p className="anim-up-d1" style={{ color: C.textSecondary, maxWidth: 420, marginBottom: 36, lineHeight: 1.7, fontFamily: FONT.sans }}>
           Este link pode estar incorreto. Que tal criar sua conta e experimentar gratuitamente?
         </p>
-        <Link href="/cadastro" className="cta-btn anim-up-d2">
-          Experimentar grátis
-        </Link>
+        <Link href="/cadastro" className="cta-btn anim-up-d2">Experimentar grátis</Link>
       </div>
     );
   }
 
-  const recipientName = invite.inviteType === 'PUBLIC'
-    ? null
-    : invite.contactName || invite.businessName;
+  const recipientName = invite.inviteType === 'PUBLIC' ? null : invite.contactName || invite.businessName;
+  const trialDays = invite.trialDays || 7;
 
   // ==========================================================================
-  // RENDER — SINGLE ULTRA PREMIUM MODEL
+  // RENDER
   // ==========================================================================
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: FONT.sans, color: C.textPrimary, overflowX: 'hidden' }}>
       <style>{GLOBAL_CSS}</style>
 
-      {/* ::::::::: NAV ::::::::: */}
+      {/* ===== NAV STICKY ===== */}
       <nav className="nav-fixed">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{
-            fontFamily: FONT.serif, fontSize: 24, fontWeight: 800, letterSpacing: '-0.5px',
+            fontFamily: FONT.serif, fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px',
             background: `linear-gradient(135deg, ${C.goldLight} 0%, ${C.gold} 50%, ${C.goldDark} 100%)`,
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
           }}>Bela Pro</span>
+          <div style={{ padding: '4px 12px', background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 20 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: '#10b981' }}>🎁 {trialDays} dias grátis</span>
+          </div>
         </div>
-        <Link href={`/cadastro?ref=${token}`} onClick={handleCtaClick} className="cta-btn" style={{ padding: '12px 28px', fontSize: 14 }}>
-          Começar grátis
+        <Link href={`/cadastro?ref=${token}`} onClick={handleCtaClick} className="cta-btn nav-cta" style={{ padding: '10px 24px', fontSize: 13, animation: 'none' }}>
+          Quero experimentar →
         </Link>
       </nav>
 
-      {/* ::::::::: HERO ::::::::: */}
+      {/* ===== HERO ===== */}
       <section ref={heroRef} style={{
-        position: 'relative',
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        padding: '120px 32px 80px',
-        background: C.heroGradient,
+        position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center',
+        padding: '120px 24px 80px', background: C.heroGradient,
       }}>
-        {/* Glow orb */}
         <div style={{
           position: 'absolute', top: '10%', left: '50%', transform: 'translateX(-50%)',
           width: 600, height: 600, borderRadius: '50%',
@@ -563,146 +577,150 @@ export default function BusinessInviteLandingPage() {
         }} />
 
         <div className="hero-grid" style={{
-          maxWidth: 1280, margin: '0 auto', width: '100%',
-          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center',
+          maxWidth: 1200, margin: '0 auto', width: '100%',
+          display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 60, alignItems: 'center',
           position: 'relative', zIndex: 2,
         }}>
           {/* Left — Copy */}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {/* Trial Badge */}
-            <div className="anim-up" style={{
-              display: 'inline-flex', alignItems: 'center', gap: 12,
-              padding: '12px 20px',
-              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              borderRadius: 60,
-              marginBottom: 20, alignSelf: 'flex-start',
-            }}>
-              <span style={{ fontSize: 20 }}>🎁</span>
-              <span style={{ color: '#10b981', fontSize: 15, fontWeight: 700 }}>
-                {invite.trialDays || 7} DIAS GRÁTIS
-              </span>
-            </div>
-
-            {/* Badge */}
+            {/* Urgency Badge */}
             <div className="anim-up" style={{
               display: 'inline-flex', alignItems: 'center', gap: 10,
-              padding: '8px 18px', background: C.bgGlass,
-              border: `1px solid ${C.borderGold}`, borderRadius: 60,
-              marginBottom: 36, alignSelf: 'flex-start',
+              padding: '10px 18px',
+              background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.1))',
+              border: '1px solid rgba(16,185,129,0.3)',
+              borderRadius: 60, marginBottom: 20, alignSelf: 'flex-start',
             }}>
-              <div style={{ width: 7, height: 7, borderRadius: '50%', background: C.gold, animation: 'pulse 2s infinite' }} />
-              <span style={{ color: C.textSecondary, fontSize: 13, fontWeight: 500 }}>
-                {invite.inviteType === 'PUBLIC'
-                  ? <><span style={{ color: C.gold }}>Oferta Exclusiva</span> para você</>                    
-                  : <>Convite exclusivo para <span style={{ color: C.gold }}>{recipientName}</span></>
-                }
+              <span style={{ fontSize: 18 }}>🎁</span>
+              <span style={{ color: '#10b981', fontSize: 14, fontWeight: 700 }}>
+                OFERTA EXCLUSIVA — {trialDays} DIAS GRÁTIS
               </span>
             </div>
 
-            {/* Headline */}
+            {/* Personal badge for directed invites */}
+            {recipientName && (
+              <div className="anim-up" style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '6px 14px', background: C.bgGlass,
+                border: `1px solid ${C.borderGold}`, borderRadius: 60,
+                marginBottom: 24, alignSelf: 'flex-start',
+              }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: C.gold, animation: 'pulse 2s infinite' }} />
+                <span style={{ color: C.textSecondary, fontSize: 12, fontWeight: 500 }}>
+                  Convite exclusivo para <span style={{ color: C.gold }}>{recipientName}</span>
+                </span>
+              </div>
+            )}
+
+            {/* Headline — pain-focused */}
             <h1 className="anim-up-d1" style={{
-              fontSize: 'clamp(38px, 5.5vw, 64px)',
-              fontWeight: 800,
-              fontFamily: FONT.serif,
-              lineHeight: 1.08,
-              marginBottom: 28,
-              letterSpacing: '-1.5px',
+              fontSize: 'clamp(32px, 5vw, 56px)', fontWeight: 800, fontFamily: FONT.serif,
+              lineHeight: 1.1, marginBottom: 24, letterSpacing: '-1.5px',
             }}>
-              A plataforma que{' '}
-              <span className="gold-text">
-                transforma
-              </span>{' '}
-              o seu negócio
+              Chega de perder cliente por causa de{' '}
+              <span className="gold-text">agenda bagunçada no WhatsApp.</span>
             </h1>
 
-            {/* Sub */}
+            {/* Sub — solution */}
             <p className="anim-up-d2" style={{
-              fontSize: 'clamp(17px, 2vw, 20px)',
-              color: C.textSecondary,
-              lineHeight: 1.7,
-              marginBottom: 40,
-              maxWidth: 520,
+              fontSize: 'clamp(16px, 1.8vw, 19px)', color: C.textSecondary,
+              lineHeight: 1.7, marginBottom: 36, maxWidth: 520,
             }}>
-              Organize sua agenda, clientes e finanças em um só lugar. 
-              Menos cadernos e planilhas. Mais tempo para o que realmente importa.
+              O Bela Pro organiza seus agendamentos, cobra via Pix automático e confirma horários por WhatsApp — tudo sozinho. Para que você foque no que sabe fazer: <strong style={{ color: C.textPrimary }}>atender bem.</strong>
             </p>
 
             {/* Personal message */}
             {invite.personalMessage && (
               <div className="anim-up-d3" style={{
-                background: C.bgGlass,
-                padding: '20px 24px',
-                borderRadius: 14,
-                border: `1px solid ${C.borderGold}`,
-                marginBottom: 40,
-                maxWidth: 500,
-                position: 'relative',
+                background: C.bgGlass, padding: '18px 22px', borderRadius: 14,
+                border: `1px solid ${C.borderGold}`, marginBottom: 32, maxWidth: 480, position: 'relative',
               }}>
-                <div style={{
-                  position: 'absolute', top: -8, left: 24,
-                  background: C.bg, padding: '0 8px',
-                  fontSize: 11, color: C.gold, fontWeight: 600, letterSpacing: 1,
-                }}>MENSAGEM PESSOAL</div>
-                <p style={{ color: C.textSecondary, fontStyle: 'italic', margin: 0, lineHeight: 1.7, fontSize: 15, fontFamily: FONT.serif }}>
+                <div style={{ position: 'absolute', top: -8, left: 20, background: C.bg, padding: '0 8px', fontSize: 10, color: C.gold, fontWeight: 600, letterSpacing: 1 }}>
+                  MENSAGEM PESSOAL
+                </div>
+                <p style={{ color: C.textSecondary, fontStyle: 'italic', margin: 0, lineHeight: 1.7, fontSize: 14, fontFamily: FONT.serif }}>
                   &ldquo;{invite.personalMessage}&rdquo;
                 </p>
               </div>
             )}
 
-            {/* CTAs */}
-            <div className="anim-up-d4" style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
+            {/* CTA */}
+            <div className="anim-up-d4" style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'center', marginBottom: 8 }}>
               <Link href={`/cadastro?ref=${token}`} onClick={handleCtaClick} className="cta-btn">
-                Experimentar {invite.trialDays || 7} dias grátis
+                Criar minha conta grátis
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <line x1="5" y1="12" x2="19" y2="12" />
                   <polyline points="12 5 19 12 12 19" />
                 </svg>
               </Link>
-              <span style={{ color: C.textMuted, fontSize: 13 }}>Sem cartão de crédito</span>
             </div>
 
             {/* Trust markers */}
-            <div className="anim-up-d5" style={{ display: 'flex', gap: 24, marginTop: 48, flexWrap: 'wrap' }}>
-              {['500+ profissionais', '4.9★ avaliação', 'Suporte humano'].map((t, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div style={{ width: 5, height: 5, borderRadius: '50%', background: C.gold }} />
-                  <span style={{ color: C.textMuted, fontSize: 12, fontWeight: 500 }}>{t}</span>
-                </div>
+            <div className="anim-up-d5" style={{ display: 'flex', gap: 20, marginTop: 16, flexWrap: 'wrap' }}>
+              {[`✓ ${trialDays} dias grátis`, '✓ Sem cartão de crédito', '✓ Cancele quando quiser'].map((t, i) => (
+                <span key={i} style={{ color: C.textMuted, fontSize: 12, fontWeight: 500 }}>{t}</span>
               ))}
+            </div>
+
+            <div className="anim-up-d5" style={{ marginTop: 16 }}>
+              <span style={{ color: C.textMuted, fontSize: 12 }}>Já usado por profissionais em SP, RJ, BH e mais 12 cidades</span>
             </div>
           </div>
 
           {/* Right — Mockup */}
-          <div className="anim-up-d3" style={{ display: 'flex', justifyContent: 'center' }}>
+          <div className="anim-up-d3 hide-mobile" style={{ display: 'flex', justifyContent: 'center' }}>
             <DashboardMockup />
           </div>
         </div>
+      </section>
 
-        {/* Scroll indicator */}
-        <div style={{
-          position: 'absolute', bottom: 40, left: '50%', transform: 'translateX(-50%)',
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-        }}>
-          <span style={{ fontSize: 11, color: C.textMuted, letterSpacing: 2, textTransform: 'uppercase' }}>Descubra</span>
-          <div style={{ width: 1, height: 40, background: `linear-gradient(180deg, ${C.gold} 0%, transparent 100%)` }} />
+      {/* ===== SECTION: QUANTO VOCÊ PERDE HOJE ===== */}
+      <section style={{ padding: '100px 24px', borderTop: `1px solid ${C.border}` }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 60 }}>
+            <div style={{ fontSize: 12, color: C.dangerText, fontWeight: 600, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 14 }}>
+              ATENÇÃO
+            </div>
+            <h2 style={{ fontSize: 'clamp(26px, 4vw, 42px)', fontWeight: 700, fontFamily: FONT.serif, letterSpacing: '-1px', marginBottom: 16 }}>
+              Você sabia que profissionais da beleza perdem até{' '}
+              <span style={{ color: C.dangerText }}>R$ 1.200/mês</span>{' '}
+              por falta de organização?
+            </h2>
+            <p style={{ color: C.textSecondary, fontSize: 16, maxWidth: 560, margin: '0 auto', lineHeight: 1.7 }}>
+              São problemas do dia a dia que parecem pequenos, mas somam um prejuízo enorme no final do mês.
+            </p>
+          </div>
+
+          <div className="loss-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+            {LOSSES.map((l, i) => (
+              <div key={i} className="loss-card">
+                <div style={{ fontSize: 32, marginBottom: 16 }}>{l.icon}</div>
+                <h3 style={{ fontSize: 17, fontWeight: 700, color: C.dangerText, fontFamily: FONT.serif, marginBottom: 10 }}>{l.title}</h3>
+                <p style={{ color: C.textSecondary, fontSize: 14, lineHeight: 1.65 }}>{l.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: 48 }}>
+            <Link href={`/cadastro?ref=${token}`} onClick={handleCtaClick} className="cta-btn-secondary">
+              Resolver isso agora →
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* ::::::::: SOCIAL PROOF BAR ::::::::: */}
-      <section style={{
-        padding: '56px 32px',
-        borderTop: `1px solid ${C.border}`,
-        borderBottom: `1px solid ${C.border}`,
-      }}>
-        <div className="stats-grid" style={{
-          maxWidth: 1100, margin: '0 auto',
-          display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32,
-        }}>
+      {/* ===== SECTION: PROVA SOCIAL ===== */}
+      <section style={{ padding: '56px 24px', borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ textAlign: 'center', marginBottom: 36 }}>
+          <p style={{ color: C.textMuted, fontSize: 12, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase' }}>
+            PROFISSIONAIS REAIS, RESULTADOS REAIS
+          </p>
+        </div>
+        <div className="stats-grid" style={{ maxWidth: 800, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 32 }}>
           {STATS.map((s, i) => (
-            <div key={i} className="stat-item">
+            <div key={i} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 14, marginBottom: 8 }}>{s.icon}</div>
-              <div className="gold-text" style={{ fontSize: 'clamp(30px, 4vw, 42px)', fontWeight: 800, fontFamily: FONT.serif, marginBottom: 4 }}>
+              <div className="gold-text" style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 800, fontFamily: FONT.serif, marginBottom: 4 }}>
                 {s.value}
               </div>
               <div style={{ color: C.textMuted, fontSize: 13, fontWeight: 500 }}>{s.label}</div>
@@ -711,49 +729,37 @@ export default function BusinessInviteLandingPage() {
         </div>
       </section>
 
-      {/* ::::::::: FEATURES ::::::::: */}
-      <section style={{ padding: '120px 32px', background: C.sectionAlt }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 72 }}>
-            <div style={{ fontSize: 12, color: C.gold, fontWeight: 600, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 16 }}>
+      {/* ===== SECTION: FUNCIONALIDADES ===== */}
+      <section style={{ padding: '100px 24px', background: C.sectionAlt }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 64 }}>
+            <div style={{ fontSize: 12, color: C.gold, fontWeight: 600, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 14 }}>
               FUNCIONALIDADES
             </div>
-            <h2 style={{
-              fontSize: 'clamp(30px, 4vw, 48px)', fontWeight: 700, fontFamily: FONT.serif,
-              marginBottom: 18, letterSpacing: '-1px',
-            }}>
-              Tudo que você precisa.<br />
+            <h2 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 700, fontFamily: FONT.serif, marginBottom: 16, letterSpacing: '-1px' }}>
+              Tudo que você precisa.{' '}
               <span className="gold-text">Nada que não precisa.</span>
             </h2>
-            <p style={{ color: C.textSecondary, fontSize: 17, maxWidth: 560, margin: '0 auto', lineHeight: 1.7 }}>
-              Ferramentas pensadas para o dia a dia do profissional. Simples, elegante, poderoso.
+            <p style={{ color: C.textSecondary, fontSize: 16, maxWidth: 540, margin: '0 auto', lineHeight: 1.7 }}>
+              Ferramentas pensadas para o dia a dia de quem atende cliente. Simples de usar, poderosas no resultado.
             </p>
           </div>
 
-          <div className="features-grid" style={{
-            display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20,
-          }}>
+          <div className="features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
             {FEATURES.map((f, i) => (
               <div key={i} className="feature-card">
                 <div style={{
-                  width: 52, height: 52, borderRadius: 14,
+                  width: 48, height: 48, borderRadius: 12,
                   background: 'rgba(201,165,92,0.08)', border: `1px solid ${C.borderGold}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 24, marginBottom: 24,
-                }}>
-                  {f.icon}
-                </div>
-                <h3 style={{ fontSize: 19, fontWeight: 700, fontFamily: FONT.serif, marginBottom: 10, color: C.textPrimary }}>
-                  {f.title}
-                </h3>
-                <p style={{ color: C.textSecondary, lineHeight: 1.65, marginBottom: 20, fontSize: 14 }}>
-                  {f.desc}
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, marginBottom: 20,
+                }}>{f.icon}</div>
+                <h3 style={{ fontSize: 17, fontWeight: 700, fontFamily: FONT.serif, marginBottom: 8, color: C.textPrimary }}>{f.title}</h3>
+                <p style={{ color: C.textSecondary, lineHeight: 1.6, marginBottom: 16, fontSize: 13 }}>{f.desc}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {f.details.map((d, j) => (
-                    <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <div style={{ width: 4, height: 4, borderRadius: '50%', background: C.gold, flexShrink: 0 }} />
-                      <span style={{ color: C.textMuted, fontSize: 13 }}>{d}</span>
+                      <span style={{ color: C.textMuted, fontSize: 12 }}>{d}</span>
                     </div>
                   ))}
                 </div>
@@ -763,44 +769,27 @@ export default function BusinessInviteLandingPage() {
         </div>
       </section>
 
-      {/* ::::::::: HOW IT WORKS ::::::::: */}
-      <section style={{ padding: '120px 32px' }}>
+      {/* ===== SECTION: ANTES vs DEPOIS ===== */}
+      <section style={{ padding: '100px 24px' }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 72 }}>
-            <div style={{ fontSize: 12, color: C.gold, fontWeight: 600, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 16 }}>
-              COMO FUNCIONA
-            </div>
-            <h2 style={{ fontSize: 'clamp(30px, 4vw, 48px)', fontWeight: 700, fontFamily: FONT.serif, letterSpacing: '-1px' }}>
-              3 passos para{' '}
-              <span className="gold-text">transformar</span>{' '}
-              seu negócio
+          <div style={{ textAlign: 'center', marginBottom: 64 }}>
+            <h2 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 700, fontFamily: FONT.serif, letterSpacing: '-1px' }}>
+              <span style={{ color: C.dangerText }}>Sem</span> Bela Pro{' '}
+              <span style={{ color: C.textMuted, fontSize: '0.6em' }}>vs</span>{' '}
+              <span className="gold-text">Com</span> Bela Pro
             </h2>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-            {STEPS.map((step, i) => (
-              <div key={i} style={{
-                display: 'flex', gap: 32, alignItems: 'flex-start', position: 'relative',
-                padding: '32px 0',
-              }}>
-                {/* Number + line */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 60, flexShrink: 0 }}>
-                  <div style={{
-                    width: 56, height: 56, borderRadius: '50%',
-                    background: i === 0 ? `linear-gradient(135deg, ${C.gold}, ${C.goldDark})` : C.bgGlass,
-                    border: `1px solid ${i === 0 ? 'transparent' : C.borderGold}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 18, fontWeight: 700, fontFamily: FONT.serif,
-                    color: i === 0 ? C.bg : C.gold,
-                  }}>{step.num}</div>
-                  {i < STEPS.length - 1 && (
-                    <div style={{ width: 1, height: 48, background: `linear-gradient(180deg, ${C.borderGold}, transparent)`, marginTop: 12 }} />
-                  )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {COMPARE.map((c, i) => (
+              <div key={i} className="compare-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="compare-bad" style={{ padding: '16px 20px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 16, flexShrink: 0 }}>❌</span>
+                  <span style={{ color: 'rgba(248,113,113,0.85)', fontSize: 14 }}>{c.bad}</span>
                 </div>
-                {/* Content */}
-                <div style={{ paddingTop: 8 }}>
-                  <h3 style={{ fontSize: 22, fontWeight: 700, fontFamily: FONT.serif, marginBottom: 8 }}>{step.title}</h3>
-                  <p style={{ color: C.textSecondary, fontSize: 15, lineHeight: 1.6 }}>{step.desc}</p>
+                <div className="compare-good" style={{ padding: '16px 20px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 16, flexShrink: 0 }}>✅</span>
+                  <span style={{ color: C.successText, fontSize: 14 }}>{c.good}</span>
                 </div>
               </div>
             ))}
@@ -808,45 +797,41 @@ export default function BusinessInviteLandingPage() {
         </div>
       </section>
 
-      {/* ::::::::: TESTIMONIALS ::::::::: */}
-      <section style={{ padding: '120px 32px', background: C.sectionAlt }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 72 }}>
-            <div style={{ fontSize: 12, color: C.gold, fontWeight: 600, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 16 }}>
+      {/* ===== SECTION: DEPOIMENTOS ===== */}
+      <section style={{ padding: '100px 24px', background: C.sectionAlt }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 60 }}>
+            <div style={{ fontSize: 12, color: C.gold, fontWeight: 600, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 14 }}>
               DEPOIMENTOS
             </div>
-            <h2 style={{ fontSize: 'clamp(30px, 4vw, 48px)', fontWeight: 700, fontFamily: FONT.serif, letterSpacing: '-1px' }}>
-              Quem usa,{' '}
-              <span className="gold-text">recomenda</span>
+            <h2 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 700, fontFamily: FONT.serif, letterSpacing: '-1px' }}>
+              Quem usa, <span className="gold-text">recomenda</span>
             </h2>
           </div>
 
-          <div className="testimonials-grid" style={{
-            display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20,
-          }}>
+          <div className="testimonials-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
             {TESTIMONIALS.map((t, i) => (
               <div key={i} className="testimonial-card">
-                {/* Stars */}
-                <div style={{ display: 'flex', gap: 4, marginBottom: 24 }}>
+                <div style={{ display: 'flex', gap: 3, marginBottom: 20 }}>
                   {[...Array(5)].map((_, j) => (
-                    <svg key={j} width="18" height="18" viewBox="0 0 24 24" fill={C.gold} stroke="none">
+                    <svg key={j} width="16" height="16" viewBox="0 0 24 24" fill={C.gold} stroke="none">
                       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                     </svg>
                   ))}
                 </div>
-                <p style={{ fontSize: 15, lineHeight: 1.75, color: C.textSecondary, marginBottom: 28, fontFamily: FONT.sans }}>
+                <p style={{ fontSize: 14, lineHeight: 1.75, color: C.textSecondary, marginBottom: 24 }}>
                   &ldquo;{t.text}&rdquo;
                 </p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{
-                    width: 44, height: 44, borderRadius: '50%',
+                    width: 40, height: 40, borderRadius: '50%',
                     background: `linear-gradient(135deg, ${C.gold}, ${C.goldDark})`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 14, fontWeight: 700, color: C.bg, fontFamily: FONT.sans,
+                    fontSize: 13, fontWeight: 700, color: C.bg,
                   }}>{t.avatar}</div>
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: C.textPrimary }}>{t.author}</div>
-                    <div style={{ fontSize: 12, color: C.textMuted }}>{t.role}</div>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: C.textPrimary }}>{t.author}</div>
+                    <div style={{ fontSize: 11, color: C.textMuted }}>{t.role}</div>
                   </div>
                 </div>
               </div>
@@ -855,100 +840,191 @@ export default function BusinessInviteLandingPage() {
         </div>
       </section>
 
-      {/* ::::::::: FINAL CTA ::::::::: */}
-      <section style={{
-        position: 'relative',
-        padding: '140px 32px',
-        textAlign: 'center',
-        overflow: 'hidden',
-      }}>
-        {/* Background glow */}
-        <div style={{
-          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-          width: 700, height: 700, borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(201,165,92,0.06) 0%, transparent 60%)',
-          pointerEvents: 'none',
-        }} />
-
-        <div style={{ position: 'relative', zIndex: 2, maxWidth: 700, margin: '0 auto' }}>
-          <div style={{ fontSize: 12, color: C.gold, fontWeight: 600, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 20 }}>
-            COMECE AGORA
+      {/* ===== SECTION: PREÇO TRANSPARENTE ===== */}
+      <section style={{ padding: '100px 24px' }}>
+        <div style={{ maxWidth: 700, margin: '0 auto', textAlign: 'center' }}>
+          <div style={{ fontSize: 12, color: C.gold, fontWeight: 600, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 14 }}>
+            TRANSPARÊNCIA TOTAL
           </div>
-          <h2 style={{
-            fontSize: 'clamp(32px, 5vw, 56px)', fontWeight: 800, fontFamily: FONT.serif,
-            marginBottom: 24, letterSpacing: '-1.5px', lineHeight: 1.1,
-          }}>
-            Pronta para dar o{' '}
-            <span className="gold-text">próximo passo?</span>
+          <h2 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 700, fontFamily: FONT.serif, marginBottom: 20, letterSpacing: '-1px' }}>
+            Sem surpresas. <span className="gold-text">Sem letra pequena.</span>
           </h2>
-          <p style={{ color: C.textSecondary, fontSize: 18, marginBottom: 48, lineHeight: 1.7, maxWidth: 540, margin: '0 auto 48px' }}>
-            {recipientName
-              ? <><strong style={{ color: C.textPrimary }}>{recipientName}</strong>, junte-se a centenas de profissionais que já transformaram seu negócio.</>
-              : 'Junte-se a centenas de profissionais que já transformaram seu negócio com o Bela Pro.'
-            }
-          </p>
 
-          <div className="final-cta-row" style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <Link href={`/cadastro?ref=${token}`} onClick={handleCtaClick} className="cta-btn" style={{ fontSize: 17, padding: '22px 52px' }}>
-              Criar minha conta grátis
-            </Link>
+          <div style={{
+            padding: '40px 32px', borderRadius: 20,
+            background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.borderGold}`,
+            marginBottom: 32,
+          }}>
+            <p style={{ color: C.textSecondary, fontSize: 17, lineHeight: 1.8, marginBottom: 24 }}>
+              Os primeiros <strong style={{ color: '#10b981' }}>{trialDays} dias são 100% grátis.</strong><br />
+              Sem cartão, sem taxa, sem pegadinha.
+            </p>
+            <p style={{ color: C.textMuted, fontSize: 14, marginBottom: 20 }}>
+              Depois do trial, se quiser continuar:
+            </p>
+            <div style={{ display: 'inline-block', padding: '16px 32px', borderRadius: 14, background: 'rgba(201,165,92,0.08)', border: `1px solid ${C.borderGold}`, marginBottom: 24 }}>
+              <span className="gold-text" style={{ fontSize: 36, fontWeight: 800, fontFamily: FONT.serif }}>R$ 49,90</span>
+              <span style={{ color: C.textMuted, fontSize: 15 }}>/mês</span>
+            </div>
+            <p style={{ color: C.textMuted, fontSize: 13, maxWidth: 480, margin: '0 auto' }}>
+              Menos que o preço de 1 atendimento. Com agenda + Pix automático + WhatsApp + controle financeiro + tudo incluso.
+            </p>
           </div>
 
-          {/* Trust */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: 36, marginTop: 44, flexWrap: 'wrap' }}>
-            {[`${invite.trialDays || 7} dias grátis`, 'Sem cartão', 'Cancele quando quiser'].map((item, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.gold} strokeWidth="2.5">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                <span style={{ color: C.textMuted, fontSize: 13 }}>{item}</span>
+          {/* Comparison */}
+          <div className="price-compare" style={{ display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'left', maxWidth: 500, margin: '0 auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderRadius: 10, background: 'rgba(248,113,113,0.04)' }}>
+              <span style={{ color: C.textMuted, fontSize: 13 }}>Caderno + WhatsApp + dor de cabeça</span>
+              <span style={{ color: C.dangerText, fontSize: 13, fontWeight: 600, textDecoration: 'line-through' }}>-R$ 800/mês</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderRadius: 10, background: 'rgba(248,113,113,0.04)' }}>
+              <span style={{ color: C.textMuted, fontSize: 13 }}>Outras plataformas genéricas</span>
+              <span style={{ color: C.dangerText, fontSize: 13, fontWeight: 600, textDecoration: 'line-through' }}>R$ 99-199/mês</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderRadius: 10, background: 'rgba(95,186,125,0.06)', border: '1px solid rgba(95,186,125,0.15)' }}>
+              <span style={{ color: C.successText, fontSize: 13, fontWeight: 600 }}>Bela Pro — tudo incluso</span>
+              <span style={{ color: C.successText, fontSize: 15, fontWeight: 700 }}>R$ 49,90/mês</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== SECTION: COMO FUNCIONA ===== */}
+      <section style={{ padding: '100px 24px', background: C.sectionAlt }}>
+        <div style={{ maxWidth: 800, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 60 }}>
+            <div style={{ fontSize: 12, color: C.gold, fontWeight: 600, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 14 }}>
+              COMO FUNCIONA
+            </div>
+            <h2 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 700, fontFamily: FONT.serif, letterSpacing: '-1px' }}>
+              Comece em menos de{' '}
+              <span className="gold-text">2 minutos</span>
+            </h2>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {STEPS.map((step, i) => (
+              <div key={i} style={{ display: 'flex', gap: 28, alignItems: 'flex-start', padding: '28px 0' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 56, flexShrink: 0 }}>
+                  <div style={{
+                    width: 52, height: 52, borderRadius: '50%',
+                    background: i === 0 ? `linear-gradient(135deg, ${C.gold}, ${C.goldDark})` : C.bgGlass,
+                    border: `1px solid ${i === 0 ? 'transparent' : C.borderGold}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 16, fontWeight: 700, fontFamily: FONT.serif,
+                    color: i === 0 ? C.bg : C.gold,
+                  }}>{step.num}</div>
+                  {i < STEPS.length - 1 && (
+                    <div style={{ width: 1, height: 40, background: `linear-gradient(180deg, ${C.borderGold}, transparent)`, marginTop: 10 }} />
+                  )}
+                </div>
+                <div style={{ paddingTop: 6 }}>
+                  <h3 style={{ fontSize: 20, fontWeight: 700, fontFamily: FONT.serif, marginBottom: 6 }}>{step.title}</h3>
+                  <p style={{ color: C.textSecondary, fontSize: 14, lineHeight: 1.6 }}>{step.desc}</p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ::::::::: PARCEIROS OFICIAIS ::::::::: */}
+      {/* ===== SECTION: FAQ ===== */}
+      <section style={{ padding: '100px 24px' }}>
+        <div style={{ maxWidth: 700, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 60 }}>
+            <h2 style={{ fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 700, fontFamily: FONT.serif, letterSpacing: '-1px' }}>
+              Perguntas frequentes
+            </h2>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {FAQS.map((faq, i) => (
+              <div key={i} className="faq-item" onClick={() => setOpenFaq(openFaq === i ? null : i)}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 600, color: C.textPrimary, margin: 0 }}>{faq.q}</h3>
+                  <span style={{ color: C.gold, fontSize: 20, fontWeight: 300, transform: openFaq === i ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0, marginLeft: 12 }}>+</span>
+                </div>
+                {openFaq === i && (
+                  <p style={{ color: C.textSecondary, fontSize: 14, lineHeight: 1.7, marginTop: 14, paddingTop: 14, borderTop: `1px solid ${C.border}`, marginBottom: 0 }}>
+                    {faq.a}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== SECTION: CTA FINAL ===== */}
+      <section style={{
+        position: 'relative', padding: '120px 24px', textAlign: 'center', overflow: 'hidden',
+        background: C.sectionAlt,
+      }}>
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+          width: 600, height: 600, borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(201,165,92,0.06) 0%, transparent 60%)',
+          pointerEvents: 'none',
+        }} />
+
+        <div style={{ position: 'relative', zIndex: 2, maxWidth: 640, margin: '0 auto' }}>
+          <h2 style={{
+            fontSize: 'clamp(30px, 5vw, 52px)', fontWeight: 800, fontFamily: FONT.serif,
+            marginBottom: 20, letterSpacing: '-1.5px', lineHeight: 1.1,
+          }}>
+            Pronta pra parar de{' '}
+            <span className="gold-text">perder cliente?</span>
+          </h2>
+          <p style={{ color: C.textSecondary, fontSize: 17, marginBottom: 44, lineHeight: 1.7, maxWidth: 520, margin: '0 auto 44px' }}>
+            {recipientName
+              ? <><strong style={{ color: C.textPrimary }}>{recipientName}</strong>, junte-se a centenas de profissionais que já largaram o caderninho e o WhatsApp bagunçado.</>
+              : 'Junte-se a centenas de profissionais que já largaram o caderninho e o WhatsApp bagunçado. Teste grátis — se não gostar, é só não continuar.'
+            }
+          </p>
+
+          <div className="final-cta-row" style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
+            <Link href={`/cadastro?ref=${token}`} onClick={handleCtaClick} className="cta-btn" style={{ fontSize: 17, padding: '22px 48px' }}>
+              Criar minha conta grátis →
+            </Link>
+          </div>
+
+          {/* Urgency */}
+          <div style={{ marginTop: 28, padding: '12px 20px', borderRadius: 10, background: 'rgba(201,165,92,0.06)', border: `1px solid ${C.borderGold}`, display: 'inline-block' }}>
+            <span style={{ color: C.gold, fontSize: 13, fontWeight: 500 }}>
+              ⏰ Oferta de {trialDays} dias grátis válida para novas contas. Vagas limitadas nesta rodada.
+            </span>
+          </div>
+
+          {/* Trust */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 28, marginTop: 36, flexWrap: 'wrap' }}>
+            {['🔒 Dados seguros', `🎁 ${trialDays} dias grátis`, '❌ Cancele quando quiser'].map((item, i) => (
+              <span key={i} style={{ color: C.textMuted, fontSize: 12 }}>{item}</span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== SPONSORS (only if any) ===== */}
       {sponsors.length > 0 && (
-        <section style={{
-          padding: '64px 32px',
-          background: C.sectionAlt,
-          borderTop: `1px solid ${C.border}`,
-        }}>
-          <div style={{ textAlign: 'center', marginBottom: 40 }}>
-            <p style={{ color: C.gold, fontSize: 12, fontWeight: 600, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 8 }}>
+        <section style={{ padding: '48px 24px', borderTop: `1px solid ${C.border}` }}>
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
+            <p style={{ color: C.textMuted, fontSize: 11, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase' }}>
               PARCEIROS OFICIAIS
             </p>
-            <p style={{ color: C.textMuted, fontSize: 14, maxWidth: 400, margin: '0 auto' }}>
-              Empresas que confiam e apoiam o Bela Pro
-            </p>
           </div>
-          <div style={{
-            display: 'flex', justifyContent: 'center', alignItems: 'center',
-            gap: 40, flexWrap: 'wrap', maxWidth: 900, margin: '0 auto',
-          }}>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 36, flexWrap: 'wrap', maxWidth: 800, margin: '0 auto' }}>
             {sponsors.map(s => (
-              <a
-                key={s.id}
-                href={s.ctaUrl || s.websiteUrl || '#'}
-                target="_blank" rel="noopener noreferrer"
+              <a key={s.id} href={s.ctaUrl || s.websiteUrl || '#'} target="_blank" rel="noopener noreferrer"
                 onClick={() => { fetch(`${API_URL}/public/sponsors/${s.id}/click`, { method: 'POST' }).catch(() => {}); }}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  padding: 12, filter: 'grayscale(70%) brightness(0.7)', opacity: 0.6,
-                  transition: 'all 0.3s ease',
-                }}
+                style={{ display: 'flex', alignItems: 'center', padding: 10, filter: 'grayscale(70%) brightness(0.7)', opacity: 0.6, transition: 'all 0.3s ease' }}
                 onMouseEnter={e => { e.currentTarget.style.filter = 'grayscale(0%) brightness(1)'; e.currentTarget.style.opacity = '1'; }}
                 onMouseLeave={e => { e.currentTarget.style.filter = 'grayscale(70%) brightness(0.7)'; e.currentTarget.style.opacity = '0.6'; }}
               >
                 {(s.logoDarkUrl || s.logoLightUrl) ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={s.logoDarkUrl || s.logoLightUrl} alt={s.name}
-                    style={{ height: 36, maxWidth: 120, objectFit: 'contain' }} />
+                  <img src={s.logoDarkUrl || s.logoLightUrl} alt={s.name} style={{ height: 32, maxWidth: 110, objectFit: 'contain' }} />
                 ) : (
-                  <span style={{ color: C.textMuted, fontSize: 14, fontWeight: 600, fontFamily: FONT.sans }}>
-                    {s.name}
-                  </span>
+                  <span style={{ color: C.textMuted, fontSize: 13, fontWeight: 600 }}>{s.name}</span>
                 )}
               </a>
             ))}
@@ -956,27 +1032,23 @@ export default function BusinessInviteLandingPage() {
         </section>
       )}
 
-      {/* ::::::::: FOOTER ::::::::: */}
-      <footer style={{
-        padding: '48px 32px',
-        borderTop: `1px solid ${C.border}`,
-        textAlign: 'center',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-          <span style={{
-            fontFamily: FONT.serif, fontSize: 28, fontWeight: 800, letterSpacing: '-0.5px',
-            background: `linear-gradient(135deg, ${C.goldLight} 0%, ${C.gold} 50%, ${C.goldDark} 100%)`,
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text', opacity: 0.7,
-          }}>Bela Pro</span>
-        </div>
-        <p style={{ color: C.textMuted, fontSize: 13 }}>
-          A plataforma de gestão para profissionais
-        </p>
-        <p style={{ color: 'rgba(255,255,255,0.15)', fontSize: 11, marginTop: 16 }}>
-          © 2026 Bela Pro. Todos os direitos reservados.
-        </p>
+      {/* ===== FOOTER ===== */}
+      <footer style={{ padding: '40px 24px', borderTop: `1px solid ${C.border}`, textAlign: 'center' }}>
+        <span style={{
+          fontFamily: FONT.serif, fontSize: 24, fontWeight: 800,
+          background: `linear-gradient(135deg, ${C.goldLight} 0%, ${C.gold} 50%, ${C.goldDark} 100%)`,
+          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', opacity: 0.6,
+        }}>Bela Pro</span>
+        <p style={{ color: C.textMuted, fontSize: 12, marginTop: 8 }}>A agenda inteligente para profissionais da beleza</p>
+        <p style={{ color: 'rgba(255,255,255,0.12)', fontSize: 11, marginTop: 12 }}>© 2026 Bela Pro. Todos os direitos reservados.</p>
       </footer>
+
+      {/* ===== MOBILE CTA BAR ===== */}
+      <div className="mobile-cta-bar">
+        <Link href={`/cadastro?ref=${token}`} onClick={handleCtaClick} className="cta-btn" style={{ width: '100%', justifyContent: 'center', padding: '16px 24px', fontSize: 15, animation: 'none' }}>
+          Criar minha conta grátis →
+        </Link>
+      </div>
     </div>
   );
 }

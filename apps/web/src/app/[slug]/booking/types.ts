@@ -48,8 +48,16 @@ export interface ProfessionalProfile {
 }
 
 // ============================================
-// SERVIÇOS
+// SERVIÇOS E CATEGORIAS
 // ============================================
+
+export interface ServiceCategory {
+  id: string;
+  name: string;
+  iconEmoji: string | null;
+  color: string | null;
+  sortOrder: number;
+}
 
 export interface Service {
   id: string;
@@ -62,6 +70,8 @@ export interface Service {
   imageUrl?: string | null;
   badgeText?: string | null;
   categoryTag?: string | null;
+  categoryId?: string | null;
+  category?: ServiceCategory | null;
 }
 
 export interface TimeSlot {
@@ -72,7 +82,7 @@ export interface TimeSlot {
 
 export interface BookingData {
   workspaceId: string;
-  serviceId: string;
+  serviceIds: string[];
   startAt: string;
   clientName: string;
   clientPhone: string;
@@ -82,11 +92,12 @@ export interface BookingState {
   // Data
   workspace: Workspace | null;
   services: Service[];
+  categories: ServiceCategory[];
   availableDays: string[];
   availableSlots: TimeSlot[];
   
   // Seleções
-  selectedService: Service | null;
+  selectedServices: Service[];
   selectedDate: string | null;
   selectedSlot: string | null;
   
@@ -107,10 +118,13 @@ export interface BookingState {
 export interface PaymentInfo {
   paymentId: string;
   appointmentId: string;
+  amount: number;
   amountCents: number;
-  pixCode: string;
-  pixRecipientName: string;
-  pixKeyMasked: string;
+  pixQrCode: string;
+  pixCode: string; // Pix copia e cola
+  pixCopyPaste: string;
+  pixRecipientName?: string;
+  pixKeyMasked?: string;
   expiresAt: string;
   instructions?: string;
 }
@@ -118,9 +132,11 @@ export interface PaymentInfo {
 export type BookingStep = 1 | 2 | 3 | 4 | 5;
 
 export interface StepConfig {
-  number: BookingStep;
+  number: number;
+  title?: string;
   label: string;
   shortLabel: string;
+  icon?: string;
 }
 
 export interface TrustBadge {

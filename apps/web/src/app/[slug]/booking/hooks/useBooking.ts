@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Workspace, Service, TimeSlot, BookingStep, BookingState, ThemeConfig, PaymentInfo } from '../types';
+import { Workspace, Service, ServiceCategory, TimeSlot, BookingStep, BookingState, ThemeConfig, PaymentInfo } from '../types';
 import { API_URL, DEFAULT_COPY, getThemeFromWorkspace } from '../constants';
 import { cleanPhone } from '../utils';
 
@@ -12,7 +12,8 @@ interface UseBookingProps {
 interface UseBookingReturn extends BookingState {
   // Actions
   fetchWorkspace: () => Promise<void>;
-  selectService: (service: Service) => Promise<void>;
+  toggleService: (service: Service) => void;
+  proceedToDateSelection: () => Promise<void>;
   selectDate: (date: string) => Promise<void>;
   selectSlot: (slot: string) => void;
   setClientName: (name: string) => void;
@@ -28,14 +29,17 @@ interface UseBookingReturn extends BookingState {
   primaryColor: string;
   gradientBg: string;
   theme: ThemeConfig;
+  totalDuration: number;
+  totalPrice: number;
 }
 
 const initialState: BookingState = {
   workspace: null,
   services: [],
+  categories: [],
   availableDays: [],
   availableSlots: [],
-  selectedService: null,
+  selectedServices: [],
   selectedDate: null,
   selectedSlot: null,
   clientName: '',
@@ -54,12 +58,16 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
   const theme = getThemeFromWorkspace(state.workspace);
   const primaryColor = theme.colors.primary;
   const gradientBg = theme.colors.gradient;
+  
+  // Totais calculados para múltiplos serviços
+  const totalDuration = state.selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
+  const totalPrice = state.selectedServices.reduce((sum, s) => sum + s.priceCents, 0);
 
   // Determina se pode prosseguir baseado na etapa atual
   const canProceed = (() => {
     switch (state.step) {
       case 1:
-        return state.selectedService !== null;
+        return state.selectedServices.length > 0;
       case 2:
         return state.selectedDate !== null;
       case 3:
@@ -83,18 +91,32 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
       
       const workspace: Workspace = await res.json();
       
-      const servicesRes = await fetch(`${API_URL}/workspace/${workspace.id}/services`);
-      const services: Service[] = await servicesRes.json();
+      // Fetch serviços e categorias em paralelo
+      const [servicesRes, categoriesRes] = await Promise.all([
+        fetch(`${API_URL}/workspace/${workspace.id}/services`),
+        fetch(`${API_URL}/workspace/${workspace.id}/categories`),
+      ]);
       
-      // Ordenar serviços por sortOrder
+      const services: Service[] = await servicesRes.json();
+      const categories: ServiceCategory[] = await categoriesRes.json();
+      
+      // Ordenar serviços por categoria e sortOrder
       const sortedServices = services
         .filter(s => s.showInBooking !== false)
-        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+        .sort((a, b) => {
+          // Primeiro por categoria sortOrder
+          const catSortA = a.category?.sortOrder ?? 999;
+          const catSortB = b.category?.sortOrder ?? 999;
+          if (catSortA !== catSortB) return catSortA - catSortB;
+          // Depois por sortOrder do serviço
+          return (a.sortOrder || 0) - (b.sortOrder || 0);
+        });
       
       setState(prev => ({
         ...prev,
         workspace,
         services: sortedServices,
+        categories,
         loading: false,
       }));
     } catch (error: any) {
@@ -106,21 +128,37 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
     }
   }, [slug]);
 
-  // Selecionar serviço e buscar dias disponíveis
-  const selectService = useCallback(async (service: Service) => {
-    if (!state.workspace) return;
+  // Toggle seleção de serviço (adiciona ou remove da lista)
+  const toggleService = useCallback((service: Service) => {
+    setState(prev => {
+      const isSelected = prev.selectedServices.some(s => s.id === service.id);
+      if (isSelected) {
+        return { ...prev, selectedServices: prev.selectedServices.filter(s => s.id !== service.id) };
+      } else {
+        // Limite de 10 serviços por vez
+        if (prev.selectedServices.length >= 10) return prev;
+        return { ...prev, selectedServices: [...prev.selectedServices, service] };
+      }
+    });
+  }, []);
+
+  // Prosseguir para seleção de data (após selecionar serviços)
+  const proceedToDateSelection = useCallback(async () => {
+    if (!state.workspace || state.selectedServices.length === 0) return;
     
     setState(prev => ({
       ...prev,
-      selectedService: service,
       loading: true,
       error: null,
     }));
     
     try {
+      // Usa o primeiro serviço para buscar disponibilidade (simplificação)
+      // Backend considera duração total na validação de conflito
+      const firstServiceId = state.selectedServices[0].id;
       const today = new Date().toISOString().split('T')[0];
       const res = await fetch(
-        `${API_URL}/availability/days?workspaceId=${state.workspace.id}&serviceId=${service.id}&from=${today}&limit=14`
+        `${API_URL}/availability/days?workspaceId=${state.workspace.id}&serviceId=${firstServiceId}&from=${today}&limit=14`
       );
       
       const days: string[] = await res.json();
@@ -138,11 +176,11 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
         error: DEFAULT_COPY.genericError,
       }));
     }
-  }, [state.workspace]);
+  }, [state.workspace, state.selectedServices]);
 
   // Selecionar data e buscar horários
   const selectDate = useCallback(async (date: string) => {
-    if (!state.workspace || !state.selectedService) return;
+    if (!state.workspace || state.selectedServices.length === 0) return;
     
     setState(prev => ({
       ...prev,
@@ -152,8 +190,10 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
     }));
     
     try {
+      // Usa primeiro serviço para buscar slots (backend valida duração total)
+      const firstServiceId = state.selectedServices[0].id;
       const res = await fetch(
-        `${API_URL}/availability/slots?workspaceId=${state.workspace.id}&serviceId=${state.selectedService.id}&date=${date}`
+        `${API_URL}/availability/slots?workspaceId=${state.workspace.id}&serviceId=${firstServiceId}&date=${date}`
       );
       
       const slots: TimeSlot[] = await res.json();
@@ -172,7 +212,7 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
         error: DEFAULT_COPY.genericError,
       }));
     }
-  }, [state.workspace, state.selectedService]);
+  }, [state.workspace, state.selectedServices]);
 
   // Selecionar horário
   const selectSlot = useCallback((slot: string) => {
@@ -195,7 +235,7 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
 
   // Confirmar agendamento
   const confirmBooking = useCallback(async () => {
-    if (!state.workspace || !state.selectedService || !state.selectedSlot) return;
+    if (!state.workspace || state.selectedServices.length === 0 || !state.selectedSlot) return;
     
     const trimmedName = state.clientName.trim();
     const cleanedPhone = cleanPhone(state.clientPhone);
@@ -213,7 +253,7 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           workspaceId: state.workspace!.id,
-          serviceId: state.selectedService!.id,
+          serviceIds: state.selectedServices.map(s => s.id),
           startAt: state.selectedSlot,
           clientName: trimmedName,
           clientPhone: cleanedPhone,
@@ -250,7 +290,7 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
         error: error.message || DEFAULT_COPY.genericError,
       }));
     }
-  }, [state.workspace, state.selectedService, state.selectedSlot, state.clientName, state.clientPhone]);
+  }, [state.workspace, state.selectedServices, state.selectedSlot, state.clientName, state.clientPhone]);
 
   // Voltar uma etapa
   const goBack = useCallback(() => {
@@ -263,7 +303,7 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
       const updates: Partial<BookingState> = { step: newStep, error: null };
       
       if (newStep < 2) {
-        updates.selectedService = null;
+        updates.selectedServices = [];
         updates.availableDays = [];
       }
       if (newStep < 3) {
@@ -310,7 +350,8 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
   return {
     ...state,
     fetchWorkspace,
-    selectService,
+    toggleService,
+    proceedToDateSelection,
     selectDate,
     selectSlot,
     setClientName,
@@ -324,6 +365,8 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
     primaryColor,
     gradientBg,
     theme,
+    totalDuration,
+    totalPrice,
   };
 }
 

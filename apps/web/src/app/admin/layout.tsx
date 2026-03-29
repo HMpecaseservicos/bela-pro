@@ -13,6 +13,9 @@ const MENU_ITEMS = [
   { href: '/admin/subscriptions', label: 'Assinaturas', icon: '💳' },
   { href: '/admin/billing', label: 'Billing', icon: '💰' },
   { href: '/admin/patrocinadores', label: 'Patrocinadores', icon: '🤝' },
+  { href: '/admin/mensagens', label: 'Mensagens', icon: '📢' },
+  { href: '/admin/my-2fa', label: 'Meu 2FA', icon: '🔐' },
+  { href: '/admin/settings', label: 'Configurações', icon: '⚙️' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

@@ -624,7 +624,11 @@ export default function AdminConvitesPage() {
   async function handleCancel(invite: BusinessInvite) {
     if (!confirm(`Deseja cancelar o convite para "${invite.inviteType === 'PUBLIC' ? invite.campaignName : invite.businessName}"?`)) return;
     try {
-      await fetch(`${API_URL}/business-invites/${invite.id}`, { method: 'DELETE', headers: authHeaders() });
+      const res = await fetch(`${API_URL}/business-invites/${invite.id}`, { method: 'DELETE', headers: authHeaders() });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || 'Erro ao cancelar');
+      }
       fetchInvites();
       fetchMetrics();
       toast('Convite cancelado', 'info');
@@ -641,6 +645,20 @@ export default function AdminConvitesPage() {
       fetchMetrics();
       toast('Convite reativado!', 'success');
     } catch (err: any) { toast(err.message || 'Erro ao reativar', 'error'); }
+  }
+
+  async function handleDeletePermanent(invite: BusinessInvite) {
+    if (!confirm(`⚠️ ATENÇÃO: Deseja EXCLUIR PERMANENTEMENTE o convite "${invite.inviteType === 'PUBLIC' ? invite.campaignName : invite.businessName}"? Esta ação não pode ser desfeita!`)) return;
+    try {
+      const res = await fetch(`${API_URL}/business-invites/${invite.id}/permanent`, { method: 'DELETE', headers: authHeaders() });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || 'Erro ao excluir');
+      }
+      fetchInvites();
+      fetchMetrics();
+      toast('Convite excluído permanentemente', 'info');
+    } catch (err: any) { toast(err.message || 'Erro ao excluir', 'error'); }
   }
 
   function handleEdit(invite: BusinessInvite) {
@@ -1011,6 +1029,11 @@ export default function AdminConvitesPage() {
                             {!['CANCELLED', 'REGISTERED', 'ACTIVATED'].includes(invite.status) && (
                               <button onClick={() => handleCancel(invite)} title="Cancelar"
                                 style={btnSmall(T.danger, T.dangerBg)}>✖</button>
+                            )}
+
+                            {['EXPIRED', 'CANCELLED'].includes(invite.status) && (
+                              <button onClick={() => handleDeletePermanent(invite)} title="Excluir permanentemente"
+                                style={btnSmall('#7f1d1d', '#fecaca')}>🗑️</button>
                             )}
 
                             {invite.convertedWorkspace && (

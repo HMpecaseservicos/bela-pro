@@ -20,6 +20,7 @@ const createServiceSchema = z.object({
   imageUrl: z.string().url().optional().nullable(),
   badgeText: z.string().max(50).optional().nullable(),
   categoryTag: z.string().max(50).optional().nullable(),
+  categoryId: z.string().cuid().optional().nullable(),
 });
 
 const updateServiceSchema = z.object({
@@ -36,6 +37,7 @@ const updateServiceSchema = z.object({
   imageUrl: z.string().url().optional().nullable(),
   badgeText: z.string().max(50).optional().nullable(),
   categoryTag: z.string().max(50).optional().nullable(),
+  categoryId: z.string().cuid().optional().nullable(),
 });
 
 @Injectable()
@@ -86,6 +88,16 @@ export class ServicesService {
       where: {
         workspaceId,
         ...(isActive !== undefined && { isActive }),
+      },
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+            iconEmoji: true,
+            color: true,
+          },
+        },
       },
       orderBy: [
         { sortOrder: 'asc' },

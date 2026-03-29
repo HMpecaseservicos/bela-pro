@@ -23,6 +23,7 @@ import {
   HeroSection,
   ServiceCardPremium,
 } from './components';
+import { ServiceListPro } from './components/ServiceListPro';
 
 // Constants
 import { COLORS, API_URL } from './constants';
@@ -160,13 +161,13 @@ export default function BookingPage() {
   }
 
   // Step 5 - Tela de pagamento PIX
-  if (booking.step === 5 && booking.paymentInfo && booking.workspace && booking.selectedService && booking.selectedDate && booking.selectedSlot) {
+  if (booking.step === 5 && booking.paymentInfo && booking.workspace && booking.selectedServices.length > 0 && booking.selectedDate && booking.selectedSlot) {
     return (
       <>
         <style>{globalStyles}</style>
         <PixPaymentScreen
           workspace={booking.workspace}
-          service={booking.selectedService}
+          services={booking.selectedServices}
           selectedDate={booking.selectedDate}
           selectedSlot={booking.selectedSlot}
           paymentInfo={booking.paymentInfo}
@@ -177,13 +178,13 @@ export default function BookingPage() {
   }
 
   // Sucesso - Tela de confirmação
-  if (booking.success && booking.workspace && booking.selectedService && booking.selectedDate && booking.selectedSlot) {
+  if (booking.success && booking.workspace && booking.selectedServices.length > 0 && booking.selectedDate && booking.selectedSlot) {
     return (
       <>
         <style>{globalStyles}</style>
         <ConfirmationScreen
           workspace={booking.workspace}
-          service={booking.selectedService}
+          services={booking.selectedServices}
           selectedDate={booking.selectedDate}
           selectedSlot={booking.selectedSlot}
           primaryColor={booking.primaryColor}
@@ -312,15 +313,59 @@ export default function BookingPage() {
 
           {/* STEP 1: Serviços */}
           {booking.step === 1 && (
-            <ServiceList
-              services={booking.services}
-              selectedService={booking.selectedService}
-              loading={booking.loading}
-              primaryColor={booking.primaryColor}
-              onSelect={booking.selectService}
-              usePremiumLayout={usePremiumLayout}
-              theme={booking.theme}
-            />
+            <>
+              <ServiceListPro
+                services={booking.services}
+                categories={booking.categories}
+                selectedServices={booking.selectedServices}
+                loading={booking.loading}
+                primaryColor={booking.primaryColor}
+                onSelect={booking.toggleService}
+                theme={booking.theme}
+              />
+              
+              {/* Resumo dos serviços selecionados */}
+              {booking.selectedServices.length > 0 && (
+                <div style={{
+                  marginTop: 20,
+                  padding: 16,
+                  background: `${booking.primaryColor}10`,
+                  borderRadius: 12,
+                  border: `1px solid ${booking.primaryColor}30`,
+                }}>
+                  <p style={{ fontSize: 13, color: COLORS.textSecondary, margin: '0 0 8px' }}>
+                    {booking.selectedServices.length} serviço{booking.selectedServices.length > 1 ? 's' : ''} selecionado{booking.selectedServices.length > 1 ? 's' : ''}
+                  </p>
+                  <p style={{ fontSize: 15, fontWeight: 600, color: COLORS.textPrimary, margin: 0 }}>
+                    {booking.totalDuration} min • R$ {(booking.totalPrice / 100).toFixed(2).replace('.', ',')}
+                  </p>
+                </div>
+              )}
+              
+              {/* Botão para prosseguir */}
+              {booking.selectedServices.length > 0 && (
+                <button
+                  onClick={booking.proceedToDateSelection}
+                  disabled={booking.loading}
+                  style={{
+                    width: '100%',
+                    marginTop: 16,
+                    padding: '14px 24px',
+                    background: booking.primaryColor,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 12,
+                    fontSize: 15,
+                    fontWeight: 600,
+                    cursor: booking.loading ? 'wait' : 'pointer',
+                    opacity: booking.loading ? 0.7 : 1,
+                    transition: 'opacity 0.2s',
+                  }}
+                >
+                  {booking.loading ? 'Carregando...' : 'Continuar'}
+                </button>
+              )}
+            </>
           )}
 
           {/* STEP 2: Data */}
@@ -331,7 +376,7 @@ export default function BookingPage() {
                   Escolha uma data
                 </h2>
                 <p style={{ fontSize: 14, color: COLORS.textSecondary, margin: 0 }}>
-                  {booking.selectedService?.name} • {booking.selectedService?.durationMinutes} min
+                  {booking.selectedServices.map(s => s.name).join(' + ')} • {booking.totalDuration} min
                 </p>
               </div>
               
@@ -368,7 +413,7 @@ export default function BookingPage() {
           )}
 
           {/* STEP 4: Dados do cliente */}
-          {booking.step === 4 && booking.selectedService && booking.selectedDate && booking.selectedSlot && (
+          {booking.step === 4 && booking.selectedServices.length > 0 && booking.selectedDate && booking.selectedSlot && (
             <>
               <div style={{ textAlign: 'center', marginBottom: 20 }}>
                 <h2 style={{ fontSize: 20, fontWeight: 700, color: COLORS.textPrimary, margin: 0 }}>
@@ -377,7 +422,7 @@ export default function BookingPage() {
               </div>
               
               <ClientForm
-                service={booking.selectedService}
+                services={booking.selectedServices}
                 selectedDate={booking.selectedDate}
                 selectedSlot={booking.selectedSlot}
                 clientName={booking.clientName}
@@ -395,13 +440,15 @@ export default function BookingPage() {
       </div>
 
       {/* Spacer para o footer sticky */}
-      {booking.selectedService && booking.step < 4 && (
+      {booking.selectedServices.length > 0 && booking.step < 4 && (
         <div style={{ height: 100 }} />
       )}
 
       {/* Footer sticky (passos 2 e 3 apenas) */}
       <StickyFooter
-        selectedService={booking.selectedService}
+        selectedServices={booking.selectedServices}
+        totalDuration={booking.totalDuration}
+        totalPrice={booking.totalPrice}
         currentStep={booking.step}
         canProceed={booking.canProceed}
         loading={booking.loading}

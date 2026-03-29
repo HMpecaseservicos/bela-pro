@@ -8,7 +8,7 @@ import { SkeletonServiceCard } from './Skeleton';
 
 interface ServiceListProps {
   services: Service[];
-  selectedService: Service | null;
+  selectedServices: Service[];
   loading: boolean;
   primaryColor?: string;
   onSelect: (service: Service) => void;
@@ -18,7 +18,7 @@ interface ServiceListProps {
 
 export function ServiceList({
   services,
-  selectedService,
+  selectedServices,
   loading,
   primaryColor = COLORS.primaryFallback,
   onSelect,
@@ -69,7 +69,7 @@ export function ServiceList({
             key={service.id}
             service={service}
             theme={theme}
-            selected={selectedService?.id === service.id}
+            selected={selectedServices.some(s => s.id === service.id)}
             onSelect={() => onSelect(service)}
           />
         ))}
@@ -84,7 +84,7 @@ export function ServiceList({
         <ServiceCard
           key={service.id}
           service={service}
-          isSelected={selectedService?.id === service.id}
+          isSelected={selectedServices.some(s => s.id === service.id)}
           primaryColor={primaryColor}
           onClick={() => onSelect(service)}
         />

@@ -15,3 +15,5 @@ coverage/
 
 # Uploads temporários
 tmp/uploads/
+# Local Netlify folder
+.netlify

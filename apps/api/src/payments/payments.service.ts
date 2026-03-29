@@ -157,6 +157,13 @@ export class PaymentsService {
   }
 
   /**
+   * Gera um ID de transação PIX único
+   */
+  generatePixTxId(): string {
+    return `BELA${Date.now().toString(36).toUpperCase()}`.slice(0, 25);
+  }
+
+  /**
    * Gera código PIX "copia e cola" (BR Code estático)
    * Formato EMV QR Code para PIX conforme especificação BACEN
    */
@@ -166,10 +173,10 @@ export class PaymentsService {
     holderName: string,
     city: string,
     amountCents: number,
+    txId: string,
     description?: string
   ): string {
     const amount = (amountCents / 100).toFixed(2);
-    const txId = `BELA${Date.now().toString(36).toUpperCase()}`.slice(0, 25);
     
     // Limpar e formatar dados
     const cleanName = this.removeAccents(holderName).toUpperCase().slice(0, 25);
@@ -291,6 +298,9 @@ export class PaymentsService {
       return null;
     }
 
+    // Gerar ID de transação PIX
+    const pixTxId = this.generatePixTxId();
+
     // Gerar código PIX
     const pixCode = workspace.pixKey && workspace.pixKeyType && workspace.pixHolderName
       ? this.generatePixCode(
@@ -299,6 +309,7 @@ export class PaymentsService {
           workspace.pixHolderName,
           workspace.pixCity || 'Brasil',
           amountCents,
+          pixTxId,
           'Agendamento BELA PRO'
         )
       : null;
@@ -307,14 +318,16 @@ export class PaymentsService {
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + (workspace.paymentExpiryMinutes || 30));
 
-    // Criar pagamento
+    // Criar pagamento com workspaceId e pixTxId
     const payment = await this.prisma.payment.create({
       data: {
         appointmentId,
+        workspaceId,
         amountCents,
         serviceTotalCents,
         status: 'PENDING',
         pixCode,
+        pixTxId,
         expiresAt,
       },
     });
@@ -586,5 +599,75 @@ export class PaymentsService {
         // Aleatória: mostrar apenas últimos 4
         return `****${key.slice(-4)}`;
     }
+  }
+
+  // ==================== WEBHOOK PIX ====================
+
+  /**
+   * Busca pagamento pelo txId (usado pelo webhook)
+   */
+  async findByPixTxId(pixTxId: string) {
+    return this.prisma.payment.findUnique({
+      where: { pixTxId },
+      include: {
+        appointment: {
+          select: {
+            id: true,
+            workspaceId: true,
+            startAt: true,
+            client: { select: { name: true, phoneE164: true } },
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Confirma pagamento via webhook PIX
+   * @param pixTxId ID da transação PIX
+   * @param webhookPayload Payload completo do webhook para auditoria
+   */
+  async confirmByWebhook(pixTxId: string, webhookPayload: string) {
+    const payment = await this.findByPixTxId(pixTxId);
+
+    if (!payment) {
+      throw new NotFoundException(`Pagamento não encontrado para txId: ${pixTxId}`);
+    }
+
+    if (payment.status !== 'PENDING') {
+      // Já foi processado (pode ser idempotente)
+      return { success: true, alreadyProcessed: true, paymentId: payment.id };
+    }
+
+    // Verificar se não expirou
+    if (new Date() > payment.expiresAt) {
+      throw new BadRequestException('Pagamento expirado');
+    }
+
+    // Atualizar pagamento e agendamento em transação
+    await this.prisma.$transaction([
+      this.prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: 'PAID',
+          paidAt: new Date(),
+          confirmedBy: 'WEBHOOK_PIX',
+          webhookReceivedAt: new Date(),
+          webhookPayload,
+          notes: 'Confirmado automaticamente via webhook PIX',
+        },
+      }),
+      this.prisma.appointment.update({
+        where: { id: payment.appointmentId },
+        data: { status: 'CONFIRMED' },
+      }),
+    ]);
+
+    return { 
+      success: true, 
+      alreadyProcessed: false, 
+      paymentId: payment.id,
+      appointmentId: payment.appointmentId,
+    };
   }
 }

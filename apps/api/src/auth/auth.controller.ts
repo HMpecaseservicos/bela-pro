@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { AuthService } from './auth.service';
 import type { JwtSubject } from './auth.types';
@@ -8,17 +9,23 @@ import type { JwtSubject } from './auth.types';
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
+  // Limit signup to 3 per minute to prevent abuse
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('signup')
   async signup(@Body() body: unknown) {
     return this.auth.signup(body);
   }
 
+  // Limit register to 3 per minute
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('register')
   async register(@Body() body: unknown) {
     // Alias for signup
     return this.auth.signup(body);
   }
 
+  // Strict rate limit on login: 5 attempts per minute per IP
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('login')
   async login(@Body() body: unknown) {
     return this.auth.login(body);
@@ -31,6 +38,7 @@ export class AuthController {
   }
 
   /** Accept invite and create/update user (public) */
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('accept-invite')
   async acceptInvite(@Body() body: unknown) {
     return this.auth.acceptInvite(body);

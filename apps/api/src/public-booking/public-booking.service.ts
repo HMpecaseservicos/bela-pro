@@ -8,7 +8,7 @@ const createPublicBookingSchema = z.object({
   workspaceId: z.string().min(1),
   clientName: z.string().min(2).max(80),
   clientPhone: z.string().min(10).max(20),
-  serviceId: z.string().min(1),
+  serviceIds: z.array(z.string().cuid()).min(1).max(10),
   startAt: z.string().datetime(),
 });
 
@@ -34,18 +34,26 @@ export class PublicBookingService {
       throw new BadRequestException('Workspace não encontrado.');
     }
 
-    // Valida que serviço existe e pertence ao workspace
-    // TENANT ISOLATION: findFirst com workspaceId no WHERE para evitar enumeração de IDs
-    const service = await this.prisma.service.findFirst({
-      where: { id: data.serviceId, workspaceId: data.workspaceId, isActive: true },
+    // Valida que todos os serviços existem e pertencem ao workspace
+    // TENANT ISOLATION: findMany com workspaceId no WHERE para evitar enumeração de IDs
+    const services = await this.prisma.service.findMany({
+      where: { 
+        id: { in: data.serviceIds }, 
+        workspaceId: data.workspaceId, 
+        isActive: true 
+      },
     });
 
-    if (!service) {
-      throw new BadRequestException('Serviço não encontrado ou inativo.');
+    if (services.length !== data.serviceIds.length) {
+      throw new BadRequestException('Um ou mais serviços não encontrados ou inativos.');
     }
 
-    // Calcula duração
-    const endAt = new Date(startAt.getTime() + service.durationMinutes * 60000);
+    // Calcula duração total (soma das durações) e preço total
+    const totalDurationMinutes = services.reduce((sum, s) => sum + s.durationMinutes, 0);
+    const totalPriceCents = services.reduce((sum, s) => sum + s.priceCents, 0);
+
+    // Calcula fim do agendamento
+    const endAt = new Date(startAt.getTime() + totalDurationMinutes * 60000);
 
     // Verifica conflitos
     const conflicts = await this.prisma.appointment.findMany({
@@ -100,7 +108,7 @@ export class PublicBookingService {
     const requiresPayment = workspace.requirePayment && workspace.paymentType !== 'NONE';
     const appointmentStatus = requiresPayment ? 'PENDING_PAYMENT' : 'PENDING';
 
-    // Cria agendamento
+    // Cria agendamento com múltiplos serviços
     const appointment = await this.prisma.appointment.create({
       data: {
         workspaceId: data.workspaceId,
@@ -109,13 +117,13 @@ export class PublicBookingService {
         endAt,
         status: appointmentStatus,
         bookedVia: 'public',
-        totalPriceCents: service.priceCents,
+        totalPriceCents,
         services: {
-          create: {
-            serviceId: service.id,
-            durationMinutes: service.durationMinutes,
-            priceCents: service.priceCents,
-          },
+          create: services.map(s => ({
+            serviceId: s.id,
+            durationMinutes: s.durationMinutes,
+            priceCents: s.priceCents,
+          })),
         },
       },
       include: {
@@ -134,7 +142,7 @@ export class PublicBookingService {
       const payment = await this.paymentsService.createPaymentForAppointment(
         appointment.id,
         data.workspaceId,
-        service.priceCents
+        totalPriceCents
       );
       
       if (payment) {
@@ -191,5 +199,199 @@ export class PublicBookingService {
       default:
         return '***';
     }
+  }
+
+  // ==================== CONSULTA PÚBLICA ====================
+
+  /**
+   * Busca agendamento pelo ID e telefone (validação de propriedade)
+   */
+  async findByIdAndPhone(id: string, phone: string) {
+    const phoneE164 = normalizePhoneE164(phone);
+    
+    const appointment = await this.prisma.appointment.findFirst({
+      where: { 
+        id,
+        client: { phoneE164 },
+      },
+      include: {
+        workspace: {
+          select: {
+            id: true,
+            name: true,
+            brandName: true,
+            slug: true,
+          },
+        },
+        client: {
+          select: {
+            name: true,
+            phoneE164: true,
+          },
+        },
+        services: {
+          include: {
+            service: {
+              select: {
+                id: true,
+                name: true,
+                durationMinutes: true,
+                priceCents: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!appointment) {
+      throw new BadRequestException('Agendamento não encontrado ou telefone não confere.');
+    }
+
+    return appointment;
+  }
+
+  // ==================== REAGENDAMENTO PÚBLICO ====================
+
+  private readonly reschedulePublicSchema = z.object({
+    phone: z.string().min(10).max(20),
+    newStartAt: z.string().datetime(),
+  });
+
+  /**
+   * Reagenda um agendamento público (cliente valida por telefone)
+   */
+  async reschedulePublic(id: string, input: unknown) {
+    const data = this.reschedulePublicSchema.parse(input);
+    const phoneE164 = normalizePhoneE164(data.phone);
+    const newStartAt = new Date(data.newStartAt);
+
+    // Busca o agendamento e valida propriedade pelo telefone
+    const appointment = await this.prisma.appointment.findFirst({
+      where: {
+        id,
+        client: { phoneE164 },
+      },
+      include: {
+        services: {
+          include: { service: true },
+        },
+        workspace: true,
+        client: true,
+      },
+    });
+
+    if (!appointment) {
+      throw new BadRequestException('Agendamento não encontrado ou telefone não confere.');
+    }
+
+    if (['CANCELLED', 'COMPLETED', 'NO_SHOW'].includes(appointment.status)) {
+      throw new BadRequestException('Este agendamento não pode ser reagendado.');
+    }
+
+    // Verifica se está dentro do prazo permitido (ex: pelo menos 2h antes)
+    const minHoursBefore = 2;
+    const now = new Date();
+    const minAllowed = new Date(appointment.startAt.getTime() - minHoursBefore * 60 * 60 * 1000);
+    if (now > minAllowed) {
+      throw new BadRequestException(
+        `Reagendamentos devem ser feitos com pelo menos ${minHoursBefore} horas de antecedência.`
+      );
+    }
+
+    // Calcula nova duração total baseada nos serviços existentes
+    const totalDurationMinutes = appointment.services.reduce((sum, as) => sum + as.durationMinutes, 0);
+    const newEndAt = new Date(newStartAt.getTime() + totalDurationMinutes * 60000);
+
+    // Verifica conflitos (excluindo o próprio agendamento)
+    const conflicts = await this.prisma.appointment.findMany({
+      where: {
+        workspaceId: appointment.workspaceId,
+        id: { not: id },
+        status: { in: ['PENDING', 'CONFIRMED', 'PENDING_PAYMENT'] },
+        AND: [{ startAt: { lt: newEndAt } }, { endAt: { gt: newStartAt } }],
+      },
+    });
+
+    if (conflicts.length > 0) {
+      throw new ConflictException('Já existe um agendamento neste horário.');
+    }
+
+    // Atualiza o agendamento
+    await this.prisma.appointment.update({
+      where: { id },
+      data: {
+        startAt: newStartAt,
+        endAt: newEndAt,
+      },
+    });
+
+    this.logger.log(
+      `✅ [${appointment.workspaceId}] Reagendamento público: ${id} | ` +
+      `cliente=${appointment.client.name} | novo horário=${newStartAt.toISOString()}`
+    );
+
+    return this.findByIdAndPhone(id, data.phone);
+  }
+
+  // ==================== CANCELAMENTO PÚBLICO ====================
+
+  private readonly cancelPublicSchema = z.object({
+    phone: z.string().min(10).max(20),
+    reason: z.string().max(500).optional(),
+  });
+
+  /**
+   * Cancela um agendamento público (cliente valida por telefone)
+   */
+  async cancelPublic(id: string, input: unknown) {
+    const data = this.cancelPublicSchema.parse(input);
+    const phoneE164 = normalizePhoneE164(data.phone);
+
+    // Busca o agendamento e valida propriedade pelo telefone
+    const appointment = await this.prisma.appointment.findFirst({
+      where: {
+        id,
+        client: { phoneE164 },
+      },
+      include: {
+        workspace: true,
+        client: true,
+      },
+    });
+
+    if (!appointment) {
+      throw new BadRequestException('Agendamento não encontrado ou telefone não confere.');
+    }
+
+    if (['CANCELLED', 'COMPLETED', 'NO_SHOW'].includes(appointment.status)) {
+      throw new BadRequestException('Este agendamento já foi finalizado.');
+    }
+
+    // Verifica se está dentro do prazo permitido (ex: pelo menos 2h antes)
+    const minHoursBefore = 2;
+    const now = new Date();
+    const minAllowed = new Date(appointment.startAt.getTime() - minHoursBefore * 60 * 60 * 1000);
+    if (now > minAllowed) {
+      throw new BadRequestException(
+        `Cancelamentos devem ser feitos com pelo menos ${minHoursBefore} horas de antecedência.`
+      );
+    }
+
+    // Cancela o agendamento
+    await this.prisma.appointment.update({
+      where: { id },
+      data: {
+        status: 'CANCELLED',
+        notes: data.reason ? `Cancelado pelo cliente: ${data.reason}` : 'Cancelado pelo cliente',
+      },
+    });
+
+    this.logger.log(
+      `✅ [${appointment.workspaceId}] Cancelamento público: ${id} | ` +
+      `cliente=${appointment.client.name}`
+    );
+
+    return { success: true, message: 'Agendamento cancelado com sucesso.' };
   }
 }

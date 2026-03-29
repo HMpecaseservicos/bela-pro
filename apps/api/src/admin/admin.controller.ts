@@ -16,6 +16,7 @@ import { hash } from '@node-rs/argon2';
 import { Response } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SuperAdminGuard } from '../auth/super-admin.guard';
@@ -24,11 +25,13 @@ import type { JwtSubject } from '../auth/auth.types';
 /**
  * Controller de administração global do sistema.
  * Todos os endpoints requerem autenticação de Super Admin.
+ * Rate limit mais estrito: 30 requests por minuto.
  * 
  * Prefixo: /api/v1/admin
  */
 @Controller('api/v1/admin')
 @UseGuards(JwtAuthGuard, SuperAdminGuard)
+@Throttle({ default: { limit: 30, ttl: 60000 } }) // 30 requests per minute for admin
 export class AdminController {
   constructor(
     private readonly adminService: AdminService,

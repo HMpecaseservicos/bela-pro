@@ -92,7 +92,7 @@ export function ProgressSteps({
             {/* Step indicator */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
               <button
-                onClick={() => isClickable && onStepClick(step.number)}
+                onClick={() => isClickable && onStepClick(step.number as BookingStep)}
                 disabled={!isClickable}
                 style={{
                   width: 32,

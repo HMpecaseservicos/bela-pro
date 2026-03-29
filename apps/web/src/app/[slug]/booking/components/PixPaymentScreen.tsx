@@ -7,7 +7,7 @@ import { formatPrice, formatDateFull, formatTime } from '../utils';
 
 interface PixPaymentScreenProps {
   workspace: Workspace;
-  service: Service;
+  services: Service[];
   selectedDate: string;
   selectedSlot: string;
   paymentInfo: PaymentInfo;
@@ -16,7 +16,7 @@ interface PixPaymentScreenProps {
 
 export function PixPaymentScreen({
   workspace,
-  service,
+  services,
   selectedDate,
   selectedSlot,
   paymentInfo,
@@ -25,6 +25,8 @@ export function PixPaymentScreen({
   const [copied, setCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
   const [expired, setExpired] = useState(false);
+  
+  const serviceNames = services.map(s => s.name).join(' + ');
 
   // Timer countdown
   useEffect(() => {
@@ -216,8 +218,8 @@ export function PixPaymentScreen({
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Serviço:</span>
-                  <span style={{ color: '#1e293b', fontWeight: 500 }}>{service.name}</span>
+                  <span style={{ color: '#64748b' }}>Serviço{services.length > 1 ? 's' : ''}:</span>
+                  <span style={{ color: '#1e293b', fontWeight: 500 }}>{serviceNames}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#64748b' }}>Data:</span>

@@ -6,7 +6,7 @@ import { COLORS, RADIUS, DEFAULT_COPY } from '../constants';
 import { formatPrice, formatDateFull, formatTime, formatDuration, getServiceEmoji } from '../utils';
 
 interface ClientFormProps {
-  service: Service;
+  services: Service[];
   selectedDate: string;
   selectedSlot: string;
   clientName: string;
@@ -20,7 +20,7 @@ interface ClientFormProps {
 }
 
 export function ClientForm({
-  service,
+  services,
   selectedDate,
   selectedSlot,
   clientName,
@@ -35,7 +35,9 @@ export function ClientForm({
   const [nameTouched, setNameTouched] = useState(false);
   const [phoneTouched, setPhoneTouched] = useState(false);
 
-  const emoji = getServiceEmoji(service.name);
+  const totalDuration = services.reduce((sum, s) => sum + s.durationMinutes, 0);
+  const totalPrice = services.reduce((sum, s) => sum + s.priceCents, 0);
+  const emoji = services.length === 1 ? getServiceEmoji(services[0].name) : '✨';
   const gradientBg = `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColorSimple(primaryColor, -40)} 100%)`;
 
   const isNameValid = clientName.trim().length >= 3;
@@ -93,8 +95,20 @@ export function ClientForm({
         <div style={{ marginTop: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 20 }}>{emoji}</span>
-            <span style={{ fontSize: 18, fontWeight: 700 }}>{service.name}</span>
+            <span style={{ fontSize: 18, fontWeight: 700 }}>
+              {services.length === 1 ? services[0].name : `${services.length} serviços`}
+            </span>
           </div>
+          
+          {services.length > 1 && (
+            <div style={{ marginTop: 8, paddingLeft: 28 }}>
+              {services.map(s => (
+                <p key={s.id} style={{ fontSize: 13, opacity: 0.9, margin: '2px 0' }}>
+                  • {s.name}
+                </p>
+              ))}
+            </div>
+          )}
 
           <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
             <p style={{ fontSize: 14, opacity: 0.95, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -107,7 +121,7 @@ export function ClientForm({
             </p>
             <p style={{ fontSize: 14, opacity: 0.95, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>⏱</span>
-              {formatDuration(service.durationMinutes)}
+              {formatDuration(totalDuration)}
             </p>
           </div>
         </div>
@@ -120,7 +134,7 @@ export function ClientForm({
             margin: '16px 0 0',
           }}
         >
-          {formatPrice(service.priceCents)}
+          {formatPrice(totalPrice)}
         </p>
       </div>
 

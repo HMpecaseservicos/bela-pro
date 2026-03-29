@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { HealthController } from './health.controller';
 import { RootController } from './root.controller';
 import { PrismaModule } from './prisma/prisma.module';
@@ -23,8 +25,10 @@ import { FinancialModule } from './financial/financial.module';
 import { BillingModule } from './billing/billing.module';
 import { BusinessInvitesModule } from './business-invites/business-invites.module';
 import { SponsorsModule } from './sponsors/sponsors.module';
+import { ServiceCategoriesModule } from './service-categories/service-categories.module';
 import { SponsorInvitesModule } from './sponsor-invites/sponsor-invites.module';
 import { SponsorDashboardModule } from './sponsor-dashboard/sponsor-dashboard.module';
+import { TwoFactorModule } from './two-factor/two-factor.module';
 
 @Module({
   imports: [
@@ -32,6 +36,24 @@ import { SponsorDashboardModule } from './sponsor-dashboard/sponsor-dashboard.mo
       isGlobal: true,
     }),
     ScheduleModule.forRoot(),
+    // Rate limiting: 100 requests per minute by default
+    ThrottlerModule.forRoot([
+      {
+        name: 'short',
+        ttl: 1000, // 1 second
+        limit: 10, // 10 requests per second
+      },
+      {
+        name: 'medium',
+        ttl: 10000, // 10 seconds
+        limit: 50, // 50 requests per 10 seconds
+      },
+      {
+        name: 'long',
+        ttl: 60000, // 1 minute
+        limit: 100, // 100 requests per minute
+      },
+    ]),
     PrismaModule,
     AuthModule,
     ServicesModule,
@@ -52,9 +74,17 @@ import { SponsorDashboardModule } from './sponsor-dashboard/sponsor-dashboard.mo
     BillingModule,
     BusinessInvitesModule,
     SponsorsModule,
+    ServiceCategoriesModule,
     SponsorInvitesModule,
     SponsorDashboardModule,
+    TwoFactorModule,
   ],
   controllers: [HealthController, RootController],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
