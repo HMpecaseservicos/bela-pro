@@ -41,6 +41,7 @@ interface PaymentInfo {
   amountCents: number;
   amountFormatted: string;
   pixCode: string;
+  pixQrCode?: string;
   pixExpiresAt: string;
   durationMonths: number;
 }
@@ -1147,6 +1148,23 @@ export default function SponsorInviteLandingPage() {
             <div style={{ marginBottom: 24 }}>
               <p style={{ color: C.textMuted, fontSize: 12, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 4 }}>Valor total</p>
               <p style={{ color: C.gold, fontSize: 32, fontWeight: 800 }}>{paymentInfo.amountFormatted}</p>
+            </div>
+
+            {/* QR Code Image */}
+            {paymentInfo.pixQrCode && (
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ display: 'inline-block', padding: 16, background: '#fff', borderRadius: 16 }}>
+                  <img src={paymentInfo.pixQrCode} alt="QR Code Pix" width={220} height={220} style={{ display: 'block' }} />
+                </div>
+                <p style={{ color: C.textMuted, fontSize: 11, marginTop: 8 }}>Escaneie com o app do seu banco</p>
+              </div>
+            )}
+
+            {/* Divider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+              <div style={{ flex: 1, height: 1, background: C.border }} />
+              <span style={{ color: C.textMuted, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>ou copie o código</span>
+              <div style={{ flex: 1, height: 1, background: C.border }} />
             </div>
 
             {/* Copy code */}

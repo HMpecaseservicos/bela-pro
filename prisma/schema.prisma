@@ -1424,6 +1424,7 @@ model SponsorPayment {
 
   // PIX
   pixCode           String?  @db.Text  // Código PIX "copia e cola"
+  pixQrCode         String?  @db.Text  // QR Code em base64
   pixExpiresAt      DateTime?           // Quando o PIX expira (48h)
 
   // Confirmação

@@ -2,6 +2,11 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { z } from 'zod';
 import { Decimal } from '@prisma/client/runtime/library';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  generatePixCode,
+  generatePixQrCode,
+  generatePixTxId,
+} from '../common/pix.utils';
 
 // ==================== SCHEMAS DE VALIDAÇÃO ====================
 
@@ -157,104 +162,6 @@ export class PaymentsService {
   }
 
   /**
-   * Gera um ID de transação PIX único
-   */
-  generatePixTxId(): string {
-    return `BELA${Date.now().toString(36).toUpperCase()}`.slice(0, 25);
-  }
-
-  /**
-   * Gera código PIX "copia e cola" (BR Code estático)
-   * Formato EMV QR Code para PIX conforme especificação BACEN
-   */
-  generatePixCode(
-    pixKey: string,
-    pixKeyType: string,
-    holderName: string,
-    city: string,
-    amountCents: number,
-    txId: string,
-    description?: string
-  ): string {
-    const amount = (amountCents / 100).toFixed(2);
-    
-    // Limpar e formatar dados
-    const cleanName = this.removeAccents(holderName).toUpperCase().slice(0, 25);
-    const cleanCity = this.removeAccents(city).toUpperCase().slice(0, 15);
-    const cleanDesc = description ? this.removeAccents(description).slice(0, 25) : '';
-    
-    // Construir payload PIX EMV
-    // ID 00 - Payload Format Indicator
-    let payload = '000201';
-    
-    // ID 26 - Merchant Account Information (PIX)
-    const gui = '0014BR.GOV.BCB.PIX'; // GUI do PIX
-    const chave = `01${pixKey.length.toString().padStart(2, '0')}${pixKey}`;
-    const merchantInfo = gui + chave;
-    payload += `26${merchantInfo.length.toString().padStart(2, '0')}${merchantInfo}`;
-    
-    // ID 52 - Merchant Category Code
-    payload += '52040000';
-    
-    // ID 53 - Transaction Currency (986 = BRL)
-    payload += '5303986';
-    
-    // ID 54 - Transaction Amount
-    if (amountCents > 0) {
-      payload += `54${amount.length.toString().padStart(2, '0')}${amount}`;
-    }
-    
-    // ID 58 - Country Code
-    payload += '5802BR';
-    
-    // ID 59 - Merchant Name
-    payload += `59${cleanName.length.toString().padStart(2, '0')}${cleanName}`;
-    
-    // ID 60 - Merchant City
-    payload += `60${cleanCity.length.toString().padStart(2, '0')}${cleanCity}`;
-    
-    // ID 62 - Additional Data Field Template
-    const txIdField = `05${txId.length.toString().padStart(2, '0')}${txId}`;
-    const additionalData = txIdField;
-    payload += `62${additionalData.length.toString().padStart(2, '0')}${additionalData}`;
-    
-    // ID 63 - CRC16 (calculado sobre todo o payload + "6304")
-    payload += '6304';
-    const crc = this.calculateCRC16(payload);
-    payload = payload.slice(0, -4) + '6304' + crc;
-    
-    return payload;
-  }
-
-  /**
-   * Remove acentos de uma string
-   */
-  private removeAccents(str: string): string {
-    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9 ]/g, '');
-  }
-
-  /**
-   * Calcula CRC16-CCITT para PIX
-   */
-  private calculateCRC16(payload: string): string {
-    const polynomial = 0x1021;
-    let crc = 0xFFFF;
-    
-    for (let i = 0; i < payload.length; i++) {
-      crc ^= (payload.charCodeAt(i) << 8);
-      for (let j = 0; j < 8; j++) {
-        if (crc & 0x8000) {
-          crc = ((crc << 1) ^ polynomial) & 0xFFFF;
-        } else {
-          crc = (crc << 1) & 0xFFFF;
-        }
-      }
-    }
-    
-    return crc.toString(16).toUpperCase().padStart(4, '0');
-  }
-
-  /**
    * Cria um registro de pagamento para um agendamento
    */
   async createPaymentForAppointment(
@@ -299,20 +206,26 @@ export class PaymentsService {
     }
 
     // Gerar ID de transação PIX
-    const pixTxId = this.generatePixTxId();
+    const pixTxId = generatePixTxId();
 
     // Gerar código PIX
-    const pixCode = workspace.pixKey && workspace.pixKeyType && workspace.pixHolderName
-      ? this.generatePixCode(
-          workspace.pixKey,
-          workspace.pixKeyType,
-          workspace.pixHolderName,
-          workspace.pixCity || 'Brasil',
-          amountCents,
-          pixTxId,
-          'Agendamento BELA PRO'
-        )
-      : null;
+    let pixCode: string | null = null;
+    let pixQrBase64: string | null = null;
+
+    if (workspace.pixKey && workspace.pixKeyType && workspace.pixHolderName) {
+      pixCode = generatePixCode(
+        {
+          key: workspace.pixKey,
+          keyType: workspace.pixKeyType,
+          holderName: workspace.pixHolderName,
+          city: workspace.pixCity || 'Brasil',
+        },
+        amountCents,
+        pixTxId,
+        'Agendamento BELA PRO',
+      );
+      pixQrBase64 = await generatePixQrCode(pixCode);
+    }
 
     // Calcular expiração
     const expiresAt = new Date();
@@ -327,6 +240,7 @@ export class PaymentsService {
         serviceTotalCents,
         status: 'PENDING',
         pixCode,
+        pixQrBase64,
         pixTxId,
         expiresAt,
       },

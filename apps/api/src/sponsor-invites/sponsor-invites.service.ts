@@ -3,6 +3,12 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { hash } from '@node-rs/argon2';
 import { z } from 'zod';
+import {
+  generatePixCode as buildPixCode,
+  generatePixQrCode,
+  generatePixTxId,
+  PixConfig,
+} from '../common/pix.utils';
 
 // =============================================================================
 // SCHEMAS
@@ -317,7 +323,13 @@ export class SponsorInvitesService {
       // Calcular preço e gerar PIX
       const amountCents = this.TIER_PRICING[data.selectedTier]?.[data.durationMonths] || 0;
       const description = `BELAPRO ${data.selectedTier} ${data.durationMonths}M`;
-      const pixCode = this.generatePixCode(amountCents, description);
+
+      // Buscar config PIX da plataforma (SystemSettings)
+      const pixConfig = await this.getSystemPixConfig();
+      const txId = generatePixTxId();
+      const pixCode = buildPixCode(pixConfig, amountCents, txId, description);
+      const pixQrCode = await generatePixQrCode(pixCode);
+
       const pixExpiresAt = new Date();
       pixExpiresAt.setHours(pixExpiresAt.getHours() + 48); // PIX válido por 48h
 
@@ -329,6 +341,7 @@ export class SponsorInvitesService {
           durationMonths: data.durationMonths,
           status: 'PENDING',
           pixCode,
+          pixQrCode,
           pixExpiresAt,
         },
       });
@@ -372,6 +385,7 @@ export class SponsorInvitesService {
         amountCents,
         amountFormatted: `R$ ${(amountCents / 100).toFixed(2).replace('.', ',')}`,
         pixCode: result.payment.pixCode,
+        pixQrCode: result.payment.pixQrCode,
         pixExpiresAt: result.payment.pixExpiresAt,
         durationMonths: data.durationMonths,
       },
@@ -655,13 +669,28 @@ export class SponsorInvitesService {
     BRONZE:  { 3: 5970,   6: 8940,   12: 14880 },    // R$ 59,70    | R$ 89,40    | R$ 148,80
   };
 
-  // PIX config (hardcoded para plataforma)
-  private readonly PIX_CONFIG = {
-    key: 'contato@belapro.com.br',
-    keyType: 'EMAIL',
-    holderName: 'BELA PRO TECNOLOGIA LTDA',
-    city: 'SAO PAULO',
-  };
+  // PIX da plataforma — lido de SystemSettings (configurado pelo Super Admin)
+  private async getSystemPixConfig(): Promise<PixConfig> {
+    const [pixKey, pixKeyType, pixHolderName, pixCity] = await Promise.all([
+      this.prisma.systemSettings.findUnique({ where: { key: 'payment.pix_key' } }),
+      this.prisma.systemSettings.findUnique({ where: { key: 'payment.pix_key_type' } }),
+      this.prisma.systemSettings.findUnique({ where: { key: 'payment.pix_holder_name' } }),
+      this.prisma.systemSettings.findUnique({ where: { key: 'payment.pix_city' } }),
+    ]);
+
+    if (!pixKey?.value) {
+      throw new BadRequestException(
+        'Configurações de PIX da plataforma não encontradas. Configure em Admin → Billing → PIX.',
+      );
+    }
+
+    return {
+      key: pixKey.value,
+      keyType: pixKeyType?.value || 'EMAIL',
+      holderName: pixHolderName?.value || 'BELA PRO',
+      city: pixCity?.value || 'SAO PAULO',
+    };
+  }
 
   getTierDetails() {
     return {
@@ -718,76 +747,6 @@ export class SponsorInvitesService {
         maxPosts: 'Não incluído',
       },
     };
-  }
-
-  // ---- PIX CODE GENERATION ----
-
-  private generatePixCode(amountCents: number, description: string): string {
-    const amount = (amountCents / 100).toFixed(2);
-    const txId = `BELA${Date.now().toString(36).toUpperCase()}`.slice(0, 25);
-    
-    const cleanName = this.removeAccents(this.PIX_CONFIG.holderName).toUpperCase().slice(0, 25);
-    const cleanCity = this.removeAccents(this.PIX_CONFIG.city).toUpperCase().slice(0, 15);
-    
-    // Construir payload PIX EMV
-    let payload = '000201';
-    
-    // ID 26 - Merchant Account Information (PIX)
-    const gui = '0014BR.GOV.BCB.PIX';
-    const chave = `01${this.PIX_CONFIG.key.length.toString().padStart(2, '0')}${this.PIX_CONFIG.key}`;
-    const merchantInfo = gui + chave;
-    payload += `26${merchantInfo.length.toString().padStart(2, '0')}${merchantInfo}`;
-    
-    // ID 52 - Merchant Category Code
-    payload += '52040000';
-    
-    // ID 53 - Transaction Currency (986 = BRL)
-    payload += '5303986';
-    
-    // ID 54 - Transaction Amount
-    payload += `54${amount.length.toString().padStart(2, '0')}${amount}`;
-    
-    // ID 58 - Country Code
-    payload += '5802BR';
-    
-    // ID 59 - Merchant Name
-    payload += `59${cleanName.length.toString().padStart(2, '0')}${cleanName}`;
-    
-    // ID 60 - Merchant City
-    payload += `60${cleanCity.length.toString().padStart(2, '0')}${cleanCity}`;
-    
-    // ID 62 - Additional Data Field Template
-    const txIdField = `05${txId.length.toString().padStart(2, '0')}${txId}`;
-    payload += `62${txIdField.length.toString().padStart(2, '0')}${txIdField}`;
-    
-    // ID 63 - CRC16
-    payload += '6304';
-    const crc = this.calculateCRC16(payload);
-    payload = payload.slice(0, -4) + '6304' + crc;
-    
-    return payload;
-  }
-
-  private removeAccents(str: string): string {
-    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9 ]/g, '');
-  }
-
-  private calculateCRC16(payload: string): string {
-    const polynomial = 0x1021;
-    let crc = 0xFFFF;
-    
-    for (let i = 0; i < payload.length; i++) {
-      crc ^= (payload.charCodeAt(i) << 8);
-      for (let j = 0; j < 8; j++) {
-        if (crc & 0x8000) {
-          crc = ((crc << 1) ^ polynomial) & 0xFFFF;
-        } else {
-          crc = (crc << 1) & 0xFFFF;
-        }
-      }
-    }
-    
-    return crc.toString(16).toUpperCase().padStart(4, '0');
   }
 
   // ---- HELPERS ----

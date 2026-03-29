@@ -2,6 +2,12 @@ import { Injectable, Logger, BadRequestException, NotFoundException } from '@nes
 import { PrismaService } from '../prisma/prisma.service';
 import { BillingService } from './billing.service';
 import { BillingCycle } from '@prisma/client';
+import {
+  generatePixCode,
+  generatePixQrCode,
+  generatePixTxId,
+  PixConfig,
+} from '../common/pix.utils';
 
 /**
  * Service para processar pagamentos de assinaturas
@@ -46,7 +52,13 @@ export class SubscriptionPaymentService {
     }
 
     // Buscar configurações do sistema (PIX da plataforma)
-    const pixSettings = await this.getSystemPixSettings();
+    const pixConfig = await this.getSystemPixConfig();
+
+    // Gerar PIX
+    const txId = generatePixTxId();
+    const description = `BELAPRO ${workspace.name}`.slice(0, 25);
+    const pixCode = generatePixCode(pixConfig, amount, txId, description);
+    const pixQrCode = await generatePixQrCode(pixCode);
 
     // Criar intent de pagamento
     const paymentIntent = await this.prisma.subscriptionPaymentIntent.create({
@@ -57,8 +69,8 @@ export class SubscriptionPaymentService {
         amountCents: amount,
         status: 'PENDING',
         expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutos
-        pixCode: this.generatePixCode(amount, workspace.name, pixSettings),
-        pixQrCode: null, // TODO: Gerar QR Code via API
+        pixCode,
+        pixQrCode,
       },
     });
 
@@ -224,23 +236,25 @@ export class SubscriptionPaymentService {
     }).format(cents / 100);
   }
 
-  private generatePixCode(amountCents: number, description: string, settings: any): string {
-    // Gerar PIX Copia e Cola (simplificado)
-    // Em produção, usar library como pix-utils ou integrar com gateway
-    const amount = (amountCents / 100).toFixed(2);
-    return `00020126580014br.gov.bcb.pix0136${settings?.pixKey || 'CHAVE_PIX_PLATAFORMA'}5204000053039865802BR5925${(description || 'BELA PRO').slice(0, 25).padEnd(25)}6008SAOPAULO62070503***6304`;
-  }
-
-  private async getSystemPixSettings() {
-    // Buscar configurações do PIX da plataforma
-    const [pixKey, pixName] = await Promise.all([
-      this.prisma.systemSettings.findUnique({ where: { key: 'pix_key' } }),
-      this.prisma.systemSettings.findUnique({ where: { key: 'pix_holder_name' } }),
+  private async getSystemPixConfig(): Promise<PixConfig> {
+    const [pixKey, pixKeyType, pixHolderName, pixCity] = await Promise.all([
+      this.prisma.systemSettings.findUnique({ where: { key: 'payment.pix_key' } }),
+      this.prisma.systemSettings.findUnique({ where: { key: 'payment.pix_key_type' } }),
+      this.prisma.systemSettings.findUnique({ where: { key: 'payment.pix_holder_name' } }),
+      this.prisma.systemSettings.findUnique({ where: { key: 'payment.pix_city' } }),
     ]);
 
+    if (!pixKey?.value) {
+      throw new BadRequestException(
+        'Configurações de PIX da plataforma não encontradas. Configure em Admin → Billing → PIX.',
+      );
+    }
+
     return {
-      pixKey: pixKey?.value || null,
-      pixHolderName: pixName?.value || 'BELA PRO',
+      key: pixKey.value,
+      keyType: pixKeyType?.value || 'EMAIL',
+      holderName: pixHolderName?.value || 'BELA PRO',
+      city: pixCity?.value || 'SAO PAULO',
     };
   }
 
