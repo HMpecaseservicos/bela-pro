@@ -605,6 +605,12 @@ export class BillingService {
       pendingInvoices,
       paidThisMonth,
       revenueByPlan,
+      // Sponsor data
+      totalSponsors,
+      activeSponsors,
+      sponsorPendingPayments,
+      sponsorPaidThisMonth,
+      sponsorActiveContracts,
     ] = await Promise.all([
       // Total de assinaturas
       this.prisma.workspaceSubscription.count(),
@@ -631,7 +637,7 @@ export class BillingService {
         _count: true,
       }),
 
-      // Receita do mês
+      // Receita do mês (assinaturas)
       this.prisma.subscriptionInvoice.aggregate({
         where: {
           status: 'PAID',
@@ -664,6 +670,26 @@ export class BillingService {
         },
         where: { isActive: true },
       }),
+
+      // === SPONSORS ===
+      this.prisma.sponsor.count(),
+      this.prisma.sponsor.count({ where: { isActive: true } }),
+      this.prisma.sponsorPayment.aggregate({
+        where: { status: 'PENDING' },
+        _sum: { amountCents: true },
+        _count: true,
+      }),
+      this.prisma.sponsorPayment.aggregate({
+        where: {
+          status: 'PAID',
+          paidAt: { gte: startOfMonth, lte: endOfMonth },
+        },
+        _sum: { amountCents: true },
+        _count: true,
+      }),
+      this.prisma.sponsorContract.count({
+        where: { status: 'ACTIVE' },
+      }),
     ]);
 
     // Calcular MRR (Monthly Recurring Revenue)
@@ -682,6 +708,13 @@ export class BillingService {
       }
     }
 
+    // Calcular MRR de sponsors (contratos ativos / meses)
+    const activeSponsorContracts = await this.prisma.sponsorContract.findMany({
+      where: { status: 'ACTIVE' },
+      select: { monthlyValue: true },
+    });
+    const sponsorMrr = activeSponsorContracts.reduce((sum, c) => sum + (c.monthlyValue || 0), 0);
+
     return {
       subscriptions: {
         total: totalSubscriptions,
@@ -695,12 +728,122 @@ export class BillingService {
         paidThisMonth: paidThisMonth._count,
         revenueThisMonth: paidThisMonth._sum.totalCents || 0,
       },
-      mrr,
+      sponsors: {
+        total: totalSponsors,
+        active: activeSponsors,
+        activeContracts: sponsorActiveContracts,
+        pendingCount: sponsorPendingPayments._count,
+        pendingAmount: sponsorPendingPayments._sum.amountCents || 0,
+        paidThisMonth: sponsorPaidThisMonth._count,
+        revenueThisMonth: sponsorPaidThisMonth._sum.amountCents || 0,
+        mrr: sponsorMrr,
+      },
+      mrr: mrr + sponsorMrr,
       revenueByPlan: revenueByPlan.map(p => ({
         planId: p.id,
         name: p.name,
         subscriptions: p._count.subscriptions,
       })),
+    };
+  }
+
+  async getPaymentHistory(page = 1, limit = 20, type?: 'subscription' | 'sponsor') {
+    const skip = (page - 1) * limit;
+    const results: Array<{
+      id: string;
+      type: 'subscription' | 'sponsor';
+      description: string;
+      amountCents: number;
+      status: string;
+      paidAt: Date | null;
+      createdAt: Date;
+      metadata: Record<string, any>;
+    }> = [];
+
+    // Fetch subscription invoices (paid)
+    if (!type || type === 'subscription') {
+      const invoices = await this.prisma.subscriptionInvoice.findMany({
+        where: { status: 'PAID' },
+        include: {
+          subscription: {
+            include: { workspace: { select: { name: true } }, plan: { select: { name: true } } },
+          },
+        },
+        orderBy: { paidAt: 'desc' },
+        take: limit * 2,
+      });
+
+      for (const inv of invoices) {
+        results.push({
+          id: inv.id,
+          type: 'subscription',
+          description: `${inv.subscription.workspace.name} — ${inv.subscription.plan.name}`,
+          amountCents: inv.totalCents,
+          status: inv.status,
+          paidAt: inv.paidAt,
+          createdAt: inv.createdAt,
+          metadata: {
+            invoiceNumber: inv.invoiceNumber,
+            workspaceName: inv.subscription.workspace.name,
+            planName: inv.subscription.plan.name,
+            billingCycle: inv.subscription.billingCycle,
+          },
+        });
+      }
+    }
+
+    // Fetch sponsor payments (paid)
+    if (!type || type === 'sponsor') {
+      const sponsorPayments = await this.prisma.sponsorPayment.findMany({
+        where: { status: 'PAID' },
+        include: {
+          contract: {
+            include: { sponsor: { select: { name: true, email: true } } },
+          },
+        },
+        orderBy: { paidAt: 'desc' },
+        take: limit * 2,
+      });
+
+      for (const sp of sponsorPayments) {
+        results.push({
+          id: sp.id,
+          type: 'sponsor',
+          description: `${sp.contract.sponsor.name} — ${sp.tier}`,
+          amountCents: sp.amountCents,
+          status: sp.status,
+          paidAt: sp.paidAt,
+          createdAt: sp.createdAt,
+          metadata: {
+            contractNumber: sp.contract.contractNumber,
+            sponsorName: sp.contract.sponsor.name,
+            sponsorEmail: sp.contract.sponsor.email,
+            tier: sp.tier,
+            durationMonths: sp.durationMonths,
+            confirmedBy: sp.confirmedBy,
+          },
+        });
+      }
+    }
+
+    // Sort by paidAt desc
+    results.sort((a, b) => {
+      const dateA = a.paidAt ?? a.createdAt;
+      const dateB = b.paidAt ?? b.createdAt;
+      return dateB.getTime() - dateA.getTime();
+    });
+
+    const total = results.length;
+    const items = results.slice(skip, skip + limit);
+
+    return {
+      items,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 

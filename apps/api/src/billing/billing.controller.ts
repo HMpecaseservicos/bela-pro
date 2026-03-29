@@ -338,4 +338,19 @@ export class BillingController {
     requireSuperAdmin(req);
     return this.billingService.getBillingDashboard();
   }
+
+  @Get('payment-history')
+  async getPaymentHistory(
+    @Req() req: any,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('type') type?: 'subscription' | 'sponsor',
+  ) {
+    requireSuperAdmin(req);
+    return this.billingService.getPaymentHistory(
+      parseInt(page || '1', 10),
+      parseInt(limit || '20', 10),
+      type,
+    );
+  }
 }
