@@ -107,7 +107,7 @@ export default function DashboardPage() {
     if (!dismissed) {
       fetch(`${API_URL}/public/sponsors/posts?limit=3`)
         .then(r => r.ok ? r.json() : [])
-        .then(setSponsorPosts)
+        .then(d => setSponsorPosts(Array.isArray(d) ? d : []))
         .catch(() => {});
     }
     
@@ -116,7 +116,7 @@ export default function DashboardPage() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : [])
-      .then(setAdminMessages)
+      .then(d => setAdminMessages(Array.isArray(d) ? d : []))
       .catch(() => {});
     
     // Fetch subscription (para banner de trial)
@@ -163,6 +163,7 @@ export default function DashboardPage() {
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
+      if (!Array.isArray(data)) throw new Error('Invalid response');
       setAppointments(data);
 
       const today = new Date().toDateString();
