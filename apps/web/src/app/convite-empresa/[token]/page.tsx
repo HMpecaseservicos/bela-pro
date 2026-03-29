@@ -457,9 +457,12 @@ export default function BusinessInviteLandingPage() {
   const [expired, setExpired] = useState(false);
   const [sponsors, setSponsors] = useState<{ id: string; name: string; logoLightUrl?: string; logoDarkUrl?: string; websiteUrl?: string; ctaUrl?: string; tier: string }[]>([]);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
   const heroRef = useRef<HTMLElement>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     fetchInvite();
@@ -497,11 +500,16 @@ export default function BusinessInviteLandingPage() {
     } catch { /* silent */ }
   }
 
+  // ---- SSR GUARD ----
+  if (!mounted) {
+    return <div style={{ minHeight: '100vh', background: '#050505' }} />;
+  }
+
   // ---- LOADING ----
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: C.bg }}>
-        <style>{GLOBAL_CSS}</style>
+        <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
         <div style={{ width: 48, height: 48, border: `3px solid ${C.border}`, borderTopColor: C.gold, borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
       </div>
     );
@@ -511,7 +519,7 @@ export default function BusinessInviteLandingPage() {
   if (expired) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: C.bg, padding: 40, textAlign: 'center' }}>
-        <style>{GLOBAL_CSS}</style>
+        <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
         <div className="anim-scale" style={{ width: 90, height: 90, borderRadius: '50%', background: 'rgba(201,165,92,0.1)', border: `1px solid ${C.borderGold}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28, fontSize: 40 }}>⏰</div>
         <h1 className="anim-up" style={{ fontSize: 32, fontWeight: 700, color: C.textPrimary, marginBottom: 12, fontFamily: FONT.serif }}>Este convite expirou</h1>
         <p className="anim-up-d1" style={{ color: C.textSecondary, maxWidth: 420, marginBottom: 36, lineHeight: 1.7, fontFamily: FONT.sans }}>
@@ -526,7 +534,7 @@ export default function BusinessInviteLandingPage() {
   if (error || !invite) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: C.bg, padding: 40, textAlign: 'center' }}>
-        <style>{GLOBAL_CSS}</style>
+        <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
         <div className="anim-scale" style={{ width: 90, height: 90, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28, fontSize: 40 }}>🔍</div>
         <h1 className="anim-up" style={{ fontSize: 32, fontWeight: 700, color: C.textPrimary, marginBottom: 12, fontFamily: FONT.serif }}>Convite não encontrado</h1>
         <p className="anim-up-d1" style={{ color: C.textSecondary, maxWidth: 420, marginBottom: 36, lineHeight: 1.7, fontFamily: FONT.sans }}>
@@ -547,7 +555,7 @@ export default function BusinessInviteLandingPage() {
   return (
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: FONT.sans, color: C.textPrimary, overflowX: 'hidden' }}>
       <link rel="stylesheet" href={FONT_URL} />
-      <style>{GLOBAL_CSS}</style>
+      <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
 
       {/* ===== NAV STICKY ===== */}
       <nav className="nav-fixed">

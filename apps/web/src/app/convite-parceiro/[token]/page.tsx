@@ -414,11 +414,16 @@ export default function SponsorInviteLandingPage() {
     textTransform: 'uppercase' as const, marginBottom: 8, display: 'block',
   };
 
+  // ===== SSR GUARD — prevents hydration mismatch =====
+  if (!mounted) {
+    return <div style={{ minHeight: '100vh', background: '#050505' }} />;
+  }
+
   // ===== LOADING =====
   if (loading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg }}>
-        <style>{GLOBAL_CSS}</style>
+        <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
         <div style={{ textAlign: 'center' }}>
           <div style={{ width: 48, height: 48, border: `3px solid ${C.borderGold}`, borderTopColor: C.gold, borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 20px' }} />
           <p style={{ color: C.textMuted, fontFamily: FONT.sans }}>Carregando convite...</p>
@@ -431,7 +436,7 @@ export default function SponsorInviteLandingPage() {
   if (error) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg }}>
-        <style>{GLOBAL_CSS}</style>
+        <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
         <div style={{ textAlign: 'center', padding: 40 }}>
           <div style={{ fontSize: 64, marginBottom: 20 }}>⚠️</div>
           <h2 style={{ color: C.textPrimary, fontFamily: FONT.serif, fontSize: 28, marginBottom: 12 }}>Convite Indisponível</h2>
@@ -445,7 +450,7 @@ export default function SponsorInviteLandingPage() {
   if (expired) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg }}>
-        <style>{GLOBAL_CSS}</style>
+        <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
         <div style={{ textAlign: 'center', padding: 40, maxWidth: 500 }}>
           <div style={{ fontSize: 64, marginBottom: 20 }}>⏰</div>
           <h2 style={{ color: C.textPrimary, fontFamily: FONT.serif, fontSize: 28, marginBottom: 12 }}>Convite Expirado</h2>
@@ -459,7 +464,7 @@ export default function SponsorInviteLandingPage() {
   if (step === 'success' && result) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg }}>
-        <style>{GLOBAL_CSS}</style>
+        <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
         <div style={{ textAlign: 'center', padding: 48, maxWidth: 640, animation: 'celebrate 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
           <div style={{ fontSize: 80, marginBottom: 24, animation: 'float 3s ease-in-out infinite' }}>🎉</div>
           <h2 style={{ fontFamily: FONT.serif, fontSize: 'clamp(28px, 5vw, 44px)', fontWeight: 800, marginBottom: 16, letterSpacing: '-1px' }}>
@@ -543,7 +548,7 @@ export default function SponsorInviteLandingPage() {
   return (
     <div style={{ minHeight: '100vh', background: C.bg, color: C.textPrimary, fontFamily: FONT.sans, overflowX: 'hidden' }}>
       <link rel="stylesheet" href={FONT_URL} />
-      <style>{GLOBAL_CSS}</style>
+      <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
 
       {/* Ambient */}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
