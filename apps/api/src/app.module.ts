@@ -61,6 +61,12 @@ import { TwoFactorModule } from './two-factor/two-factor.module';
     ScheduleRulesModule,
     TimeOffModule,
     AvailabilityModule,
+    // AdminModule e SponsorsModule ANTES de WorkspaceModule:
+    // WorkspaceController tem @Get(':workspaceId') que captura qualquer sub-rota
+    // se registrado primeiro. Módulos com rotas /workspace/xxx mais específicas
+    // precisam vir antes para ter prioridade na resolução de rotas.
+    AdminModule,
+    SponsorsModule,
     WorkspaceModule,
     PublicBookingModule,
     UploadModule,
@@ -68,12 +74,10 @@ import { TwoFactorModule } from './two-factor/two-factor.module';
     TeamModule,
     MessageTemplatesModule,
     ChatUsageModule,
-    AdminModule,
     PaymentsModule,
     FinancialModule,
     BillingModule,
     BusinessInvitesModule,
-    SponsorsModule,
     ServiceCategoriesModule,
     SponsorInvitesModule,
     SponsorDashboardModule,

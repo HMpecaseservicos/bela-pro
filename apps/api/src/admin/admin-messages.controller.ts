@@ -11,6 +11,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { AdminMessagesService } from './admin-messages.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SuperAdminGuard } from '../auth/super-admin.guard';
@@ -99,6 +100,7 @@ export class AdminMessagesAdminController {
 
 @Controller('api/v1/workspace/admin-messages')
 @UseGuards(JwtAuthGuard)
+@SkipThrottle()
 export class AdminMessagesWorkspaceController {
   constructor(private readonly adminMessagesService: AdminMessagesService) {}
 
