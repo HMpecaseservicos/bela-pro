@@ -1,10 +1,22 @@
 // Types para a página de agendamento público
+// Tipos de domínio vêm do pacote compartilhado
+import type {
+  ThemePreset,
+  WorkspacePublic as Workspace,
+  ProfessionalProfile,
+  ServiceCategory,
+  ServicePublic as Service,
+  TimeSlot,
+  BookingRequest as BookingData,
+  PaymentInfo,
+} from '@bela-pro/shared';
+
+// Re-export para manter compatibilidade com imports existentes
+export type { ThemePreset, Workspace, ProfessionalProfile, ServiceCategory, Service, TimeSlot, BookingData, PaymentInfo };
 
 // ============================================
-// TEMAS
+// TEMAS (UI-only, ficam aqui)
 // ============================================
-
-export type ThemePreset = 'rose_gold' | 'burgundy' | 'olive_green' | 'classic_dark' | 'ocean_blue' | 'custom';
 
 export interface ThemeColors {
   primary: string;
@@ -22,71 +34,8 @@ export interface ThemeConfig {
 }
 
 // ============================================
-// WORKSPACE
+// ESTADO DO BOOKING (UI-only)
 // ============================================
-
-export interface Workspace {
-  id: string;
-  name: string;
-  slug: string;
-  brandName: string | null;
-  primaryColorHex: string | null;
-  accentColorHex: string | null;
-  logoUrl: string | null;
-  coverImageUrl: string | null;
-  galleryUrls: string[];
-  themePreset: ThemePreset | null;
-  welcomeText: string | null;
-  description: string | null;
-  profile: ProfessionalProfile | null;
-}
-
-export interface ProfessionalProfile {
-  displayName: string;
-  addressLine: string | null;
-  phoneE164: string | null;
-}
-
-// ============================================
-// SERVIÇOS E CATEGORIAS
-// ============================================
-
-export interface ServiceCategory {
-  id: string;
-  name: string;
-  iconEmoji: string | null;
-  color: string | null;
-  sortOrder: number;
-}
-
-export interface Service {
-  id: string;
-  name: string;
-  description: string | null;
-  durationMinutes: number;
-  priceCents: number;
-  sortOrder?: number;
-  showInBooking?: boolean;
-  imageUrl?: string | null;
-  badgeText?: string | null;
-  categoryTag?: string | null;
-  categoryId?: string | null;
-  category?: ServiceCategory | null;
-}
-
-export interface TimeSlot {
-  startAt: string;
-  endAt: string;
-  available: boolean;
-}
-
-export interface BookingData {
-  workspaceId: string;
-  serviceIds: string[];
-  startAt: string;
-  clientName: string;
-  clientPhone: string;
-}
 
 export interface BookingState {
   // Data
@@ -113,20 +62,6 @@ export interface BookingState {
   
   // Payment (quando pagamento PIX é exigido)
   paymentInfo: PaymentInfo | null;
-}
-
-export interface PaymentInfo {
-  paymentId: string;
-  appointmentId: string;
-  amount: number;
-  amountCents: number;
-  pixQrCode: string;
-  pixCode: string; // Pix copia e cola
-  pixCopyPaste: string;
-  pixRecipientName?: string;
-  pixKeyMasked?: string;
-  expiresAt: string;
-  instructions?: string;
 }
 
 export type BookingStep = 1 | 2 | 3 | 4 | 5;

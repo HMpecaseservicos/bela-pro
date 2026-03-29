@@ -1,5 +1,7 @@
-import { Controller, Post, Body, Headers, Logger, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, Headers, Logger, HttpCode, HttpStatus, UnauthorizedException, Req } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
+import * as crypto from 'crypto';
+import { Request } from 'express';
 
 /**
  * Estrutura esperada do webhook PIX (exemplo genérico)
@@ -26,17 +28,29 @@ interface PixWebhookPayload {
 @Controller('api/v1/webhooks/pix')
 export class PixWebhookController {
   private readonly logger = new Logger(PixWebhookController.name);
+  private readonly webhookSecret: string | undefined;
+  private readonly allowedIps: string[];
 
-  constructor(private readonly paymentsService: PaymentsService) {}
+  constructor(private readonly paymentsService: PaymentsService) {
+    this.webhookSecret = process.env.PIX_WEBHOOK_SECRET;
+    this.allowedIps = (process.env.PIX_WEBHOOK_ALLOWED_IPS || '')
+      .split(',')
+      .map(ip => ip.trim())
+      .filter(Boolean);
+
+    if (!this.webhookSecret) {
+      this.logger.warn('⚠️ PIX_WEBHOOK_SECRET não configurado — webhook rejeitará todas as requisições');
+    }
+  }
 
   /**
    * POST /api/v1/webhooks/pix
    * Endpoint para receber notificações de pagamento PIX
    * 
-   * IMPORTANTE: Em produção, adicionar:
-   * 1. Validação de assinatura/HMAC do provedor
-   * 2. Whitelist de IPs do provedor
-   * 3. Rate limiting
+   * Segurança:
+   * 1. Validação de assinatura HMAC-SHA256 (obrigatória)
+   * 2. Whitelist de IPs (quando configurada)
+   * 3. Validação de timestamp para replay attacks
    */
   @Post()
   @HttpCode(HttpStatus.OK)
@@ -44,21 +58,41 @@ export class PixWebhookController {
     @Body() payload: PixWebhookPayload,
     @Headers('x-webhook-signature') signature?: string,
     @Headers('x-webhook-timestamp') timestamp?: string,
+    @Req() req?: Request,
   ) {
     this.logger.log(`📥 Webhook PIX recebido`);
-    this.logger.debug(`Payload: ${JSON.stringify(payload)}`);
 
-    // TODO: Validar assinatura do webhook (implementar conforme PSP)
-    // if (!this.validateWebhookSignature(payload, signature)) {
-    //   throw new UnauthorizedException('Assinatura inválida');
-    // }
+    // 1. Validar IP (quando whitelist configurada)
+    if (this.allowedIps.length > 0 && req) {
+      const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
+        || req.socket?.remoteAddress || '';
+      if (!this.allowedIps.includes(clientIp)) {
+        this.logger.warn(`🚫 Webhook PIX rejeitado — IP não autorizado: ${clientIp}`);
+        throw new UnauthorizedException('IP não autorizado');
+      }
+    }
+
+    // 2. Validar assinatura HMAC
+    if (!this.validateWebhookSignature(payload, signature, timestamp)) {
+      this.logger.warn('🚫 Webhook PIX rejeitado — assinatura inválida');
+      throw new UnauthorizedException('Assinatura inválida');
+    }
+
+    // 3. Validar timestamp (rejeitar se > 5 min atrás — anti replay)
+    if (timestamp) {
+      const ts = parseInt(timestamp, 10);
+      const now = Date.now();
+      if (isNaN(ts) || Math.abs(now - ts) > 5 * 60 * 1000) {
+        this.logger.warn('🚫 Webhook PIX rejeitado — timestamp fora da janela');
+        throw new UnauthorizedException('Timestamp expirado');
+      }
+    }
 
     // Extrair txId do payload (adaptar conforme formato do PSP)
     const txId = this.extractTxId(payload);
 
     if (!txId) {
       this.logger.warn('⚠️ Webhook recebido sem txId identificável');
-      // Retornar 200 mesmo assim para não re-enviar (idempotência)
       return { received: true, processed: false, reason: 'no_txid' };
     }
 
@@ -81,8 +115,6 @@ export class PixWebhookController {
       };
     } catch (error: any) {
       this.logger.error(`❌ Erro ao processar webhook PIX: ${error.message}`);
-      
-      // Retornar 200 para evitar reenvios, mas indicar erro
       return { 
         received: true, 
         processed: false, 
@@ -93,38 +125,43 @@ export class PixWebhookController {
 
   /**
    * Extrai o txId do payload do webhook
-   * Adaptar conforme o formato do PSP usado
    */
   private extractTxId(payload: PixWebhookPayload): string | null {
-    // Formato BACEN/Gerencianet (array pix)
     if (payload.pix && Array.isArray(payload.pix) && payload.pix.length > 0) {
       return payload.pix[0].txid || null;
     }
-
-    // Formatos alternativos
     if (payload.txId) return payload.txId;
     if (payload.transactionId) return payload.transactionId;
-
     return null;
   }
 
-  // TODO: Implementar validação de assinatura
-  // private validateWebhookSignature(
-  //   payload: unknown, 
-  //   signature?: string
-  // ): boolean {
-  //   if (!signature) return false;
-  //   const secret = process.env.PIX_WEBHOOK_SECRET;
-  //   if (!secret) return false;
-  //   
-  //   const computed = crypto
-  //     .createHmac('sha256', secret)
-  //     .update(JSON.stringify(payload))
-  //     .digest('hex');
-  //   
-  //   return crypto.timingSafeEqual(
-  //     Buffer.from(signature), 
-  //     Buffer.from(computed)
-  //   );
-  // }
+  /**
+   * Valida assinatura HMAC-SHA256 do webhook
+   */
+  private validateWebhookSignature(
+    payload: unknown,
+    signature?: string,
+    timestamp?: string,
+  ): boolean {
+    if (!this.webhookSecret) return false;
+    if (!signature) return false;
+
+    const body = timestamp
+      ? `${timestamp}.${JSON.stringify(payload)}`
+      : JSON.stringify(payload);
+
+    const computed = crypto
+      .createHmac('sha256', this.webhookSecret)
+      .update(body)
+      .digest('hex');
+
+    try {
+      return crypto.timingSafeEqual(
+        Buffer.from(signature),
+        Buffer.from(computed),
+      );
+    } catch {
+      return false;
+    }
+  }
 }
