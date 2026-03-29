@@ -143,6 +143,15 @@ export class BillingController {
     return this.paymentService.confirmPayment(intentId, req.user.userId);
   }
 
+  /**
+   * Exclui um payment intent (apenas pendente/expirado)
+   */
+  @Delete('payment/:intentId')
+  async deletePaymentIntent(@Req() req: any, @Param('intentId') intentId: string) {
+    requireSuperAdmin(req);
+    return this.paymentService.deletePaymentIntent(intentId);
+  }
+
   // ==================== PLANOS (Super Admin) ====================
 
   @Get('plans')

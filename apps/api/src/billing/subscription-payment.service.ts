@@ -214,6 +214,30 @@ export class SubscriptionPaymentService {
     });
   }
 
+  /**
+   * Exclui um payment intent (apenas PENDING/EXPIRED)
+   */
+  async deletePaymentIntent(intentId: string) {
+    const intent = await this.prisma.subscriptionPaymentIntent.findUnique({
+      where: { id: intentId },
+    });
+
+    if (!intent) {
+      throw new NotFoundException('Intent de pagamento não encontrado');
+    }
+
+    if (intent.status === 'CONFIRMED') {
+      throw new BadRequestException('Não é possível excluir um pagamento já confirmado');
+    }
+
+    await this.prisma.subscriptionPaymentIntent.delete({
+      where: { id: intentId },
+    });
+
+    this.logger.log(`🗑️ Payment intent excluído: ${intentId}`);
+    return { success: true, message: 'Pagamento excluído com sucesso' };
+  }
+
   // ==================== HELPERS ====================
 
   private calculateAmount(plan: any, cycle: BillingCycle): number {

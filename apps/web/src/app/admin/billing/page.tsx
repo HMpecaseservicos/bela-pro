@@ -149,6 +149,17 @@ export default function AdminBillingPage() {
     finally { setConfirmingId(null); }
   }
 
+  async function deletePaymentIntent(intentId: string) {
+    if (!confirm('Tem certeza que deseja excluir este pagamento?')) return;
+    try {
+      const res = await fetch(`${API_URL}/billing/payment/${intentId}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.message || 'Erro'); }
+      fetchPendingPayments(); fetchDashboard();
+    } catch (err: any) { alert(err.message); }
+  }
+
   async function confirmSponsorPayment(paymentId: string) {
     const name = prompt('Nome de quem pagou:');
     if (!name) return;
@@ -448,9 +459,30 @@ export default function AdminBillingPage() {
             <h2 style={{ margin: 0, color: T.text, fontSize: 20, fontWeight: 600 }}>
               💳 PIX de Assinaturas Pendentes
             </h2>
-            <button onClick={fetchPendingPayments} style={{ padding: '8px 14px', background: T.border, border: 'none', borderRadius: 8, color: T.textSec, fontSize: 13, cursor: 'pointer' }}>
-              🔄 Atualizar
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {pendingPayments.some(p => isExpired(p.expiresAt)) && (
+                <button
+                  onClick={async () => {
+                    if (!confirm(`Excluir todos os ${pendingPayments.filter(p => isExpired(p.expiresAt)).length} pagamentos expirados?`)) return;
+                    const expired = pendingPayments.filter(p => isExpired(p.expiresAt));
+                    for (const p of expired) {
+                      try {
+                        await fetch(`${API_URL}/billing/payment/${p.id}`, {
+                          method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` },
+                        });
+                      } catch { /* continue */ }
+                    }
+                    fetchPendingPayments(); fetchDashboard();
+                  }}
+                  style={{ padding: '8px 14px', background: T.redDark, border: 'none', borderRadius: 8, color: T.redLight, fontSize: 13, cursor: 'pointer', fontWeight: 600 }}
+                >
+                  🗑️ Limpar expirados
+                </button>
+              )}
+              <button onClick={fetchPendingPayments} style={{ padding: '8px 14px', background: T.border, border: 'none', borderRadius: 8, color: T.textSec, fontSize: 13, cursor: 'pointer' }}>
+                🔄 Atualizar
+              </button>
+            </div>
           </div>
 
           {pendingPayments.length === 0 ? (
@@ -482,17 +514,31 @@ export default function AdminBillingPage() {
                     </div>
                     <div style={{ textAlign: 'right' as const }}>
                       <div style={{ fontSize: 22, fontWeight: 700, color: T.green }}>{fmt(p.amountCents)}</div>
-                      <button
-                        onClick={() => confirmSubscriptionPayment(p.id)}
-                        disabled={confirmingId === p.id || expired}
-                        style={{
-                          marginTop: 8, padding: '8px 18px', border: 'none', borderRadius: 8,
-                          background: expired ? T.border : T.green, color: expired ? T.textMuted : '#fff',
-                          fontWeight: 600, fontSize: 13, cursor: expired ? 'default' : 'pointer',
-                        }}
-                      >
-                        {confirmingId === p.id ? '⏳...' : expired ? 'Expirado' : '✓ Confirmar'}
-                      </button>
+                      <div style={{ display: 'flex', gap: 6, marginTop: 8, justifyContent: 'flex-end' }}>
+                        {expired && (
+                          <button
+                            onClick={() => deletePaymentIntent(p.id)}
+                            style={{
+                              padding: '8px 14px', border: 'none', borderRadius: 8,
+                              background: T.redDark, color: T.redLight,
+                              fontWeight: 600, fontSize: 13, cursor: 'pointer',
+                            }}
+                          >
+                            🗑️ Excluir
+                          </button>
+                        )}
+                        <button
+                          onClick={() => confirmSubscriptionPayment(p.id)}
+                          disabled={confirmingId === p.id || expired}
+                          style={{
+                            padding: '8px 18px', border: 'none', borderRadius: 8,
+                            background: expired ? T.border : T.green, color: expired ? T.textMuted : '#fff',
+                            fontWeight: 600, fontSize: 13, cursor: expired ? 'default' : 'pointer',
+                          }}
+                        >
+                          {confirmingId === p.id ? '⏳...' : expired ? 'Expirado' : '✓ Confirmar'}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
