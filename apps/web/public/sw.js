@@ -1,6 +1,6 @@
-const CACHE_NAME = 'agenda-digital-v2';
-const STATIC_CACHE = 'agenda-static-v2';
-const DYNAMIC_CACHE = 'agenda-dynamic-v2';
+const CACHE_NAME = 'agenda-digital-v3';
+const STATIC_CACHE = 'agenda-static-v3';
+const DYNAMIC_CACHE = 'agenda-dynamic-v3';
 
 // Assets to cache immediately
 const STATIC_ASSETS = [

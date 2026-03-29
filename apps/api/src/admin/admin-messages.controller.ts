@@ -109,11 +109,14 @@ export class AdminMessagesWorkspaceController {
    */
   @Get()
   async getActiveMessages(
-    @Req() req: { user: { workspaceId: string } },
+    @Req() req: { user: { workspaceId: string | null } },
     @Query('plan') plan?: string,
   ) {
+    // Super admins sem workspace context recebem todas as mensagens ativas
+    const workspaceId = req.user.workspaceId || '__global__';
+
     const messages = await this.adminMessagesService.getActiveMessagesForWorkspace(
-      req.user.workspaceId,
+      workspaceId,
       plan,
     );
 
