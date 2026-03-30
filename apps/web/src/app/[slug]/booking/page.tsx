@@ -1209,6 +1209,11 @@ export default function BookingPage() {
     setMounted(true);
   }, []);
 
+  // Fechar CartPanel automaticamente quando carrinho esvaziar
+  useEffect(() => {
+    if (booking.cart.length === 0) setShowCartPanel(false);
+  }, [booking.cart.length]);
+
   // Busca sponsors quando workspace estiver disponível
   useEffect(() => {
     if (!booking.workspace?.id) return;
@@ -1234,21 +1239,16 @@ export default function BookingPage() {
     }
     setActiveTab(tab);
     if (tab === 'shop') setShowCartPanel(false);
+    // Scroll suave ao topo ao trocar de tab
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeTab, booking.step]);
 
   // Checkout de produtos via carrinho
   const handleCartCheckout = useCallback(() => {
     setShowCartPanel(false);
-    // Se tem serviços selecionados, manter na tab services
-    if (booking.selectedServices.length > 0) {
-      setActiveTab('services');
-      booking.proceedToDateSelection();
-    } else {
-      // Produto puro: ir para step 4 diretamente
-      setActiveTab('services');
-      booking.proceedToDateSelection();
-    }
-  }, [booking]);
+    setActiveTab('services');
+    booking.proceedToDateSelection();
+  }, [booking.proceedToDateSelection]);
 
   // CSS global + animações
   const globalStyles = `
@@ -1404,11 +1404,16 @@ export default function BookingPage() {
                   background: COLORS.errorLight,
                   border: `1px solid ${COLORS.error}33`,
                   color: COLORS.error,
-                  padding: 14,
+                  padding: '12px 14px',
                   borderRadius: 12,
                   marginBottom: 20,
-                  fontSize: 14,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
                 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
                   {booking.error}
                 </div>
               )}
@@ -1487,7 +1492,7 @@ export default function BookingPage() {
                         style={{
                           width: '100%',
                           padding: '16px 24px',
-                          background: booking.primaryColor,
+                          background: `linear-gradient(135deg, ${booking.primaryColor}, ${booking.primaryColor}DD)`,
                           color: 'white',
                           border: 'none',
                           borderRadius: 14,
@@ -1496,10 +1501,12 @@ export default function BookingPage() {
                           cursor: booking.loading ? 'wait' : 'pointer',
                           opacity: booking.loading ? 0.7 : 1,
                           transition: 'opacity 0.2s',
+                          boxShadow: `0 4px 16px ${booking.primaryColor}40`,
+                          letterSpacing: -0.2,
                         }}
                       >
                         {booking.loading ? 'Carregando...' : 
-                          booking.selectedServices.length > 0 ? 'Escolher Data e Horário' : 'Finalizar Pedido'}
+                          booking.selectedServices.length > 0 ? 'Escolher Data e Horário →' : 'Finalizar Pedido →'}
                       </button>
                     </div>
                   )}
@@ -1555,7 +1562,9 @@ export default function BookingPage() {
                     <h2 style={{ fontSize: 21, fontWeight: 800, color: COLORS.textPrimary, margin: '0 0 4px', letterSpacing: -0.3 }}>
                       Seus dados
                     </h2>
-                    <p style={{ fontSize: 13, color: COLORS.textSecondary, margin: 0 }}>Para confirmar {booking.selectedServices.length > 0 ? 'seu agendamento' : 'seu pedido'}</p>
+                    <p style={{ fontSize: 13, color: COLORS.textSecondary, margin: 0 }}>
+                      Para confirmar {booking.selectedServices.length > 0 && booking.cart.length > 0 ? 'seu agendamento e pedido' : booking.selectedServices.length > 0 ? 'seu agendamento' : 'seu pedido'}
+                    </p>
                   </div>
                   <ClientForm
                     services={booking.selectedServices}
