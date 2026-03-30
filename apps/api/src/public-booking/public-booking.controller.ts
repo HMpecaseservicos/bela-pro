@@ -29,6 +29,15 @@ export class PublicBookingController {
     return this.publicBookingService.findClientOrders(slug, phone);
   }
 
+  // Buscar agendamentos do cliente por telefone + slug
+  @Get('appointments')
+  async getClientAppointments(
+    @Query('slug') slug: string,
+    @Query('phone') phone: string,
+  ) {
+    return this.publicBookingService.findClientAppointments(slug, phone);
+  }
+
   /**
    * GET /public-booking/:id
    * Busca um agendamento público pelo ID e telefone (validação de propriedade)

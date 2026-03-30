@@ -13,7 +13,7 @@ const createServiceSchema = z.object({
   imageUrl: z.string().url().optional().nullable(),
   badgeText: z.string().max(50).optional().nullable(),
   categoryTag: z.string().max(50).optional().nullable(),
-  categoryId: z.string().cuid().optional().nullable(),
+  categoryId: z.string().min(1).optional().nullable(),
   // LOJA UNIFICADA
   itemType: z.enum(['SERVICE', 'PRODUCT']).optional(),
   stock: z.number().int().min(0).optional(),

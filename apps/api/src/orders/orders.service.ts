@@ -14,17 +14,17 @@ import { z } from 'zod';
 // ==================== SCHEMAS DE VALIDAÇÃO ====================
 
 const createOrderSchema = z.object({
-  clientId: z.string().cuid(),
+  clientId: z.string().min(1),
   items: z
     .array(
       z.object({
-        serviceId: z.string().cuid(),
+        serviceId: z.string().min(1),
         quantity: z.number().int().min(1).max(99),
       }),
     )
     .min(1)
     .max(50),
-  linkedAppointmentId: z.string().cuid().optional(),
+  linkedAppointmentId: z.string().min(1).optional(),
   notes: z.string().max(1000).optional(),
   bookedVia: z.enum(['admin', 'public', 'whatsapp']).default('admin'),
 });

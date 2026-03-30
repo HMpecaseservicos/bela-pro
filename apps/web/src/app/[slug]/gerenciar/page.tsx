@@ -144,6 +144,7 @@ export default function ManageBookingPage() {
   const [phone, setPhone] = useState('');
   const [appointmentId, setAppointmentId] = useState(searchParams.get('id') || '');
   const [appointment, setAppointment] = useState<Appointment | null>(null);
+  const [clientAppointments, setClientAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -171,7 +172,7 @@ export default function ManageBookingPage() {
       .catch(() => {});
   }, [slug]);
 
-  // Lookup appointment
+  // Lookup appointment - agora suporta busca por telefone OU por ID+telefone
   const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -181,27 +182,54 @@ export default function ManageBookingPage() {
       return;
     }
     
-    if (!appointmentId.trim()) {
-      setError('Digite o código do agendamento');
-      return;
-    }
-    
     setLoading(true);
     setError(null);
     
     try {
-      const res = await fetch(
-        `${API_URL}/public-booking/${appointmentId}?phone=${cleanedPhone}`
-      );
-      
-      if (!res.ok) {
+      // Se tem ID de agendamento, busca direto
+      if (appointmentId.trim()) {
+        const res = await fetch(
+          `${API_URL}/public-booking/${appointmentId}?phone=${cleanedPhone}`
+        );
+        
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.message || 'Agendamento não encontrado');
+        }
+        
         const data = await res.json();
-        throw new Error(data.message || 'Agendamento não encontrado');
+        setAppointment(data);
+        setStep('view');
+      } else {
+        // Busca todos agendamentos por telefone
+        const res = await fetch(
+          `${API_URL}/public-booking/appointments?phone=${encodeURIComponent(cleanedPhone)}&slug=${encodeURIComponent(slug)}`
+        );
+        
+        if (!res.ok) throw new Error('Erro ao buscar agendamentos');
+        
+        const data = await res.json();
+        const appointments = Array.isArray(data) ? data : [];
+        setClientAppointments(appointments);
+        
+        if (appointments.length === 1) {
+          setAppointment(appointments[0]);
+          setStep('view');
+        }
+        
+        // Busca pedidos também se shop habilitado
+        if (shopEnabled) {
+          await fetchClientOrders();
+          // Se não tem agendamentos mas tem loja, muda para aba de pedidos
+          if (appointments.length === 0) {
+            setActiveTab('orders');
+          }
+        }
+        
+        if (appointments.length === 0 && !shopEnabled) {
+          setError('Nenhum agendamento encontrado para este telefone');
+        }
       }
-      
-      const data = await res.json();
-      setAppointment(data);
-      setStep('view');
     } catch (err: any) {
       setError(err.message || 'Erro ao buscar agendamento');
     } finally {
@@ -465,13 +493,13 @@ export default function ManageBookingPage() {
                   color: COLORS.textPrimary,
                   marginBottom: 6,
                 }}>
-                  Código do agendamento
+                  Telefone
                 </label>
                 <input
-                  type="text"
-                  value={appointmentId}
-                  onChange={(e) => setAppointmentId(e.target.value)}
-                  placeholder="Ex: clz1234..."
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(formatPhone(e.target.value))}
+                  placeholder="(11) 99999-9999"
                   style={{
                     width: '100%',
                     padding: '12px 14px',
@@ -482,7 +510,7 @@ export default function ManageBookingPage() {
                   }}
                 />
                 <p style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 4 }}>
-                  Enviado por WhatsApp na confirmação
+                  O mesmo telefone usado no agendamento
                 </p>
               </div>
 
@@ -491,16 +519,16 @@ export default function ManageBookingPage() {
                   display: 'block', 
                   fontSize: 14, 
                   fontWeight: 500, 
-                  color: COLORS.textPrimary,
+                  color: COLORS.textSecondary,
                   marginBottom: 6,
                 }}>
-                  Telefone
+                  Código do agendamento <span style={{ fontSize: 12, fontStyle: 'italic' }}>(opcional)</span>
                 </label>
                 <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(formatPhone(e.target.value))}
-                  placeholder="(11) 99999-9999"
+                  type="text"
+                  value={appointmentId}
+                  onChange={(e) => setAppointmentId(e.target.value)}
+                  placeholder="Ex: clz1234..."
                   style={{
                     width: '100%',
                     padding: '12px 14px',
@@ -528,9 +556,47 @@ export default function ManageBookingPage() {
                   opacity: loading ? 0.7 : 1,
                 }}
               >
-                {loading ? 'Buscando...' : 'Buscar agendamento'}
+                {loading ? 'Buscando...' : 'Entrar'}
               </button>
             </form>
+
+            {/* Lista de agendamentos encontrados */}
+            {clientAppointments.length > 1 && (
+              <div style={{ marginTop: 20 }}>
+                <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.textPrimary, marginBottom: 10 }}>
+                  Seus agendamentos
+                </p>
+                {clientAppointments.map(apt => (
+                  <button
+                    key={apt.id}
+                    onClick={() => { setAppointment(apt); setStep('view'); }}
+                    style={{
+                      width: '100%',
+                      background: COLORS.background,
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: 12,
+                      padding: 14,
+                      marginBottom: 8,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <div>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: COLORS.textPrimary, margin: '0 0 4px' }}>
+                        {apt.services.map(s => s.service.name).join(', ')}
+                      </p>
+                      <p style={{ fontSize: 13, color: COLORS.textSecondary, margin: 0 }}>
+                        {formatDate(apt.startAt)} • {formatTime(apt.startAt)}
+                      </p>
+                    </div>
+                    <StatusBadge status={apt.status} />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

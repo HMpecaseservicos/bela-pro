@@ -19,8 +19,8 @@ const createTransactionSchema = z.object({
   transactionDate: z.string().datetime(),
   dueDate: z.string().datetime().optional(),
   paymentMethod: z.enum(['PIX', 'CASH', 'CREDIT_CARD', 'DEBIT_CARD', 'TRANSFER', 'OTHER']).optional(),
-  categoryId: z.string().cuid().optional(),
-  clientId: z.string().cuid().optional(),
+  categoryId: z.string().min(1).optional(),
+  clientId: z.string().min(1).optional(),
   status: z.enum(['PENDING', 'COMPLETED', 'CANCELLED']).optional(),
 });
 
@@ -30,7 +30,7 @@ const updateTransactionSchema = z.object({
   transactionDate: z.string().datetime().optional(),
   dueDate: z.string().datetime().optional(),
   paymentMethod: z.enum(['PIX', 'CASH', 'CREDIT_CARD', 'DEBIT_CARD', 'TRANSFER', 'OTHER']).optional().nullable(),
-  categoryId: z.string().cuid().optional().nullable(),
+  categoryId: z.string().min(1).optional().nullable(),
   status: z.enum(['PENDING', 'COMPLETED', 'CANCELLED']).optional(),
 });
 

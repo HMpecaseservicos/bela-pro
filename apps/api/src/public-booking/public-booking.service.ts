@@ -8,7 +8,7 @@ const createPublicBookingSchema = z.object({
   workspaceId: z.string().min(1),
   clientName: z.string().min(2).max(80),
   clientPhone: z.string().min(10).max(20),
-  serviceIds: z.array(z.string().cuid()).min(1).max(10),
+  serviceIds: z.array(z.string().min(1)).min(1).max(10),
   startAt: z.string().datetime(),
 });
 
@@ -402,13 +402,13 @@ export class PublicBookingService {
     clientName: z.string().min(2).max(80),
     clientPhone: z.string().min(10).max(20),
     // Serviços para agendar (opcional)
-    serviceIds: z.array(z.string().cuid()).max(10).default([]),
+    serviceIds: z.array(z.string().min(1)).max(10).default([]),
     startAt: z.string().datetime().optional(),
     // Produtos para comprar (opcional)
     products: z
       .array(
         z.object({
-          serviceId: z.string().cuid(),
+          serviceId: z.string().min(1),
           quantity: z.number().int().min(1).max(99),
         }),
       )
@@ -686,6 +686,9 @@ export class PublicBookingService {
       }
     }
 
+    // Para pedidos somente-produto sem appointment, Payment não é gerado
+    // (Payment requer appointmentId). O pedido fica como PENDING e o dono confirma pelo painel.
+
     this.logger.log(
       `✅ [${data.workspaceId}] Checkout unificado: ` +
         `appointment=${result.appointment?.id || 'none'} | ` +
@@ -743,6 +746,63 @@ export class PublicBookingService {
       },
       orderBy: { createdAt: 'desc' },
       take: 20,
+    });
+  }
+
+  /**
+   * Busca agendamentos de um cliente por telefone e slug (endpoint público)
+   */
+  async findClientAppointments(slug: string, phone: string) {
+    if (!slug || !phone) return [];
+
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+    if (!workspace) return [];
+
+    const phoneE164 = normalizePhoneE164(phone);
+    const client = await this.prisma.client.findUnique({
+      where: {
+        workspaceId_phoneE164: {
+          workspaceId: workspace.id,
+          phoneE164,
+        },
+      },
+      select: { id: true },
+    });
+    if (!client) return [];
+
+    return this.prisma.appointment.findMany({
+      where: {
+        workspaceId: workspace.id,
+        clientId: client.id,
+        status: { in: ['PENDING', 'CONFIRMED', 'PENDING_PAYMENT', 'COMPLETED'] },
+      },
+      select: {
+        id: true,
+        startAt: true,
+        endAt: true,
+        status: true,
+        totalPriceCents: true,
+        workspace: {
+          select: { id: true, name: true, brandName: true, slug: true },
+        },
+        client: {
+          select: { name: true, phoneE164: true },
+        },
+        services: {
+          select: {
+            durationMinutes: true,
+            priceCents: true,
+            service: {
+              select: { id: true, name: true, durationMinutes: true, priceCents: true },
+            },
+          },
+        },
+      },
+      orderBy: { startAt: 'desc' },
+      take: 10,
     });
   }
 }

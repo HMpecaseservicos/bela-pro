@@ -37,8 +37,8 @@ const createPlanSchema = z.object({
 const updatePlanSchema = createPlanSchema.partial();
 
 const createSubscriptionSchema = z.object({
-  workspaceId: z.string().cuid(),
-  planId: z.string().cuid(),
+  workspaceId: z.string().min(1),
+  planId: z.string().min(1),
   billingCycle: z.enum(['MONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL']).default('MONTHLY'),
   discountPercent: z.number().int().min(0).max(100).optional(),
   discountNote: z.string().max(200).optional(),
@@ -47,7 +47,7 @@ const createSubscriptionSchema = z.object({
 });
 
 const updateSubscriptionSchema = z.object({
-  planId: z.string().cuid().optional(),
+  planId: z.string().min(1).optional(),
   billingCycle: z.enum(['MONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL']).optional(),
   status: z.enum(['ACTIVE', 'TRIAL', 'PAST_DUE', 'CANCELLED', 'SUSPENDED']).optional(),
   discountPercent: z.number().int().min(0).max(100).optional().nullable(),

@@ -7,7 +7,7 @@ import { z } from 'zod';
 const createAppointmentSchema = z.object({
   clientName: z.string().min(2).max(80),
   clientPhone: z.string().min(10).max(20),
-  serviceIds: z.array(z.string().cuid()).min(1),
+  serviceIds: z.array(z.string().min(1)).min(1),
   startAt: z.string().datetime(),
   notes: z.string().max(1000).optional(),
   cancelReason: z.string().max(1000).optional(),
@@ -15,7 +15,7 @@ const createAppointmentSchema = z.object({
 
 const rescheduleSchema = z.object({
   startAt: z.string().datetime().optional(),
-  serviceId: z.string().cuid().optional(),
+  serviceId: z.string().min(1).optional(),
   notes: z.string().max(1000).optional(),
 });
 
