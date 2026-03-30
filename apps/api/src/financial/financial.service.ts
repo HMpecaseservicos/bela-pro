@@ -587,4 +587,81 @@ export class FinancialService {
 
     return transaction;
   }
+
+  // ==================== LOJA UNIFICADA: INTEGRAÇÃO COM PEDIDOS ====================
+
+  /**
+   * Cria transação financeira automática quando um pedido é entregue
+   */
+  async createTransactionFromOrder(
+    workspaceId: string,
+    orderId: string,
+    paymentMethod?: 'PIX' | 'CASH' | 'CREDIT_CARD' | 'DEBIT_CARD' | 'TRANSFER' | 'OTHER',
+  ) {
+    // Verifica se já existe transação para este pedido
+    const existing = await this.prisma.financialTransaction.findUnique({
+      where: { orderId },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    // Busca o pedido completo
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, workspaceId },
+      include: {
+        client: { select: { id: true, name: true } },
+        items: {
+          include: { service: { select: { name: true } } },
+        },
+      },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Pedido não encontrado.');
+    }
+
+    // Busca categoria "Produtos" para receitas
+    let productCategory = await this.prisma.financialCategory.findFirst({
+      where: { workspaceId, name: 'Produtos', type: 'INCOME' },
+    });
+
+    if (!productCategory) {
+      await this.initializeSystemCategories(workspaceId);
+      productCategory = await this.prisma.financialCategory.findFirst({
+        where: { workspaceId, name: 'Produtos', type: 'INCOME' },
+      });
+    }
+
+    const productNames = order.items
+      .map((i) => `${i.quantity}x ${i.service.name}`)
+      .join(', ');
+
+    const transaction = await this.prisma.financialTransaction.create({
+      data: {
+        workspaceId,
+        type: 'INCOME',
+        status: 'COMPLETED',
+        amountCents: order.totalProductsCents,
+        description: `Produtos: ${productNames} - ${order.client.name}`,
+        transactionDate: new Date(),
+        completedAt: new Date(),
+        paymentMethod: paymentMethod || 'OTHER',
+        categoryId: productCategory?.id,
+        orderId: order.id,
+        clientId: order.client.id,
+      },
+      include: {
+        category: true,
+        client: { select: { id: true, name: true } },
+      },
+    });
+
+    this.logger.log(
+      `✅ [${workspaceId}] Transação criada do pedido ${orderId}: R$ ${order.totalProductsCents / 100}`,
+    );
+
+    return transaction;
+  }
 }

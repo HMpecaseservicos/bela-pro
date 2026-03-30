@@ -29,6 +29,7 @@ import { ServiceCategoriesModule } from './service-categories/service-categories
 import { SponsorInvitesModule } from './sponsor-invites/sponsor-invites.module';
 import { SponsorDashboardModule } from './sponsor-dashboard/sponsor-dashboard.module';
 import { TwoFactorModule } from './two-factor/two-factor.module';
+import { OrdersModule } from './orders/orders.module'; // LOJA UNIFICADA
 
 @Module({
   imports: [
@@ -82,6 +83,7 @@ import { TwoFactorModule } from './two-factor/two-factor.module';
     SponsorInvitesModule,
     SponsorDashboardModule,
     TwoFactorModule,
+    OrdersModule, // LOJA UNIFICADA
   ],
   controllers: [HealthController, RootController],
   providers: [

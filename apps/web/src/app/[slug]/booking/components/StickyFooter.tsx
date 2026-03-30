@@ -1,6 +1,6 @@
 'use client';
 
-import { Service, BookingStep } from '../types';
+import { Service, BookingStep, CartItem } from '../types';
 import { CTA_LABELS, COLORS, RADIUS } from '../constants';
 import { formatPrice, getServiceEmoji } from '../utils';
 
@@ -13,6 +13,10 @@ interface StickyFooterProps {
   loading: boolean;
   primaryColor?: string;
   onContinue: () => void;
+  // LOJA UNIFICADA
+  cart?: CartItem[];
+  totalCombinedPrice?: number;
+  cartItemCount?: number;
 }
 
 export function StickyFooter({
@@ -24,16 +28,27 @@ export function StickyFooter({
   loading,
   primaryColor = COLORS.primaryFallback,
   onContinue,
+  // LOJA UNIFICADA
+  cart = [],
+  totalCombinedPrice,
+  cartItemCount = 0,
 }: StickyFooterProps) {
+  const hasServices = selectedServices.length > 0;
+  const hasProducts = cart.length > 0;
+  
   // Não mostrar na etapa 1 (botão inline agora) ou na etapa 4
-  if (selectedServices.length === 0 || currentStep === 1 || currentStep === 4) {
-    return null;
-  }
+  if (!hasServices && !hasProducts) return null;
+  if (currentStep === 1 || currentStep === 4) return null;
 
-  const emoji = selectedServices.length === 1 ? getServiceEmoji(selectedServices[0].name) : '✨';
-  const serviceLabel = selectedServices.length === 1 
-    ? selectedServices[0].name 
-    : `${selectedServices.length} serviços`;
+  const emoji = hasServices 
+    ? (selectedServices.length === 1 ? getServiceEmoji(selectedServices[0].name) : '✨')
+    : '🛍️';
+  const serviceLabel = hasServices
+    ? (selectedServices.length === 1 
+        ? selectedServices[0].name 
+        : `${selectedServices.length} serviços`)
+    : `${cartItemCount} produto${cartItemCount > 1 ? 's' : ''}`;
+  const displayPrice = totalCombinedPrice !== undefined ? totalCombinedPrice : totalPrice;
   const ctaLabel = CTA_LABELS[currentStep] || 'Continuar';
   const gradientBg = `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColorSimple(primaryColor, -40)} 100%)`;
 
@@ -75,7 +90,8 @@ export function StickyFooter({
                 {serviceLabel}
               </span>
               <span style={{ fontSize: 12, color: COLORS.textSecondary, marginLeft: 8 }}>
-                • {totalDuration} min
+                {hasServices ? `• ${totalDuration} min` : ''}
+                {hasServices && hasProducts ? ` + ${cartItemCount} produto${cartItemCount > 1 ? 's' : ''}` : ''}
               </span>
             </div>
           </div>
@@ -86,7 +102,7 @@ export function StickyFooter({
               color: primaryColor,
             }}
           >
-            {formatPrice(totalPrice)}
+            {formatPrice(displayPrice)}
           </span>
         </div>
 

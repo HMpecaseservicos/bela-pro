@@ -16,6 +16,7 @@ interface WorkspaceConfig {
   autoConfirm: boolean;
   minLeadTimeMinutes: number;
   slotIntervalMinutes: number;
+  shopEnabled: boolean; // LOJA UNIFICADA
 }
 
 export default function ConfigPage() {
@@ -30,6 +31,7 @@ export default function ConfigPage() {
     autoConfirm: true,
     minLeadTimeMinutes: 120,
     slotIntervalMinutes: 15,
+    shopEnabled: false,
   });
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -88,6 +90,7 @@ export default function ConfigPage() {
           autoConfirm: true, // TODO: adicionar campo no schema
           minLeadTimeMinutes: workspace.minLeadTimeMinutes || 120,
           slotIntervalMinutes: workspace.slotIntervalMinutes || 15,
+          shopEnabled: workspace.shopEnabled || false,
         });
       } catch (err) {
         console.error('Erro ao carregar workspace:', err);
@@ -125,6 +128,7 @@ export default function ConfigPage() {
           maxBookingDaysAhead: config.maxAdvanceDays,
           minLeadTimeMinutes: config.minLeadTimeMinutes,
           slotIntervalMinutes: config.slotIntervalMinutes,
+          shopEnabled: config.shopEnabled,
           profile: {
             phoneE164: config.phone,
             addressLine: config.address,
@@ -568,6 +572,72 @@ export default function ConfigPage() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* LOJA UNIFICADA: Toggle */}
+      <div style={{
+        background: 'white',
+        borderRadius: isMobile ? 12 : 16,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+        padding: isMobile ? 16 : 32,
+        marginBottom: isMobile ? 16 : 24,
+      }}>
+        <h3 style={{ margin: '0 0 24px', fontSize: isMobile ? 16 : 18, fontWeight: 600, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span>🛍️</span> Loja de Produtos
+        </h3>
+
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: 20,
+          background: config.shopEnabled ? '#f0fdf4' : '#f8fafc',
+          borderRadius: 12,
+          border: config.shopEnabled ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
+          transition: 'all 0.2s',
+        }}>
+          <div>
+            <div style={{ fontWeight: 500, color: '#1e293b', marginBottom: 4 }}>
+              Ativar Loja
+            </div>
+            <div style={{ fontSize: 13, color: '#64748b' }}>
+              Permita que seus clientes comprem produtos junto com os agendamentos
+            </div>
+          </div>
+          <button
+            onClick={() => setConfig({ ...config, shopEnabled: !config.shopEnabled })}
+            style={{
+              width: 50,
+              height: 28,
+              borderRadius: 14,
+              border: 'none',
+              background: config.shopEnabled ? '#22c55e' : '#e5e7eb',
+              cursor: 'pointer',
+              position: 'relative',
+              transition: 'background 0.2s',
+            }}
+          >
+            <div style={{
+              width: 22,
+              height: 22,
+              borderRadius: '50%',
+              background: 'white',
+              position: 'absolute',
+              top: 3,
+              left: config.shopEnabled ? 25 : 3,
+              transition: 'left 0.2s',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+            }} />
+          </button>
+        </div>
+
+        {config.shopEnabled && (
+          <div style={{ marginTop: 16, padding: 16, background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0' }}>
+            <p style={{ margin: 0, fontSize: 13, color: '#15803d' }}>
+              ✅ Loja ativada! Acesse <strong>Produtos</strong> no menu lateral para cadastrar itens e <strong>Pedidos</strong> para gerenciá-los.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Danger Zone */}

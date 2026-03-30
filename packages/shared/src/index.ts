@@ -71,6 +71,17 @@ export type ChatConversationState =
 
 export type SponsorTier = 'DIAMOND' | 'GOLD' | 'SILVER' | 'BRONZE';
 
+// LOJA UNIFICADA
+export type ServiceItemType = 'SERVICE' | 'PRODUCT';
+
+export type OrderStatus =
+  | 'PENDING'
+  | 'PENDING_PAYMENT'
+  | 'CONFIRMED'
+  | 'READY'
+  | 'DELIVERED'
+  | 'CANCELLED';
+
 export type BusinessInviteStatus =
   | 'PENDING'
   | 'VIEWED'
@@ -112,6 +123,7 @@ export interface WorkspacePublic {
   welcomeText: string | null;
   description: string | null;
   profile: ProfessionalProfile | null;
+  shopEnabled?: boolean; // LOJA UNIFICADA
 }
 
 export interface ServiceCategory {
@@ -120,6 +132,7 @@ export interface ServiceCategory {
   iconEmoji: string | null;
   color: string | null;
   sortOrder: number;
+  categoryType?: ServiceItemType; // LOJA UNIFICADA
 }
 
 export interface ServicePublic {
@@ -135,6 +148,10 @@ export interface ServicePublic {
   categoryTag?: string | null;
   categoryId?: string | null;
   category?: ServiceCategory | null;
+  // LOJA UNIFICADA
+  itemType?: ServiceItemType;
+  stock?: number;
+  isPhysical?: boolean;
 }
 
 export interface TimeSlot {
@@ -154,6 +171,7 @@ export interface BookingRequest {
 export interface PaymentInfo {
   paymentId: Id;
   appointmentId: Id;
+  orderId?: Id; // LOJA UNIFICADA
   amount: number;
   amountCents: MoneyCents;
   pixQrCode: string;
@@ -170,4 +188,56 @@ export interface JwtPayload {
   workspaceId: Id;
   role: UserRole;
   isSuperAdmin?: boolean;
+}
+
+// ============================================
+// LOJA UNIFICADA: Interfaces de checkout
+// ============================================
+
+export interface UnifiedCheckoutRequest {
+  workspaceId: Id;
+  clientName: string;
+  clientPhone: string;
+  serviceIds: Id[];
+  startAt?: string;
+  products: Array<{
+    serviceId: Id;
+    quantity: number;
+  }>;
+}
+
+export interface OrderItemPublic {
+  id: Id;
+  serviceId: Id;
+  quantity: number;
+  priceCents: MoneyCents;
+  totalCents: MoneyCents;
+  service: {
+    id: Id;
+    name: string;
+    imageUrl: string | null;
+    priceCents: MoneyCents;
+  };
+}
+
+export interface OrderPublic {
+  id: Id;
+  status: OrderStatus;
+  totalProductsCents: MoneyCents;
+  totalServicesCents: MoneyCents;
+  totalCents: MoneyCents;
+  items: OrderItemPublic[];
+  createdAt: string;
+  linkedAppointment?: {
+    id: Id;
+    startAt: string;
+    status: AppointmentStatus;
+  } | null;
+}
+
+export interface UnifiedCheckoutResponse {
+  appointment: any | null;
+  order: OrderPublic | null;
+  paymentInfo: PaymentInfo | null;
+  requiresPayment: boolean;
 }

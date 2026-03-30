@@ -161,24 +161,29 @@ export default function BookingPage() {
   }
 
   // Step 5 - Tela de pagamento PIX
-  if (booking.step === 5 && booking.paymentInfo && booking.workspace && booking.selectedServices.length > 0 && booking.selectedDate && booking.selectedSlot) {
-    return (
-      <>
-        <style>{globalStyles}</style>
-        <PixPaymentScreen
-          workspace={booking.workspace}
-          services={booking.selectedServices}
-          selectedDate={booking.selectedDate}
-          selectedSlot={booking.selectedSlot}
-          paymentInfo={booking.paymentInfo}
-          primaryColor={booking.primaryColor}
-        />
-      </>
-    );
+  if (booking.step === 5 && booking.paymentInfo && booking.workspace && (booking.selectedServices.length > 0 || booking.cart.length > 0)) {
+    // PIX com serviços agendados
+    if (booking.selectedServices.length > 0 && booking.selectedDate && booking.selectedSlot) {
+      return (
+        <>
+          <style>{globalStyles}</style>
+          <PixPaymentScreen
+            workspace={booking.workspace}
+            services={booking.selectedServices}
+            selectedDate={booking.selectedDate}
+            selectedSlot={booking.selectedSlot}
+            paymentInfo={booking.paymentInfo}
+            primaryColor={booking.primaryColor}
+          />
+        </>
+      );
+    }
+    // PIX com somente produtos (sem data/slot)
+    // Reutiliza PixPaymentScreen passando listas vazias para date/slot
   }
 
   // Sucesso - Tela de confirmação
-  if (booking.success && booking.workspace && booking.selectedServices.length > 0 && booking.selectedDate && booking.selectedSlot) {
+  if (booking.success && booking.workspace && (booking.selectedServices.length > 0 || booking.cart.length > 0)) {
     return (
       <>
         <style>{globalStyles}</style>
@@ -189,6 +194,8 @@ export default function BookingPage() {
           selectedSlot={booking.selectedSlot}
           primaryColor={booking.primaryColor}
           onNewBooking={booking.resetBooking}
+          cart={booking.cart}
+          orderResult={booking.orderResult}
         />
       </>
     );
@@ -322,10 +329,18 @@ export default function BookingPage() {
                 primaryColor={booking.primaryColor}
                 onSelect={booking.toggleService}
                 theme={booking.theme}
+                // LOJA UNIFICADA
+                shopEnabled={booking.shopEnabled}
+                itemFilter={booking.itemFilter}
+                onItemFilterChange={booking.setItemFilter}
+                cart={booking.cart}
+                onAddToCart={booking.addToCart}
+                onRemoveFromCart={booking.removeFromCart}
+                onUpdateCartQuantity={booking.updateCartQuantity}
               />
               
-              {/* Resumo dos serviços selecionados */}
-              {booking.selectedServices.length > 0 && (
+              {/* Resumo dos serviços selecionados e carrinho */}
+              {(booking.selectedServices.length > 0 || booking.cart.length > 0) && (
                 <div style={{
                   marginTop: 20,
                   padding: 16,
@@ -333,17 +348,25 @@ export default function BookingPage() {
                   borderRadius: 12,
                   border: `1px solid ${booking.primaryColor}30`,
                 }}>
-                  <p style={{ fontSize: 13, color: COLORS.textSecondary, margin: '0 0 8px' }}>
-                    {booking.selectedServices.length} serviço{booking.selectedServices.length > 1 ? 's' : ''} selecionado{booking.selectedServices.length > 1 ? 's' : ''}
-                  </p>
+                  {booking.selectedServices.length > 0 && (
+                    <p style={{ fontSize: 13, color: COLORS.textSecondary, margin: '0 0 4px' }}>
+                      {booking.selectedServices.length} serviço{booking.selectedServices.length > 1 ? 's' : ''} selecionado{booking.selectedServices.length > 1 ? 's' : ''}
+                    </p>
+                  )}
+                  {booking.cart.length > 0 && (
+                    <p style={{ fontSize: 13, color: COLORS.textSecondary, margin: '0 0 4px' }}>
+                      {booking.cartItemCount} produto{booking.cartItemCount > 1 ? 's' : ''} no carrinho
+                    </p>
+                  )}
                   <p style={{ fontSize: 15, fontWeight: 600, color: COLORS.textPrimary, margin: 0 }}>
-                    {booking.totalDuration} min • R$ {(booking.totalPrice / 100).toFixed(2).replace('.', ',')}
+                    {booking.selectedServices.length > 0 ? `${booking.totalDuration} min • ` : ''}
+                    R$ {(booking.totalCombinedPrice / 100).toFixed(2).replace('.', ',')}
                   </p>
                 </div>
               )}
               
               {/* Botão para prosseguir */}
-              {booking.selectedServices.length > 0 && (
+              {(booking.selectedServices.length > 0 || booking.cart.length > 0) && (
                 <button
                   onClick={booking.proceedToDateSelection}
                   disabled={booking.loading}
@@ -413,7 +436,7 @@ export default function BookingPage() {
           )}
 
           {/* STEP 4: Dados do cliente */}
-          {booking.step === 4 && booking.selectedServices.length > 0 && booking.selectedDate && booking.selectedSlot && (
+          {booking.step === 4 && (booking.selectedServices.length > 0 || booking.cart.length > 0) && (
             <>
               <div style={{ textAlign: 'center', marginBottom: 20 }}>
                 <h2 style={{ fontSize: 20, fontWeight: 700, color: COLORS.textPrimary, margin: 0 }}>
@@ -433,6 +456,8 @@ export default function BookingPage() {
                 onNameChange={booking.setClientName}
                 onPhoneChange={booking.setClientPhone}
                 onSubmit={booking.confirmBooking}
+                cart={booking.cart}
+                totalCombinedPrice={booking.totalCombinedPrice}
               />
             </>
           )}
@@ -440,7 +465,7 @@ export default function BookingPage() {
       </div>
 
       {/* Spacer para o footer sticky */}
-      {booking.selectedServices.length > 0 && booking.step < 4 && (
+      {(booking.selectedServices.length > 0 || booking.cart.length > 0) && booking.step < 4 && (
         <div style={{ height: 100 }} />
       )}
 
@@ -454,6 +479,9 @@ export default function BookingPage() {
         loading={booking.loading}
         primaryColor={booking.primaryColor}
         onContinue={handleContinue}
+        cart={booking.cart}
+        totalCombinedPrice={booking.totalCombinedPrice}
+        cartItemCount={booking.cartItemCount}
       />
 
       {/* ============================================================= */}

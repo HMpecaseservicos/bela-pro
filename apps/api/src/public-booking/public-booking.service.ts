@@ -394,4 +394,350 @@ export class PublicBookingService {
 
     return { success: true, message: 'Agendamento cancelado com sucesso.' };
   }
+
+  // ==================== LOJA UNIFICADA: CHECKOUT PÚBLICO ====================
+
+  private readonly unifiedCheckoutSchema = z.object({
+    workspaceId: z.string().min(1),
+    clientName: z.string().min(2).max(80),
+    clientPhone: z.string().min(10).max(20),
+    // Serviços para agendar (opcional)
+    serviceIds: z.array(z.string().cuid()).max(10).default([]),
+    startAt: z.string().datetime().optional(),
+    // Produtos para comprar (opcional)
+    products: z
+      .array(
+        z.object({
+          serviceId: z.string().cuid(),
+          quantity: z.number().int().min(1).max(99),
+        }),
+      )
+      .max(50)
+      .default([]),
+  });
+
+  /**
+   * Checkout unificado: cria appointment (se houver serviços) + order (se houver produtos)
+   * vinculados entre si. Reutiliza 100% da lógica existente de pagamento PIX.
+   */
+  async unifiedCheckout(input: unknown) {
+    const data = this.unifiedCheckoutSchema.parse(input);
+
+    const hasServices = data.serviceIds.length > 0;
+    const hasProducts = data.products.length > 0;
+
+    if (!hasServices && !hasProducts) {
+      throw new BadRequestException(
+        'Selecione pelo menos um serviço ou produto.',
+      );
+    }
+
+    if (hasServices && !data.startAt) {
+      throw new BadRequestException(
+        'Data/hora é obrigatória quando há serviços selecionados.',
+      );
+    }
+
+    // Validar workspace
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: data.workspaceId },
+    });
+
+    if (!workspace) {
+      throw new BadRequestException('Workspace não encontrado.');
+    }
+
+    // Se tem produtos, workspace precisa ter loja habilitada
+    if (hasProducts && !workspace.shopEnabled) {
+      throw new BadRequestException(
+        'A loja não está habilitada neste workspace.',
+      );
+    }
+
+    const phoneE164 = normalizePhoneE164(data.clientPhone);
+
+    // Busca ou cria cliente
+    let client = await this.prisma.client.findUnique({
+      where: {
+        workspaceId_phoneE164: {
+          workspaceId: data.workspaceId,
+          phoneE164,
+        },
+      },
+    });
+
+    if (!client) {
+      client = await this.prisma.client.create({
+        data: {
+          workspaceId: data.workspaceId,
+          name: data.clientName,
+          phoneE164,
+          status: 'NORMAL',
+        },
+      });
+    } else if (client.name !== data.clientName) {
+      client = await this.prisma.client.update({
+        where: { id: client.id },
+        data: { name: data.clientName },
+      });
+    }
+
+    let appointment: any = null;
+    let order: any = null;
+    let paymentInfo: any = null;
+
+    // TRANSAÇÃO ATÔMICA para garantir consistência
+    const result = await this.prisma.$transaction(async (tx) => {
+      // ── CRIAR APPOINTMENT (se houver serviços) ──
+      if (hasServices) {
+        const services = await tx.service.findMany({
+          where: {
+            id: { in: data.serviceIds },
+            workspaceId: data.workspaceId,
+            isActive: true,
+            itemType: 'SERVICE',
+          },
+        });
+
+        if (services.length !== data.serviceIds.length) {
+          throw new BadRequestException(
+            'Um ou mais serviços não encontrados ou inativos.',
+          );
+        }
+
+        const totalDurationMinutes = services.reduce(
+          (sum, s) => sum + s.durationMinutes,
+          0,
+        );
+        const startAt = new Date(data.startAt!);
+        const endAt = new Date(
+          startAt.getTime() + totalDurationMinutes * 60000,
+        );
+
+        // Verificar conflitos
+        const conflicts = await tx.appointment.findMany({
+          where: {
+            workspaceId: data.workspaceId,
+            status: { in: ['PENDING', 'CONFIRMED', 'PENDING_PAYMENT'] },
+            AND: [{ startAt: { lt: endAt } }, { endAt: { gt: startAt } }],
+          },
+        });
+
+        if (conflicts.length > 0) {
+          throw new BadRequestException('Horário indisponível.');
+        }
+
+        const totalServicesCents = services.reduce(
+          (sum, s) => sum + s.priceCents,
+          0,
+        );
+        const requiresPayment =
+          workspace.requirePayment && workspace.paymentType !== 'NONE';
+
+        appointment = await tx.appointment.create({
+          data: {
+            workspaceId: data.workspaceId,
+            clientId: client!.id,
+            startAt,
+            endAt,
+            status: requiresPayment ? 'PENDING_PAYMENT' : 'PENDING',
+            bookedVia: 'public',
+            totalPriceCents: totalServicesCents,
+            services: {
+              create: services.map((s) => ({
+                serviceId: s.id,
+                durationMinutes: s.durationMinutes,
+                priceCents: s.priceCents,
+              })),
+            },
+          },
+          include: {
+            client: true,
+            services: { include: { service: true } },
+          },
+        });
+      }
+
+      // ── CRIAR ORDER (se houver produtos) ──
+      if (hasProducts) {
+        const productIds = data.products.map((p) => p.serviceId);
+        const products = await tx.service.findMany({
+          where: {
+            id: { in: productIds },
+            workspaceId: data.workspaceId,
+            isActive: true,
+            itemType: 'PRODUCT',
+          },
+        });
+
+        if (products.length !== productIds.length) {
+          throw new BadRequestException(
+            'Um ou mais produtos não encontrados ou inativos.',
+          );
+        }
+
+        const quantityMap = new Map(
+          data.products.map((p) => [p.serviceId, p.quantity]),
+        );
+
+        // Verificar e decrementar estoque
+        for (const product of products) {
+          const qty = quantityMap.get(product.id) || 1;
+          const updated = await tx.service.updateMany({
+            where: {
+              id: product.id,
+              workspaceId: data.workspaceId,
+              stock: { gte: qty },
+            },
+            data: { stock: { decrement: qty } },
+          });
+
+          if (updated.count === 0) {
+            throw new BadRequestException(
+              `Estoque insuficiente para "${product.name}".`,
+            );
+          }
+        }
+
+        const totalProductsCents = products.reduce((sum, p) => {
+          const qty = quantityMap.get(p.id) || 1;
+          return sum + p.priceCents * qty;
+        }, 0);
+
+        order = await tx.order.create({
+          data: {
+            workspaceId: data.workspaceId,
+            clientId: client!.id,
+            status: 'PENDING',
+            totalProductsCents,
+            totalServicesCents: appointment?.totalPriceCents || 0,
+            totalCents:
+              totalProductsCents + (appointment?.totalPriceCents || 0),
+            bookedVia: 'public',
+            items: {
+              create: products.map((p) => {
+                const qty = quantityMap.get(p.id) || 1;
+                return {
+                  serviceId: p.id,
+                  quantity: qty,
+                  priceCents: p.priceCents,
+                  totalCents: p.priceCents * qty,
+                };
+              }),
+            },
+          },
+          include: {
+            client: true,
+            items: {
+              include: {
+                service: {
+                  select: {
+                    id: true,
+                    name: true,
+                    imageUrl: true,
+                    priceCents: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        // Vincular appointment ↔ order se ambos existem
+        if (appointment) {
+          await tx.appointment.update({
+            where: { id: appointment.id },
+            data: { linkedOrderId: order.id },
+          });
+        }
+      }
+
+      return { appointment, order };
+    });
+
+    // Criar pagamento PIX se necessário (para valor total combinado)
+    const requiresPayment =
+      workspace.requirePayment && workspace.paymentType !== 'NONE';
+    if (requiresPayment && result.appointment) {
+      const totalCombined =
+        (result.appointment?.totalPriceCents || 0) +
+        (result.order?.totalProductsCents || 0);
+
+      const payment = await this.paymentsService.createPaymentForAppointment(
+        result.appointment.id,
+        data.workspaceId,
+        totalCombined,
+      );
+
+      if (payment) {
+        paymentInfo = {
+          paymentId: payment.id,
+          appointmentId: result.appointment.id,
+          orderId: result.order?.id,
+          amountCents: payment.amountCents,
+          pixCode: payment.pixCode || '',
+          pixRecipientName: payment.workspace?.pixHolderName || '',
+          pixKeyMasked: this.maskPixKey(
+            payment.workspace?.pixKey,
+            payment.workspace?.pixKeyType,
+          ),
+          expiresAt: payment.expiresAt.toISOString(),
+        };
+      }
+    }
+
+    this.logger.log(
+      `✅ [${data.workspaceId}] Checkout unificado: ` +
+        `appointment=${result.appointment?.id || 'none'} | ` +
+        `order=${result.order?.id || 'none'} | ` +
+        `cliente=${client!.name}`,
+    );
+
+    return {
+      appointment: result.appointment,
+      order: result.order,
+      paymentInfo,
+      requiresPayment,
+    };
+  }
+
+  /**
+   * Busca pedidos de um cliente por telefone e slug (endpoint público)
+   */
+  async findClientOrders(slug: string, phone: string) {
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { slug },
+      select: { id: true, shopEnabled: true },
+    });
+    if (!workspace || !workspace.shopEnabled) return [];
+
+    const cleanPhone = phone.replace(/\D/g, '');
+    const client = await this.prisma.client.findFirst({
+      where: { workspaceId: workspace.id, phoneE164: { contains: cleanPhone } },
+      select: { id: true },
+    });
+    if (!client) return [];
+
+    return this.prisma.order.findMany({
+      where: { workspaceId: workspace.id, clientId: client.id },
+      select: {
+        id: true,
+        status: true,
+        totalCents: true,
+        createdAt: true,
+        items: {
+          select: {
+            id: true,
+            quantity: true,
+            priceCents: true,
+            service: {
+              select: { name: true },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+    });
+  }
 }

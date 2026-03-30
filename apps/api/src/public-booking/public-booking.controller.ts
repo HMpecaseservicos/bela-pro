@@ -14,6 +14,21 @@ export class PublicBookingController {
     return this.publicBookingService.createBooking(body);
   }
 
+  // LOJA UNIFICADA: Checkout público unificado (serviços + produtos)
+  @Post('unified-checkout')
+  async unifiedCheckout(@Body() body: any) {
+    return this.publicBookingService.unifiedCheckout(body);
+  }
+
+  // LOJA UNIFICADA: Buscar pedidos do cliente por telefone + slug
+  @Get('orders')
+  async getClientOrders(
+    @Query('slug') slug: string,
+    @Query('phone') phone: string,
+  ) {
+    return this.publicBookingService.findClientOrders(slug, phone);
+  }
+
   /**
    * GET /public-booking/:id
    * Busca um agendamento público pelo ID e telefone (validação de propriedade)

@@ -25,6 +25,7 @@ const updateWorkspaceSchema = z.object({
   maxBookingDaysAhead: z.number().int().min(1).max(365).optional(),
   slotIntervalMinutes: z.number().int().refine((v: number) => [15, 30, 60].includes(v)).optional(),
   slug: z.string().min(2).max(50).optional(),
+  shopEnabled: z.boolean().optional(), // LOJA UNIFICADA
   profile: profileSchema,
 });
 
@@ -60,6 +61,8 @@ export class WorkspaceService {
         bufferMinutes: true,
         maxBookingDaysAhead: true,
         slotIntervalMinutes: true,
+        // LOJA UNIFICADA
+        shopEnabled: true,
         // Profile
         profile: {
           select: {
@@ -100,6 +103,10 @@ export class WorkspaceService {
         badgeText: true,
         categoryTag: true,
         categoryId: true,
+        // LOJA UNIFICADA
+        itemType: true,
+        stock: true,
+        isPhysical: true,
         category: {
           select: {
             id: true,

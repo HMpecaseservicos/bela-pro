@@ -43,6 +43,21 @@ interface TimeSlot {
   available: boolean;
 }
 
+interface OrderItem {
+  id: string;
+  quantity: number;
+  priceCents: number;
+  service: { name: string };
+}
+
+interface Order {
+  id: string;
+  status: string;
+  totalCents: number;
+  createdAt: string;
+  items: OrderItem[];
+}
+
 // Colors
 const COLORS = {
   primary: '#6366f1',
@@ -141,6 +156,20 @@ export default function ManageBookingPage() {
   // Cancel state
   const [cancelReason, setCancelReason] = useState('');
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
+  // Shop / Orders state
+  const [shopEnabled, setShopEnabled] = useState(false);
+  const [clientOrders, setClientOrders] = useState<Order[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [activeTab, setActiveTab] = useState<'booking' | 'orders'>('booking');
+
+  // Check if workspace has shop enabled
+  useEffect(() => {
+    fetch(`${API_URL}/workspace/by-slug/${encodeURIComponent(slug)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(ws => { if (ws?.shopEnabled) setShopEnabled(true); })
+      .catch(() => {});
+  }, [slug]);
 
   // Lookup appointment
   const handleLookup = async (e: React.FormEvent) => {
@@ -295,6 +324,35 @@ export default function ManageBookingPage() {
   // Check if can modify
   const canModify = appointment && ['PENDING', 'CONFIRMED', 'PENDING_PAYMENT'].includes(appointment.status);
 
+  // Fetch client orders by phone
+  const fetchClientOrders = async () => {
+    const cleanedPhone = cleanPhone(phone);
+    if (cleanedPhone.length < 10) return;
+    setLoadingOrders(true);
+    try {
+      const res = await fetch(
+        `${API_URL}/public-booking/orders?phone=${encodeURIComponent(cleanedPhone)}&slug=${encodeURIComponent(slug)}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setClientOrders(Array.isArray(data) ? data : []);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  const ORDER_STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
+    PENDING: { label: 'Pendente', bg: '#fef3c7', color: '#92400e' },
+    CONFIRMED: { label: 'Confirmado', bg: '#dbeafe', color: '#1e40af' },
+    PREPARING: { label: 'Em preparo', bg: '#ede9fe', color: '#5b21b6' },
+    READY: { label: 'Pronto', bg: '#cffafe', color: '#155e75' },
+    DELIVERED: { label: 'Entregue', bg: '#d1fae5', color: '#065f46' },
+    CANCELLED: { label: 'Cancelado', bg: '#fee2e2', color: '#991b1b' },
+  };
+
   return (
     <div style={{ 
       minHeight: '100vh', 
@@ -314,16 +372,66 @@ export default function ManageBookingPage() {
             color: COLORS.textPrimary,
             margin: '0 0 8px',
           }}>
-            Gerenciar Agendamento
+            Gerenciar {shopEnabled ? 'Atendimento' : 'Agendamento'}
           </h1>
           <p style={{ 
             fontSize: 14, 
             color: COLORS.textSecondary,
             margin: 0,
           }}>
-            Reagende ou cancele seu horário
+            {shopEnabled ? 'Acompanhe seus agendamentos e pedidos' : 'Reagende ou cancele seu horário'}
           </p>
         </div>
+
+        {/* Tabs (when shop enabled) */}
+        {shopEnabled && (
+          <div style={{
+            display: 'flex',
+            gap: 0,
+            marginBottom: 20,
+            background: '#f3f4f6',
+            borderRadius: 12,
+            padding: 4,
+          }}>
+            <button
+              onClick={() => setActiveTab('booking')}
+              style={{
+                flex: 1,
+                padding: '10px 16px',
+                background: activeTab === 'booking' ? COLORS.surface : 'transparent',
+                color: activeTab === 'booking' ? COLORS.primary : COLORS.textSecondary,
+                border: 'none',
+                borderRadius: 10,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: 'pointer',
+                boxShadow: activeTab === 'booking' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              }}
+            >
+              📅 Agendamento
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('orders');
+                if (clientOrders.length === 0 && phone) fetchClientOrders();
+              }}
+              style={{
+                flex: 1,
+                padding: '10px 16px',
+                background: activeTab === 'orders' ? COLORS.surface : 'transparent',
+                color: activeTab === 'orders' ? COLORS.primary : COLORS.textSecondary,
+                border: 'none',
+                borderRadius: 10,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: 'pointer',
+                boxShadow: activeTab === 'orders' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              }}
+            >
+              📦 Pedidos
+            </button>
+          </div>
+        )}
 
         {/* Error */}
         {error && (
@@ -341,7 +449,7 @@ export default function ManageBookingPage() {
         )}
 
         {/* STEP: LOOKUP */}
-        {step === 'lookup' && (
+        {step === 'lookup' && activeTab === 'booking' && (
           <div style={{
             background: COLORS.surface,
             borderRadius: 16,
@@ -427,7 +535,7 @@ export default function ManageBookingPage() {
         )}
 
         {/* STEP: VIEW */}
-        {step === 'view' && appointment && (
+        {step === 'view' && appointment && activeTab === 'booking' && (
           <div style={{
             background: COLORS.surface,
             borderRadius: 16,
@@ -558,7 +666,7 @@ export default function ManageBookingPage() {
         )}
 
         {/* STEP: RESCHEDULE */}
-        {step === 'reschedule' && appointment && (
+        {step === 'reschedule' && appointment && activeTab === 'booking' && (
           <div style={{
             background: COLORS.surface,
             borderRadius: 16,
@@ -767,7 +875,7 @@ export default function ManageBookingPage() {
         )}
 
         {/* STEP: CANCELLED */}
-        {step === 'cancelled' && (
+        {step === 'cancelled' && activeTab === 'booking' && (
           <div style={{
             background: COLORS.surface,
             borderRadius: 16,
@@ -821,6 +929,160 @@ export default function ManageBookingPage() {
             >
               Agendar novo horário
             </button>
+          </div>
+        )}
+
+        {/* ORDERS TAB */}
+        {shopEnabled && activeTab === 'orders' && (
+          <div>
+            {/* Phone input for order lookup */}
+            {clientOrders.length === 0 && !loadingOrders && (
+              <div style={{
+                background: COLORS.surface,
+                borderRadius: 16,
+                padding: 24,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                marginBottom: 16,
+              }}>
+                <p style={{ fontSize: 14, fontWeight: 500, color: COLORS.textPrimary, marginBottom: 12 }}>
+                  Digite seu telefone para ver seus pedidos
+                </p>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(formatPhone(e.target.value))}
+                    placeholder="(11) 99999-9999"
+                    style={{
+                      flex: 1,
+                      padding: '12px 14px',
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: 10,
+                      fontSize: 15,
+                      outline: 'none',
+                    }}
+                  />
+                  <button
+                    onClick={fetchClientOrders}
+                    disabled={cleanPhone(phone).length < 10}
+                    style={{
+                      padding: '12px 20px',
+                      background: cleanPhone(phone).length >= 10 ? COLORS.primary : COLORS.border,
+                      color: cleanPhone(phone).length >= 10 ? 'white' : COLORS.textSecondary,
+                      border: 'none',
+                      borderRadius: 10,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      cursor: cleanPhone(phone).length >= 10 ? 'pointer' : 'default',
+                    }}
+                  >
+                    Buscar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {loadingOrders && (
+              <div style={{ textAlign: 'center', padding: 40, color: COLORS.textSecondary }}>
+                Carregando pedidos...
+              </div>
+            )}
+
+            {!loadingOrders && clientOrders.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {clientOrders.map(order => {
+                  const statusCfg = ORDER_STATUS_CONFIG[order.status] || ORDER_STATUS_CONFIG.PENDING;
+                  return (
+                    <div key={order.id} style={{
+                      background: COLORS.surface,
+                      borderRadius: 14,
+                      padding: 20,
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                        <div>
+                          <span style={{ fontSize: 12, color: COLORS.textSecondary }}>
+                            {new Date(order.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </span>
+                        </div>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '4px 12px',
+                          borderRadius: 20,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          background: statusCfg.bg,
+                          color: statusCfg.color,
+                        }}>
+                          {statusCfg.label}
+                        </span>
+                      </div>
+
+                      {order.items.map((item, i) => (
+                        <div key={item.id || i} style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          padding: '6px 0',
+                          borderBottom: i < order.items.length - 1 ? `1px solid ${COLORS.border}` : 'none',
+                          fontSize: 14,
+                        }}>
+                          <span style={{ color: COLORS.textPrimary }}>
+                            {item.quantity}x {item.service.name}
+                          </span>
+                          <span style={{ color: COLORS.textSecondary }}>
+                            {formatPrice(item.priceCents * item.quantity)}
+                          </span>
+                        </div>
+                      ))}
+
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        marginTop: 12,
+                        paddingTop: 12,
+                        borderTop: `1px solid ${COLORS.border}`,
+                      }}>
+                        <span style={{ fontWeight: 600, color: COLORS.textPrimary }}>Total</span>
+                        <span style={{ fontWeight: 700, color: COLORS.primary, fontSize: 16 }}>
+                          {formatPrice(order.totalCents)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {!loadingOrders && clientOrders.length === 0 && phone && cleanPhone(phone).length >= 10 && (
+              <div style={{
+                background: COLORS.surface,
+                borderRadius: 14,
+                padding: 32,
+                textAlign: 'center',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              }}>
+                <span style={{ fontSize: 32 }}>📦</span>
+                <p style={{ color: COLORS.textSecondary, marginTop: 12, fontSize: 14 }}>
+                  Nenhum pedido encontrado
+                </p>
+                <a
+                  href={`/${slug}/booking`}
+                  style={{
+                    display: 'inline-block',
+                    marginTop: 16,
+                    padding: '10px 20px',
+                    background: COLORS.primary,
+                    color: 'white',
+                    borderRadius: 10,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                  }}
+                >
+                  Ir para a loja
+                </a>
+              </div>
+            )}
           </div>
         )}
 

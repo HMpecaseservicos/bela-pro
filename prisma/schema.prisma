@@ -95,6 +95,22 @@ enum SponsorScope {
   WORKSPACE // Gerenciado pelo dono do workspace, aparece apenas naquela página
 }
 
+// ==================== LOJA UNIFICADA ====================
+
+enum ServiceItemType {
+  SERVICE // Serviço agendável (padrão atual)
+  PRODUCT // Produto físico para venda
+}
+
+enum OrderStatus {
+  PENDING         // Aguardando pagamento
+  PENDING_PAYMENT // Aguardando confirmação PIX
+  CONFIRMED       // Pago / confirmado
+  READY           // Produtos separados, pronto para retirada
+  DELIVERED       // Entregue ao cliente
+  CANCELLED       // Cancelado
+}
+
 model Workspace {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
@@ -149,6 +165,9 @@ model Workspace {
   pixHolderName String? // Nome do titular
   pixCity       String? // Cidade (para QR Code)
 
+  // ==================== LOJA UNIFICADA ====================
+  shopEnabled Boolean @default(false) // Ativar Loja / Venda de Produtos
+
   // ==================== PATROCINADORES ====================
   // Controle de exibição de sponsors na página de booking
   showGlobalSponsors   Boolean @default(true)  // Mostra sponsors globais (FREE=true, Pagos podem desativar)
@@ -186,6 +205,9 @@ model Workspace {
 
   // Pagamentos PIX do workspace
   payments Payment[]
+
+  // LOJA UNIFICADA: Pedidos do workspace
+  orders Order[]
 
   // Origem do convite (se veio de um convite)
   inviteSource BusinessInvite? @relation("InviteToWorkspace")
@@ -301,12 +323,20 @@ model Service {
   categoryId String?
   category   ServiceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
+  // LOJA UNIFICADA: tipo do item e campos de produto
+  itemType      ServiceItemType @default(SERVICE) // Serviço ou Produto
+  stock         Int             @default(9999) // Estoque (9999 = ilimitado para serviços)
+  pricePurchase Decimal?        @db.Decimal(10, 2) // Preço de custo (margem)
+  isPhysical    Boolean         @default(false) // Produto físico (retirada no local)
+
   appointmentServices AppointmentService[]
   bundleItems         ServiceBundleItem[]
+  orderItems          OrderItem[] // LOJA UNIFICADA
 
   @@unique([workspaceId, name])
   @@index([workspaceId, isActive])
   @@index([workspaceId, showInBooking, sortOrder])
+  @@index([workspaceId, itemType]) // LOJA UNIFICADA
 }
 
 model ServiceCategory {
@@ -322,6 +352,9 @@ model ServiceCategory {
   color     String? // Cor hex opcional para destaque
   sortOrder Int     @default(0)
   isActive  Boolean @default(true)
+
+  // LOJA UNIFICADA: tipo de categoria
+  categoryType ServiceItemType @default(SERVICE) // Categoria de serviço ou produto
 
   services Service[]
 
@@ -375,6 +408,7 @@ model Client {
 
   appointments          Appointment[]
   financialTransactions FinancialTransaction[]
+  orders                Order[] // LOJA UNIFICADA
 
   @@unique([workspaceId, phoneE164])
   @@index([workspaceId])
@@ -415,6 +449,10 @@ model Appointment {
   notifications        NotificationJob[]
   payment              Payment? // Pagamento associado (quando requirePayment = true)
   financialTransaction FinancialTransaction? // Transação financeira associada
+
+  // LOJA UNIFICADA: vínculo opcional com pedido
+  linkedOrderId String? @unique
+  linkedOrder   Order?  @relation("AppointmentOrder", fields: [linkedOrderId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, startAt])
   @@index([workspaceId, status])
@@ -478,6 +516,78 @@ model Payment {
   @@index([status])
   @@index([expiresAt])
   @@index([workspaceId])
+}
+
+// ==================== LOJA UNIFICADA: PEDIDOS ====================
+
+model Order {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Restrict)
+
+  status OrderStatus @default(PENDING)
+
+  // Totais
+  totalProductsCents Int @default(0) // Total dos produtos
+  totalServicesCents Int @default(0) // Total dos serviços (ref. do appointment vinculado)
+  totalCents         Int @default(0) // Total geral do pedido
+
+  // Origem
+  bookedVia String @default("public") // admin | public | whatsapp
+
+  // Pagamento PIX (reutiliza lógica existente)
+  pixCode     String?       @db.Text
+  pixQrBase64 String?       @db.Text
+  pixTxId     String?       @unique
+  paymentStatus PaymentStatus @default(PENDING)
+  expiresAt   DateTime?
+  paidAt      DateTime?
+  confirmedBy String?
+
+  // Cancelamento
+  cancelledAt  DateTime?
+  cancelReason String?
+
+  // Notas
+  notes String?
+
+  // Itens do pedido
+  items OrderItem[]
+
+  // Vínculo reverso: Appointment que aponta para este Order
+  linkedAppointment Appointment? @relation("AppointmentOrder")
+
+  // Transação financeira associada
+  financialTransaction FinancialTransaction? @relation("OrderTransaction")
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, createdAt])
+  @@index([clientId])
+}
+
+model OrderItem {
+  id String @id @default(cuid())
+
+  orderId String
+  order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // Referência ao produto (Service com itemType=PRODUCT)
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  // Snapshot no momento da compra
+  quantity   Int @default(1)
+  priceCents Int // Preço unitário no momento da compra
+  totalCents Int // quantity * priceCents
+
+  @@index([orderId])
+  @@index([serviceId])
 }
 
 model ScheduleRule {
@@ -776,6 +886,10 @@ model FinancialTransaction {
   // Vínculo com agendamento (para receitas de serviços)
   appointmentId String?      @unique
   appointment   Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  // LOJA UNIFICADA: vínculo com pedido (para receitas de produtos)
+  orderId String?  @unique
+  order   Order?   @relation("OrderTransaction", fields: [orderId], references: [id], onDelete: SetNull)
 
   // Vínculo com cliente (opcional)
   clientId String?

@@ -1,14 +1,14 @@
 'use client';
 
 import { useState } from 'react';
-import { Service } from '../types';
+import { Service, CartItem } from '../types';
 import { COLORS, RADIUS, DEFAULT_COPY } from '../constants';
 import { formatPrice, formatDateFull, formatTime, formatDuration, getServiceEmoji } from '../utils';
 
 interface ClientFormProps {
   services: Service[];
-  selectedDate: string;
-  selectedSlot: string;
+  selectedDate: string | null;
+  selectedSlot: string | null;
   clientName: string;
   clientPhone: string;
   loading: boolean;
@@ -17,6 +17,9 @@ interface ClientFormProps {
   onNameChange: (name: string) => void;
   onPhoneChange: (phone: string) => void;
   onSubmit: () => void;
+  // LOJA UNIFICADA
+  cart?: CartItem[];
+  totalCombinedPrice?: number;
 }
 
 export function ClientForm({
@@ -31,13 +34,22 @@ export function ClientForm({
   onNameChange,
   onPhoneChange,
   onSubmit,
+  // LOJA UNIFICADA
+  cart = [],
+  totalCombinedPrice,
 }: ClientFormProps) {
   const [nameTouched, setNameTouched] = useState(false);
   const [phoneTouched, setPhoneTouched] = useState(false);
 
   const totalDuration = services.reduce((sum, s) => sum + s.durationMinutes, 0);
   const totalPrice = services.reduce((sum, s) => sum + s.priceCents, 0);
-  const emoji = services.length === 1 ? getServiceEmoji(services[0].name) : '✨';
+  const totalCartPrice = cart.reduce((sum, item) => sum + item.service.priceCents * item.quantity, 0);
+  const displayPrice = totalCombinedPrice !== undefined ? totalCombinedPrice : (totalPrice + totalCartPrice);
+  const hasServices = services.length > 0;
+  const hasProducts = cart.length > 0;
+  const emoji = hasServices 
+    ? (services.length === 1 ? getServiceEmoji(services[0].name) : '✨')
+    : '🛍️';
   const gradientBg = `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColorSimple(primaryColor, -40)} 100%)`;
 
   const isNameValid = clientName.trim().length >= 3;
@@ -93,36 +105,65 @@ export function ClientForm({
         </p>
 
         <div style={{ marginTop: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 20 }}>{emoji}</span>
-            <span style={{ fontSize: 18, fontWeight: 700 }}>
-              {services.length === 1 ? services[0].name : `${services.length} serviços`}
-            </span>
-          </div>
-          
-          {services.length > 1 && (
-            <div style={{ marginTop: 8, paddingLeft: 28 }}>
-              {services.map(s => (
-                <p key={s.id} style={{ fontSize: 13, opacity: 0.9, margin: '2px 0' }}>
-                  • {s.name}
-                </p>
-              ))}
+          {hasServices && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 20 }}>{emoji}</span>
+                <span style={{ fontSize: 18, fontWeight: 700 }}>
+                  {services.length === 1 ? services[0].name : `${services.length} serviços`}
+                </span>
+              </div>
+              
+              {services.length > 1 && (
+                <div style={{ marginTop: 8, paddingLeft: 28 }}>
+                  {services.map(s => (
+                    <p key={s.id} style={{ fontSize: 13, opacity: 0.9, margin: '2px 0' }}>
+                      • {s.name}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* LOJA UNIFICADA: Itens do carrinho */}
+          {hasProducts && (
+            <div style={{ marginTop: hasServices ? 12 : 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 20 }}>🛍️</span>
+                <span style={{ fontSize: 16, fontWeight: 600 }}>
+                  {cart.reduce((sum, item) => sum + item.quantity, 0)} produto{cart.reduce((sum, item) => sum + item.quantity, 0) > 1 ? 's' : ''}
+                </span>
+              </div>
+              <div style={{ marginTop: 6, paddingLeft: 28 }}>
+                {cart.map(item => (
+                  <p key={item.service.id} style={{ fontSize: 13, opacity: 0.9, margin: '2px 0' }}>
+                    • {item.service.name} × {item.quantity}
+                  </p>
+                ))}
+              </div>
             </div>
           )}
 
           <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <p style={{ fontSize: 14, opacity: 0.95, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>📅</span>
-              {formatDateFull(selectedDate)}
-            </p>
-            <p style={{ fontSize: 14, opacity: 0.95, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>🕐</span>
-              {formatTime(selectedSlot)}
-            </p>
-            <p style={{ fontSize: 14, opacity: 0.95, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span>⏱</span>
-              {formatDuration(totalDuration)}
-            </p>
+            {selectedDate && (
+              <p style={{ fontSize: 14, opacity: 0.95, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>📅</span>
+                {formatDateFull(selectedDate)}
+              </p>
+            )}
+            {selectedSlot && (
+              <p style={{ fontSize: 14, opacity: 0.95, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>🕐</span>
+                {formatTime(selectedSlot)}
+              </p>
+            )}
+            {hasServices && totalDuration > 0 && (
+              <p style={{ fontSize: 14, opacity: 0.95, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>⏱</span>
+                {formatDuration(totalDuration)}
+              </p>
+            )}
           </div>
         </div>
 
@@ -134,7 +175,7 @@ export function ClientForm({
             margin: '16px 0 0',
           }}
         >
-          {formatPrice(totalPrice)}
+          {formatPrice(displayPrice)}
         </p>
       </div>
 
@@ -280,6 +321,8 @@ export function ClientForm({
             Confirmando...
           </span>
         ) : (
+          hasServices && hasProducts ? 'Confirmar agendamento e pedido' :
+          hasProducts ? 'Confirmar pedido' :
           'Confirmar agendamento'
         )}
       </button>

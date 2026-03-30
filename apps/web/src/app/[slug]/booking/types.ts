@@ -9,10 +9,12 @@ import type {
   TimeSlot,
   BookingRequest as BookingData,
   PaymentInfo,
+  ServiceItemType, // LOJA UNIFICADA
+  OrderPublic,     // LOJA UNIFICADA
 } from '@bela-pro/shared';
 
 // Re-export para manter compatibilidade com imports existentes
-export type { ThemePreset, Workspace, ProfessionalProfile, ServiceCategory, Service, TimeSlot, BookingData, PaymentInfo };
+export type { ThemePreset, Workspace, ProfessionalProfile, ServiceCategory, Service, TimeSlot, BookingData, PaymentInfo, ServiceItemType, OrderPublic };
 
 // ============================================
 // TEMAS (UI-only, ficam aqui)
@@ -50,6 +52,9 @@ export interface BookingState {
   selectedDate: string | null;
   selectedSlot: string | null;
   
+  // LOJA UNIFICADA: carrinho de produtos
+  cart: CartItem[];
+  
   // Cliente
   clientName: string;
   clientPhone: string;
@@ -62,6 +67,18 @@ export interface BookingState {
   
   // Payment (quando pagamento PIX é exigido)
   paymentInfo: PaymentInfo | null;
+  
+  // LOJA UNIFICADA: resultado do checkout
+  orderResult: OrderPublic | null;
+  
+  // LOJA UNIFICADA: filtro ativo
+  itemFilter: 'all' | 'service' | 'product';
+}
+
+// LOJA UNIFICADA: item no carrinho de produtos
+export interface CartItem {
+  service: Service;
+  quantity: number;
 }
 
 export type BookingStep = 1 | 2 | 3 | 4 | 5;

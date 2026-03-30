@@ -21,6 +21,11 @@ const createServiceSchema = z.object({
   badgeText: z.string().max(50).optional().nullable(),
   categoryTag: z.string().max(50).optional().nullable(),
   categoryId: z.string().cuid().optional().nullable(),
+  // LOJA UNIFICADA
+  itemType: z.enum(['SERVICE', 'PRODUCT']).optional(),
+  stock: z.number().int().min(0).optional(),
+  pricePurchase: z.number().min(0).optional().nullable(),
+  isPhysical: z.boolean().optional(),
 });
 
 const updateServiceSchema = z.object({
@@ -38,6 +43,11 @@ const updateServiceSchema = z.object({
   badgeText: z.string().max(50).optional().nullable(),
   categoryTag: z.string().max(50).optional().nullable(),
   categoryId: z.string().cuid().optional().nullable(),
+  // LOJA UNIFICADA
+  itemType: z.enum(['SERVICE', 'PRODUCT']).optional(),
+  stock: z.number().int().min(0).optional(),
+  pricePurchase: z.number().min(0).optional().nullable(),
+  isPhysical: z.boolean().optional(),
 });
 
 @Injectable()

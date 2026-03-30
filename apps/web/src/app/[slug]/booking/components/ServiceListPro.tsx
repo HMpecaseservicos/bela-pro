@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Service, ServiceCategory, ThemeConfig } from '../types';
+import { Service, ServiceCategory, ThemeConfig, CartItem } from '../types';
 import { ServiceSearchInput } from './ServiceSearchInput';
 import { CategoryTabs } from './CategoryTabs';
 import { ServiceCardCompact } from './ServiceCardCompact';
+import { formatPrice } from '../utils';
 
 interface ServiceListProProps {
   services: Service[];
@@ -15,6 +16,14 @@ interface ServiceListProProps {
   theme?: ThemeConfig;
   loading?: boolean;
   primaryColor?: string; // Fallback if no theme
+  // LOJA UNIFICADA
+  shopEnabled?: boolean;
+  itemFilter?: 'all' | 'service' | 'product';
+  onItemFilterChange?: (filter: 'all' | 'service' | 'product') => void;
+  cart?: CartItem[];
+  onAddToCart?: (service: Service) => void;
+  onRemoveFromCart?: (serviceId: string) => void;
+  onUpdateCartQuantity?: (serviceId: string, quantity: number) => void;
 }
 
 export function ServiceListPro({
@@ -26,6 +35,14 @@ export function ServiceListPro({
   theme,
   loading = false,
   primaryColor,
+  // LOJA UNIFICADA
+  shopEnabled = false,
+  itemFilter = 'all',
+  onItemFilterChange,
+  cart = [],
+  onAddToCart,
+  onRemoveFromCart,
+  onUpdateCartQuantity,
 }: ServiceListProProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -40,6 +57,13 @@ export function ServiceListPro({
   // Agrupa serviços por categoria
   const groupedServices = useMemo(() => {
     const filtered = services.filter((service) => {
+      // LOJA UNIFICADA: Filtro por tipo de item
+      if (shopEnabled && itemFilter !== 'all') {
+        const serviceType = (service as any).itemType || 'SERVICE';
+        if (itemFilter === 'service' && serviceType !== 'SERVICE') return false;
+        if (itemFilter === 'product' && serviceType !== 'PRODUCT') return false;
+      }
+
       // Filtro de busca
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -92,7 +116,7 @@ export function ServiceListPro({
     }
 
     return groups;
-  }, [services, categories, searchQuery, selectedCategoryId]);
+  }, [services, categories, searchQuery, selectedCategoryId, shopEnabled, itemFilter]);
 
   // Total de serviços filtrados
   const totalFiltered = groupedServices.reduce(
@@ -139,6 +163,49 @@ export function ServiceListPro({
         onChange={setSearchQuery}
         theme={theme}
       />
+
+      {/* LOJA UNIFICADA: Tabs de tipo (Tudo / Serviços / Produtos) */}
+      {shopEnabled && (
+        <div style={{
+          display: 'flex',
+          gap: 8,
+          marginBottom: 12,
+          overflowX: 'auto',
+          paddingBottom: 4,
+        }}>
+          {([
+            { key: 'all' as const, label: 'Tudo', icon: '🏪' },
+            { key: 'service' as const, label: 'Serviços', icon: '✂️' },
+            { key: 'product' as const, label: 'Produtos', icon: '🛍️' },
+          ]).map(tab => {
+            const isActive = itemFilter === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => onItemFilterChange?.(tab.key)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: 20,
+                  border: `1.5px solid ${isActive ? (theme?.colors.primary || '#a07a45') : (textSecondary + '30')}`,
+                  background: isActive ? (theme?.colors.primary || '#a07a45') : 'transparent',
+                  color: isActive ? '#fff' : (theme?.colors.text || '#2f2a24'),
+                  fontSize: 13,
+                  fontWeight: isActive ? 600 : 400,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <span style={{ fontSize: 14 }}>{tab.icon}</span>
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Tabs de categoria */}
       <CategoryTabs
@@ -232,15 +299,168 @@ export function ServiceListPro({
           )}
 
           {/* Cards */}
-          {group.services.map((service) => (
-            <ServiceCardCompact
-              key={service.id}
-              service={service}
-              isSelected={selectedServices.some((s) => s.id === service.id)}
-              onClick={() => handleToggle(service)}
-              theme={theme}
-            />
-          ))}
+          {group.services.map((service) => {
+            const isProduct = shopEnabled && (service as any).itemType === 'PRODUCT';
+            const stock = (service as any).stock;
+            const isOutOfStock = isProduct && stock !== null && stock !== undefined && stock <= 0;
+            const cartItem = cart.find(item => item.service.id === service.id);
+
+            if (isProduct) {
+              // LOJA UNIFICADA: Card de produto
+              return (
+                <div
+                  key={service.id}
+                  style={{
+                    background: surfaceColor,
+                    borderRadius: 12,
+                    border: `1px solid ${cartItem ? (theme?.colors.primary || '#a07a45') : (textSecondary + '20')}`,
+                    padding: 16,
+                    marginBottom: 10,
+                    opacity: isOutOfStock ? 0.5 : 1,
+                    transition: 'border-color 0.2s',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 15, fontWeight: 600, color: theme?.colors.text || '#2f2a24' }}>
+                          {service.name}
+                        </span>
+                        {isOutOfStock && (
+                          <span style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: '#ef4444',
+                            background: '#fef2f2',
+                            padding: '2px 8px',
+                            borderRadius: 10,
+                            textTransform: 'uppercase',
+                          }}>
+                            Esgotado
+                          </span>
+                        )}
+                        {!isOutOfStock && stock !== null && stock !== undefined && stock <= 5 && (
+                          <span style={{
+                            fontSize: 10,
+                            fontWeight: 600,
+                            color: '#f59e0b',
+                            background: '#fffbeb',
+                            padding: '2px 8px',
+                            borderRadius: 10,
+                          }}>
+                            Últimas {stock}un
+                          </span>
+                        )}
+                      </div>
+                      {service.description && (
+                        <p style={{ fontSize: 13, color: textSecondary, margin: '4px 0 0', lineHeight: 1.3 }}>
+                          {service.description}
+                        </p>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: theme?.colors.primary || '#a07a45', whiteSpace: 'nowrap', marginLeft: 12 }}>
+                      {formatPrice(service.priceCents)}
+                    </span>
+                  </div>
+
+                  {/* Botão add-to-cart / controle de quantidade */}
+                  {!isOutOfStock && (
+                    <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+                      {cartItem ? (
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 0,
+                          border: `1.5px solid ${theme?.colors.primary || '#a07a45'}`,
+                          borderRadius: 10,
+                          overflow: 'hidden',
+                        }}>
+                          <button
+                            onClick={() => onUpdateCartQuantity?.(service.id, cartItem.quantity - 1)}
+                            style={{
+                              width: 36,
+                              height: 36,
+                              background: 'transparent',
+                              border: 'none',
+                              fontSize: 18,
+                              fontWeight: 600,
+                              color: theme?.colors.primary || '#a07a45',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            −
+                          </button>
+                          <span style={{
+                            width: 36,
+                            textAlign: 'center',
+                            fontSize: 15,
+                            fontWeight: 700,
+                            color: theme?.colors.text || '#2f2a24',
+                          }}>
+                            {cartItem.quantity}
+                          </span>
+                          <button
+                            onClick={() => onUpdateCartQuantity?.(service.id, cartItem.quantity + 1)}
+                            disabled={stock !== null && stock !== undefined && cartItem.quantity >= stock}
+                            style={{
+                              width: 36,
+                              height: 36,
+                              background: 'transparent',
+                              border: 'none',
+                              fontSize: 18,
+                              fontWeight: 600,
+                              color: theme?.colors.primary || '#a07a45',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              opacity: (stock !== null && stock !== undefined && cartItem.quantity >= stock) ? 0.3 : 1,
+                            }}
+                          >
+                            +
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => onAddToCart?.(service)}
+                          style={{
+                            padding: '8px 16px',
+                            borderRadius: 10,
+                            background: theme?.colors.primary || '#a07a45',
+                            color: '#fff',
+                            border: 'none',
+                            fontSize: 13,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            transition: 'opacity 0.2s',
+                          }}
+                        >
+                          <span>🛒</span> Adicionar
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // Card padrão de serviço (existente)
+            return (
+              <ServiceCardCompact
+                key={service.id}
+                service={service}
+                isSelected={selectedServices.some((s) => s.id === service.id)}
+                onClick={() => handleToggle(service)}
+                theme={theme}
+              />
+            );
+          })}
         </div>
       ))}
 

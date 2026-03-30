@@ -1,16 +1,19 @@
 'use client';
 
-import { Service, Workspace } from '../types';
+import { Service, Workspace, CartItem, OrderPublic } from '../types';
 import { COLORS, RADIUS, DEFAULT_COPY } from '../constants';
 import { formatPrice, formatDateFull, formatTime, getServiceEmoji } from '../utils';
 
 interface ConfirmationScreenProps {
   workspace: Workspace;
   services: Service[];
-  selectedDate: string;
-  selectedSlot: string;
+  selectedDate: string | null;
+  selectedSlot: string | null;
   primaryColor?: string;
   onNewBooking: () => void;
+  // LOJA UNIFICADA
+  cart?: CartItem[];
+  orderResult?: OrderPublic | null;
 }
 
 export function ConfirmationScreen({
@@ -20,9 +23,18 @@ export function ConfirmationScreen({
   selectedSlot,
   primaryColor = COLORS.primaryFallback,
   onNewBooking,
+  // LOJA UNIFICADA
+  cart = [],
+  orderResult,
 }: ConfirmationScreenProps) {
-  const emoji = services.length === 1 ? getServiceEmoji(services[0].name) : '✨';
-  const totalPrice = services.reduce((sum, s) => sum + s.priceCents, 0);
+  const hasServices = services.length > 0;
+  const hasProducts = cart.length > 0 || !!orderResult;
+  const emoji = hasServices 
+    ? (services.length === 1 ? getServiceEmoji(services[0].name) : '✨')
+    : '🛍️';
+  const totalServicePrice = services.reduce((sum, s) => sum + s.priceCents, 0);
+  const totalCartPrice = cart.reduce((sum, item) => sum + item.service.priceCents * item.quantity, 0);
+  const totalPrice = totalServicePrice + totalCartPrice;
   const gradientBg = `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColorSimple(primaryColor, -40)} 100%)`;
   const address = workspace.profile?.addressLine;
 
@@ -85,7 +97,9 @@ export function ConfirmationScreen({
             margin: '0 0 8px',
           }}
         >
-          {DEFAULT_COPY.confirmationTitle}
+          {hasServices && hasProducts ? 'Agendamento e pedido confirmados!' :
+           hasProducts ? 'Pedido confirmado!' :
+           DEFAULT_COPY.confirmationTitle}
         </h1>
 
         <p
@@ -95,7 +109,7 @@ export function ConfirmationScreen({
             margin: '0 0 24px',
           }}
         >
-          {DEFAULT_COPY.confirmationSubtitle}
+          {hasServices ? DEFAULT_COPY.confirmationSubtitle : 'Obrigado pela sua compra!'}
         </p>
 
         {/* Card com detalhes */}
@@ -109,65 +123,131 @@ export function ConfirmationScreen({
           }}
         >
           {/* Serviço(s) */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 10,
-              marginBottom: 16,
-              paddingBottom: 16,
-              borderBottom: `1px solid ${COLORS.border}`,
-            }}
-          >
-            <span style={{ fontSize: 24 }}>{emoji}</span>
-            <div style={{ flex: 1 }}>
-              <p
-                style={{
-                  fontSize: 16,
-                  fontWeight: 600,
-                  color: COLORS.textPrimary,
-                  margin: 0,
-                }}
-              >
-                {services.length === 1 ? services[0].name : `${services.length} serviços`}
-              </p>
-              {services.length > 1 && (
+          {hasServices && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 10,
+                marginBottom: 16,
+                paddingBottom: 16,
+                borderBottom: `1px solid ${COLORS.border}`,
+              }}
+            >
+              <span style={{ fontSize: 24 }}>{emoji}</span>
+              <div style={{ flex: 1 }}>
+                <p
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: COLORS.textPrimary,
+                    margin: 0,
+                  }}
+                >
+                  {services.length === 1 ? services[0].name : `${services.length} serviços`}
+                </p>
+                {services.length > 1 && (
+                  <div style={{ marginTop: 4 }}>
+                    {services.map(s => (
+                      <p key={s.id} style={{ fontSize: 13, color: COLORS.textSecondary, margin: '2px 0' }}>
+                        • {s.name}
+                      </p>
+                    ))}
+                  </div>
+                )}
+                <p
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 700,
+                    color: primaryColor,
+                    margin: '4px 0 0',
+                  }}
+                >
+                  {formatPrice(totalServicePrice)}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* LOJA UNIFICADA: Produtos do pedido */}
+          {hasProducts && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 10,
+                marginBottom: 16,
+                paddingBottom: 16,
+                borderBottom: `1px solid ${COLORS.border}`,
+              }}
+            >
+              <span style={{ fontSize: 24 }}>🛍️</span>
+              <div style={{ flex: 1 }}>
+                <p
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 600,
+                    color: COLORS.textPrimary,
+                    margin: 0,
+                  }}
+                >
+                  Produtos
+                </p>
                 <div style={{ marginTop: 4 }}>
-                  {services.map(s => (
-                    <p key={s.id} style={{ fontSize: 13, color: COLORS.textSecondary, margin: '2px 0' }}>
-                      • {s.name}
+                  {cart.map(item => (
+                    <p key={item.service.id} style={{ fontSize: 13, color: COLORS.textSecondary, margin: '2px 0' }}>
+                      • {item.service.name} × {item.quantity} — {formatPrice(item.service.priceCents * item.quantity)}
                     </p>
                   ))}
                 </div>
-              )}
-              <p
-                style={{
-                  fontSize: 18,
-                  fontWeight: 700,
-                  color: primaryColor,
-                  margin: '4px 0 0',
-                }}
-              >
+                <p
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 700,
+                    color: primaryColor,
+                    margin: '4px 0 0',
+                  }}
+                >
+                  {formatPrice(totalCartPrice)}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Total combinado se ambos */}
+          {hasServices && hasProducts && (
+            <div style={{ 
+              textAlign: 'right', 
+              marginBottom: 16, 
+              paddingBottom: 16, 
+              borderBottom: `1px solid ${COLORS.border}` 
+            }}>
+              <span style={{ fontSize: 13, color: COLORS.textSecondary }}>Total: </span>
+              <span style={{ fontSize: 20, fontWeight: 700, color: primaryColor }}>
                 {formatPrice(totalPrice)}
-              </p>
+              </span>
             </div>
-          </div>
+          )}
 
-          {/* Data e horário */}
+          {/* Data e horário (condicional) */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 18 }}>📅</span>
-              <span style={{ fontSize: 14, color: COLORS.textSecondary }}>
-                {formatDateFull(selectedDate)}
-              </span>
-            </div>
+            {selectedDate && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 18 }}>📅</span>
+                <span style={{ fontSize: 14, color: COLORS.textSecondary }}>
+                  {formatDateFull(selectedDate)}
+                </span>
+              </div>
+            )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 18 }}>⏰</span>
-              <span style={{ fontSize: 14, color: COLORS.textSecondary }}>
-                {formatTime(selectedSlot)}
-              </span>
-            </div>
+            {selectedSlot && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 18 }}>⏰</span>
+                <span style={{ fontSize: 14, color: COLORS.textSecondary }}>
+                  {formatTime(selectedSlot)}
+                </span>
+              </div>
+            )}
 
             {address && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -182,8 +262,9 @@ export function ConfirmationScreen({
 
         {/* Botões de ação */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {/* Adicionar ao calendário (Google Calendar) */}
-          <button
+          {/* Adicionar ao calendário (Google Calendar) - só quando tem serviço agendado */}
+          {hasServices && selectedSlot && (
+            <button
             onClick={() => {
               const totalDuration = services.reduce((sum, s) => sum + s.durationMinutes, 0);
               const startDate = new Date(selectedSlot);
@@ -219,8 +300,10 @@ export function ConfirmationScreen({
             <span>📆</span>
             Adicionar ao calendário
           </button>
+          )}
 
-          {/* Link para gerenciar agendamento */}
+          {/* Link para gerenciar agendamento - só quando tem serviço */}
+          {hasServices && (
           <a
             href={`/${workspace.slug}/gerenciar`}
             style={{
@@ -239,6 +322,7 @@ export function ConfirmationScreen({
           >
             Precisa remarcar? Gerenciar agendamento
           </a>
+          )}
 
           {/* Novo agendamento */}
           <button

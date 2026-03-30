@@ -7,6 +7,7 @@ const createCategorySchema = z.object({
   iconEmoji: z.string().max(10).optional().nullable(),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional().nullable(),
   sortOrder: z.number().int().min(0).optional(),
+  categoryType: z.enum(['SERVICE', 'PRODUCT']).optional(), // LOJA UNIFICADA
 });
 
 const updateCategorySchema = z.object({
@@ -15,6 +16,7 @@ const updateCategorySchema = z.object({
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional().nullable(),
   sortOrder: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
+  categoryType: z.enum(['SERVICE', 'PRODUCT']).optional(), // LOJA UNIFICADA
 });
 
 const reorderSchema = z.object({

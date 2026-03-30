@@ -21,6 +21,13 @@ interface Stats {
   todayCount: number;
 }
 
+interface OrderStats {
+  totalOrders: number;
+  pendingOrders: number;
+  deliveredOrders: number;
+  totalRevenueCents: number;
+}
+
 interface SponsorPost {
   id: string;
   title: string;
@@ -78,6 +85,10 @@ export default function DashboardPage() {
   const [adminMessages, setAdminMessages] = useState<AdminMessage[]>([]);
   const [dismissedMsgIds, setDismissedMsgIds] = useState<Set<string>>(new Set());
   
+  // Shop / Orders
+  const [shopEnabled, setShopEnabled] = useState(false);
+  const [orderStats, setOrderStats] = useState<OrderStats>({ totalOrders: 0, pendingOrders: 0, deliveredOrders: 0, totalRevenueCents: 0 });
+
   // Trial banner
   const [subscription, setSubscription] = useState<{
     status: string;
@@ -101,7 +112,26 @@ export default function DashboardPage() {
       return;
     }
     fetchAppointments();
-    
+
+    // Fetch workspace (para shopEnabled)
+    fetch(`${API_URL}/workspace/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(ws => {
+        if (ws?.shopEnabled) {
+          setShopEnabled(true);
+          // Fetch order summary
+          fetch(`${API_URL}/orders/summary`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+            .then(r => r.ok ? r.json() : null)
+            .then(d => { if (d) setOrderStats(d); })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
+
     // Fetch sponsor posts (apenas 1x por sessão)
     const dismissed = sessionStorage.getItem('sponsor_banner_dismissed');
     if (!dismissed) {
@@ -237,6 +267,22 @@ export default function DashboardPage() {
         <MetricCard label="Confirmados" value={stats.confirmed} note="preparados" />
         <MetricCard label="Receita do Dia" value={formatPrice(stats.todayRevenue)} note="faturamento" />
       </div>
+
+      {/* ============ RESUMO DE PEDIDOS (LOJA) ============ */}
+      {shopEnabled && (orderStats.totalOrders > 0 || orderStats.pendingOrders > 0) && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+          gap: 12,
+          marginBottom: 24,
+        }}>
+          <MetricCard label="Pedidos Pendentes" value={orderStats.pendingOrders} note="aguardando" />
+          <MetricCard label="Pedidos Entregues" value={orderStats.deliveredOrders} note="concluídos" />
+          {!isMobile && (
+            <MetricCard label="Receita Pedidos" value={formatPrice(orderStats.totalRevenueCents)} note="produtos" />
+          )}
+        </div>
+      )}
 
       {/* ============ BANNER DE TRIAL ============ */}
       {subscription?.status === 'TRIAL' && subscription.trialEndsAt && (() => {
@@ -569,6 +615,8 @@ export default function DashboardPage() {
         <QuickAction href="/dashboard/servicos" label="Gerenciar Servicos" />
         <QuickAction href="/dashboard/horarios" label="Configurar Horarios" />
         <QuickAction href="/dashboard/clientes" label="Base de Clientes" />
+        {shopEnabled && <QuickAction href="/dashboard/pedidos" label="Ver Pedidos" />}
+        {shopEnabled && <QuickAction href="/dashboard/produtos" label="Gerenciar Produtos" />}
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Workspace, Service, ServiceCategory, TimeSlot, BookingStep, BookingState, ThemeConfig, PaymentInfo } from '../types';
+import { Workspace, Service, ServiceCategory, TimeSlot, BookingStep, BookingState, ThemeConfig, PaymentInfo, CartItem } from '../types';
 import { API_URL, DEFAULT_COPY, getThemeFromWorkspace } from '../constants';
 import { cleanPhone } from '../utils';
 
@@ -24,6 +24,12 @@ interface UseBookingReturn extends BookingState {
   clearError: () => void;
   resetBooking: () => void;
   
+  // LOJA UNIFICADA: Actions
+  addToCart: (service: Service) => void;
+  removeFromCart: (serviceId: string) => void;
+  updateCartQuantity: (serviceId: string, quantity: number) => void;
+  setItemFilter: (filter: 'all' | 'service' | 'product') => void;
+  
   // Computed
   canProceed: boolean;
   primaryColor: string;
@@ -31,6 +37,13 @@ interface UseBookingReturn extends BookingState {
   theme: ThemeConfig;
   totalDuration: number;
   totalPrice: number;
+  // LOJA UNIFICADA: Computed
+  shopEnabled: boolean;
+  hasServices: boolean;
+  hasProducts: boolean;
+  totalCartPrice: number;
+  totalCombinedPrice: number;
+  cartItemCount: number;
 }
 
 const initialState: BookingState = {
@@ -42,6 +55,7 @@ const initialState: BookingState = {
   selectedServices: [],
   selectedDate: null,
   selectedSlot: null,
+  cart: [], // LOJA UNIFICADA
   clientName: '',
   clientPhone: '',
   step: 1,
@@ -49,6 +63,8 @@ const initialState: BookingState = {
   error: null,
   success: false,
   paymentInfo: null,
+  orderResult: null, // LOJA UNIFICADA
+  itemFilter: 'all', // LOJA UNIFICADA
 };
 
 export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
@@ -63,11 +79,19 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
   const totalDuration = state.selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
   const totalPrice = state.selectedServices.reduce((sum, s) => sum + s.priceCents, 0);
 
+  // LOJA UNIFICADA: computed values
+  const shopEnabled = state.workspace?.shopEnabled === true;
+  const hasServices = state.selectedServices.length > 0;
+  const hasProducts = state.cart.length > 0;
+  const totalCartPrice = state.cart.reduce((sum, item) => sum + item.service.priceCents * item.quantity, 0);
+  const totalCombinedPrice = totalPrice + totalCartPrice;
+  const cartItemCount = state.cart.reduce((sum, item) => sum + item.quantity, 0);
+
   // Determina se pode prosseguir baseado na etapa atual
   const canProceed = (() => {
     switch (state.step) {
       case 1:
-        return state.selectedServices.length > 0;
+        return state.selectedServices.length > 0 || state.cart.length > 0; // LOJA UNIFICADA: serviços OU produtos
       case 2:
         return state.selectedDate !== null;
       case 3:
@@ -144,6 +168,12 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
 
   // Prosseguir para seleção de data (após selecionar serviços)
   const proceedToDateSelection = useCallback(async () => {
+    // LOJA UNIFICADA: se só tem produtos no carrinho, pular direto para dados
+    if (state.selectedServices.length === 0 && state.cart.length > 0) {
+      setState(prev => ({ ...prev, step: 4 }));
+      return;
+    }
+
     if (!state.workspace || state.selectedServices.length === 0) return;
     
     setState(prev => ({
@@ -235,7 +265,14 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
 
   // Confirmar agendamento
   const confirmBooking = useCallback(async () => {
-    if (!state.workspace || state.selectedServices.length === 0 || !state.selectedSlot) return;
+    if (!state.workspace) return;
+    
+    const hasServicesSelected = state.selectedServices.length > 0;
+    const hasProductsInCart = state.cart.length > 0;
+    
+    // LOJA UNIFICADA: validação flexível
+    if (!hasServicesSelected && !hasProductsInCart) return;
+    if (hasServicesSelected && !state.selectedSlot) return;
     
     const trimmedName = state.clientName.trim();
     const cleanedPhone = cleanPhone(state.clientPhone);
@@ -248,40 +285,82 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
     setState(prev => ({ ...prev, loading: true, error: null }));
     
     try {
-      const res = await fetch(`${API_URL}/public-booking`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          workspaceId: state.workspace!.id,
-          serviceIds: state.selectedServices.map(s => s.id),
-          startAt: state.selectedSlot,
-          clientName: trimmedName,
-          clientPhone: cleanedPhone,
-        }),
-      });
-      
-      if (!res.ok) {
+      // LOJA UNIFICADA: usar unified-checkout se tem produtos
+      if (hasProductsInCart) {
+        const res = await fetch(`${API_URL}/public-booking/unified-checkout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workspaceId: state.workspace!.id,
+            serviceIds: state.selectedServices.map(s => s.id),
+            startAt: state.selectedSlot || undefined,
+            clientName: trimmedName,
+            clientPhone: cleanedPhone,
+            products: state.cart.map(item => ({
+              serviceId: item.service.id,
+              quantity: item.quantity,
+            })),
+          }),
+        });
+        
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.message || DEFAULT_COPY.genericError);
+        }
+        
         const data = await res.json();
-        throw new Error(data.message || DEFAULT_COPY.genericError);
-      }
-      
-      const data = await res.json();
-      
-      // Se tem informações de pagamento, ir para step 5 (pagamento PIX)
-      if (data.paymentInfo) {
-        setState(prev => ({
-          ...prev,
-          paymentInfo: data.paymentInfo,
-          step: 5,
-          loading: false,
-        }));
+        
+        if (data.paymentInfo) {
+          setState(prev => ({
+            ...prev,
+            paymentInfo: data.paymentInfo,
+            orderResult: data.order,
+            step: 5,
+            loading: false,
+          }));
+        } else {
+          setState(prev => ({
+            ...prev,
+            success: true,
+            orderResult: data.order,
+            loading: false,
+          }));
+        }
       } else {
-        // Sem pagamento, ir direto para sucesso
-        setState(prev => ({
-          ...prev,
-          success: true,
-          loading: false,
-        }));
+        // Fluxo original: somente serviços
+        const res = await fetch(`${API_URL}/public-booking`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workspaceId: state.workspace!.id,
+            serviceIds: state.selectedServices.map(s => s.id),
+            startAt: state.selectedSlot,
+            clientName: trimmedName,
+            clientPhone: cleanedPhone,
+          }),
+        });
+        
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.message || DEFAULT_COPY.genericError);
+        }
+        
+        const data = await res.json();
+        
+        if (data.paymentInfo) {
+          setState(prev => ({
+            ...prev,
+            paymentInfo: data.paymentInfo,
+            step: 5,
+            loading: false,
+          }));
+        } else {
+          setState(prev => ({
+            ...prev,
+            success: true,
+            loading: false,
+          }));
+        }
       }
     } catch (error: any) {
       setState(prev => ({
@@ -290,12 +369,68 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
         error: error.message || DEFAULT_COPY.genericError,
       }));
     }
-  }, [state.workspace, state.selectedServices, state.selectedSlot, state.clientName, state.clientPhone]);
+  }, [state.workspace, state.selectedServices, state.selectedSlot, state.clientName, state.clientPhone, state.cart]);
+
+  // LOJA UNIFICADA: Adicionar produto ao carrinho
+  const addToCart = useCallback((service: Service) => {
+    setState(prev => {
+      const existing = prev.cart.find(item => item.service.id === service.id);
+      if (existing) {
+        // Verificar estoque
+        if (service.stock !== null && service.stock !== undefined && existing.quantity >= service.stock) return prev;
+        return {
+          ...prev,
+          cart: prev.cart.map(item =>
+            item.service.id === service.id
+              ? { ...item, quantity: item.quantity + 1 }
+              : item
+          ),
+        };
+      }
+      return { ...prev, cart: [...prev.cart, { service, quantity: 1 }] };
+    });
+  }, []);
+
+  // LOJA UNIFICADA: Remover produto do carrinho
+  const removeFromCart = useCallback((serviceId: string) => {
+    setState(prev => ({
+      ...prev,
+      cart: prev.cart.filter(item => item.service.id !== serviceId),
+    }));
+  }, []);
+
+  // LOJA UNIFICADA: Atualizar quantidade no carrinho
+  const updateCartQuantity = useCallback((serviceId: string, quantity: number) => {
+    setState(prev => {
+      if (quantity <= 0) {
+        return { ...prev, cart: prev.cart.filter(item => item.service.id !== serviceId) };
+      }
+      return {
+        ...prev,
+        cart: prev.cart.map(item => {
+          if (item.service.id !== serviceId) return item;
+          // Verificar estoque
+          const maxQty = item.service.stock ?? Infinity;
+          return { ...item, quantity: Math.min(quantity, maxQty) };
+        }),
+      };
+    });
+  }, []);
+
+  // LOJA UNIFICADA: Filtrar itens por tipo
+  const setItemFilter = useCallback((filter: 'all' | 'service' | 'product') => {
+    setState(prev => ({ ...prev, itemFilter: filter }));
+  }, []);
 
   // Voltar uma etapa
   const goBack = useCallback(() => {
     setState(prev => {
       if (prev.step === 1) return prev;
+
+      // LOJA UNIFICADA: se só tem produtos e está no step 4, voltar para step 1
+      if (prev.step === 4 && prev.selectedServices.length === 0 && prev.cart.length > 0) {
+        return { ...prev, step: 1 as BookingStep, error: null };
+      }
       
       const newStep = (prev.step - 1) as BookingStep;
       
@@ -338,6 +473,7 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
       ...initialState,
       workspace: prev.workspace,
       services: prev.services,
+      categories: prev.categories,
       loading: false,
     }));
   }, []);
@@ -361,12 +497,25 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
     goToStep,
     clearError,
     resetBooking,
+    // LOJA UNIFICADA: cart actions
+    addToCart,
+    removeFromCart,
+    updateCartQuantity,
+    setItemFilter,
+    // Computed
     canProceed,
     primaryColor,
     gradientBg,
     theme,
     totalDuration,
     totalPrice,
+    // LOJA UNIFICADA: computed
+    shopEnabled,
+    hasServices,
+    hasProducts,
+    totalCartPrice,
+    totalCombinedPrice,
+    cartItemCount,
   };
 }
 
