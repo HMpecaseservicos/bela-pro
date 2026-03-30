@@ -660,7 +660,7 @@ export class PublicBookingService {
       workspace.requirePayment && workspace.paymentType !== 'NONE';
     if (requiresPayment && result.appointment) {
       const totalCombined =
-        (result.appointment?.totalPriceCents || 0) +
+        (result.appointment.totalPriceCents || 0) +
         (result.order?.totalProductsCents || 0);
 
       const payment = await this.paymentsService.createPaymentForAppointment(
@@ -711,9 +711,14 @@ export class PublicBookingService {
     });
     if (!workspace || !workspace.shopEnabled) return [];
 
-    const cleanPhone = phone.replace(/\D/g, '');
-    const client = await this.prisma.client.findFirst({
-      where: { workspaceId: workspace.id, phoneE164: { contains: cleanPhone } },
+    const phoneE164 = normalizePhoneE164(phone);
+    const client = await this.prisma.client.findUnique({
+      where: {
+        workspaceId_phoneE164: {
+          workspaceId: workspace.id,
+          phoneE164,
+        },
+      },
       select: { id: true },
     });
     if (!client) return [];

@@ -79,6 +79,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [shopEnabled, setShopEnabled] = useState(false);
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -87,6 +90,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       return;
     }
     setUserName(localStorage.getItem('userName') || 'Admin');
+
+    // Carregar shopEnabled do workspace
+    fetch(`${API_URL}/workspace/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(ws => { if (ws?.shopEnabled) setShopEnabled(true); })
+      .catch(() => {});
 
     const checkMobile = () => {
       const mobile = window.innerWidth < 960;
@@ -125,6 +136,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (exact) return pathname === href;
     return pathname.startsWith(href);
   }
+
+  const shopPaths = ['/dashboard/produtos', '/dashboard/pedidos'];
+  const filteredMenuItems = shopEnabled
+    ? menuItems
+    : menuItems.filter(i => !shopPaths.includes(i.href));
+  const filteredMoreMenuItems = shopEnabled
+    ? moreMenuItems
+    : moreMenuItems.filter(i => !shopPaths.includes(i.href));
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: THEME.page }}>
@@ -168,7 +187,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         <nav style={{ flex: 1, padding: '16px 10px', overflowY: 'auto' }}>
-          {menuItems.map((item) => {
+          {filteredMenuItems.map((item) => {
             const active = isActive(item.href, item.exact);
             const Icon = item.icon as LucideIcon;
             return (
@@ -375,7 +394,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
-                {moreMenuItems.map((item) => {
+                {filteredMoreMenuItems.map((item) => {
                   const active = pathname.startsWith(item.href);
                   const Icon = item.icon as LucideIcon;
                   return (

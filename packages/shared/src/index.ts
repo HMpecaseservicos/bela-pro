@@ -78,6 +78,7 @@ export type OrderStatus =
   | 'PENDING'
   | 'PENDING_PAYMENT'
   | 'CONFIRMED'
+  | 'PREPARING'
   | 'READY'
   | 'DELIVERED'
   | 'CANCELLED';

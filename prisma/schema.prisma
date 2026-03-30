@@ -106,6 +106,7 @@ enum OrderStatus {
   PENDING         // Aguardando pagamento
   PENDING_PAYMENT // Aguardando confirmação PIX
   CONFIRMED       // Pago / confirmado
+  PREPARING       // Em preparo
   READY           // Produtos separados, pronto para retirada
   DELIVERED       // Entregue ao cliente
   CANCELLED       // Cancelado

@@ -34,12 +34,24 @@ const updateOrderStatusSchema = z.object({
     'PENDING',
     'PENDING_PAYMENT',
     'CONFIRMED',
+    'PREPARING',
     'READY',
     'DELIVERED',
     'CANCELLED',
   ]),
   cancelReason: z.string().max(500).optional(),
 });
+
+// Transições válidas de status de pedido
+const VALID_STATUS_TRANSITIONS: Record<string, string[]> = {
+  PENDING: ['CONFIRMED', 'CANCELLED'],
+  PENDING_PAYMENT: ['CONFIRMED', 'CANCELLED'],
+  CONFIRMED: ['PREPARING', 'READY', 'CANCELLED'],
+  PREPARING: ['READY', 'CANCELLED'],
+  READY: ['DELIVERED', 'CANCELLED'],
+  DELIVERED: [],
+  CANCELLED: [],
+};
 
 // ==================== SERVICE ====================
 
@@ -306,6 +318,14 @@ export class OrdersService {
     const data = updateOrderStatusSchema.parse(input);
     const order = await this.findOne(workspaceId, id);
 
+    // Validar transição de status
+    const allowed = VALID_STATUS_TRANSITIONS[order.status] || [];
+    if (!allowed.includes(data.status)) {
+      throw new BadRequestException(
+        `Transição inválida: ${order.status} → ${data.status}`,
+      );
+    }
+
     const updateData: any = { status: data.status };
 
     if (data.status === 'CANCELLED') {
@@ -411,7 +431,7 @@ export class OrdersService {
       this.prisma.order.count({
         where: {
           ...where,
-          status: { in: ['PENDING', 'PENDING_PAYMENT', 'CONFIRMED', 'READY'] },
+          status: { in: ['PENDING', 'PENDING_PAYMENT', 'CONFIRMED', 'PREPARING', 'READY'] },
         },
       }),
       this.prisma.order.count({
@@ -420,9 +440,9 @@ export class OrdersService {
       this.prisma.order.aggregate({
         where: {
           ...where,
-          status: { in: ['CONFIRMED', 'READY', 'DELIVERED'] },
+          status: { in: ['CONFIRMED', 'PREPARING', 'READY', 'DELIVERED'] },
         },
-        _sum: { totalProductsCents: true },
+        _sum: { totalCents: true },
       }),
     ]);
 
@@ -430,7 +450,7 @@ export class OrdersService {
       totalOrders,
       pendingOrders,
       deliveredOrders,
-      totalRevenueCents: revenue._sum.totalProductsCents || 0,
+      totalRevenueCents: revenue._sum.totalCents || 0,
     };
   }
 }
