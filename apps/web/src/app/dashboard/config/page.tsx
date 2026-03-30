@@ -103,6 +103,37 @@ export default function ConfigPage() {
     loadWorkspace();
   }, []);
 
+  async function handleToggleShop() {
+    const newValue = !config.shopEnabled;
+    setConfig({ ...config, shopEnabled: newValue });
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setConfig({ ...config, shopEnabled: !newValue });
+        setError('Você precisa estar logado');
+        return;
+      }
+
+      const res = await fetch(`${API_URL}/workspace/me`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ shopEnabled: newValue }),
+      });
+
+      if (!res.ok) {
+        setConfig({ ...config, shopEnabled: !newValue });
+        setError('Erro ao salvar configuração da loja');
+      }
+    } catch {
+      setConfig({ ...config, shopEnabled: !newValue });
+      setError('Erro de conexão com o servidor');
+    }
+  }
+
   async function handleSave() {
     setSaving(true);
     setError(null);
@@ -605,7 +636,7 @@ export default function ConfigPage() {
             </div>
           </div>
           <button
-            onClick={() => setConfig({ ...config, shopEnabled: !config.shopEnabled })}
+            onClick={handleToggleShop}
             style={{
               width: 50,
               height: 28,
