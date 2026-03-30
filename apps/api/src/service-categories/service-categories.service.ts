@@ -20,7 +20,7 @@ const updateCategorySchema = z.object({
 });
 
 const reorderSchema = z.object({
-  categoryIds: z.array(z.string().cuid()).min(1),
+  categoryIds: z.array(z.string().min(1)).min(1),
 });
 
 @Injectable()
