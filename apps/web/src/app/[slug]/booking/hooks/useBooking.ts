@@ -206,7 +206,7 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
         error: DEFAULT_COPY.genericError,
       }));
     }
-  }, [state.workspace, state.selectedServices]);
+  }, [state.workspace, state.selectedServices, state.cart]);
 
   // Selecionar data e buscar horários
   const selectDate = useCallback(async (date: string) => {
