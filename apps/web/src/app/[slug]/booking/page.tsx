@@ -24,6 +24,7 @@ import {
   ServiceCardPremium,
 } from './components';
 import { ServiceListPro } from './components/ServiceListPro';
+import { FloatingCartBadge } from './components/FloatingCartBadge';
 
 // Constants
 import { COLORS, API_URL } from './constants';
@@ -162,24 +163,20 @@ export default function BookingPage() {
 
   // Step 5 - Tela de pagamento PIX
   if (booking.step === 5 && booking.paymentInfo && booking.workspace && (booking.selectedServices.length > 0 || booking.cart.length > 0)) {
-    // PIX com serviços agendados
-    if (booking.selectedServices.length > 0 && booking.selectedDate && booking.selectedSlot) {
-      return (
-        <>
-          <style>{globalStyles}</style>
-          <PixPaymentScreen
-            workspace={booking.workspace}
-            services={booking.selectedServices}
-            selectedDate={booking.selectedDate}
-            selectedSlot={booking.selectedSlot}
-            paymentInfo={booking.paymentInfo}
-            primaryColor={booking.primaryColor}
-          />
-        </>
-      );
-    }
-    // PIX com somente produtos (sem data/slot)
-    // Reutiliza PixPaymentScreen passando listas vazias para date/slot
+    return (
+      <>
+        <style>{globalStyles}</style>
+        <PixPaymentScreen
+          workspace={booking.workspace}
+          services={booking.selectedServices}
+          selectedDate={booking.selectedDate}
+          selectedSlot={booking.selectedSlot}
+          paymentInfo={booking.paymentInfo}
+          primaryColor={booking.primaryColor}
+          cart={booking.cart}
+        />
+      </>
+    );
   }
 
   // Sucesso - Tela de confirmação
@@ -279,6 +276,31 @@ export default function BookingPage() {
 
           {/* Progress Bar */}
           <ProgressBar currentStep={booking.step} primaryColor={booking.primaryColor} />
+
+          {/* Link para área do cliente */}
+          {booking.step === 1 && (
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <a
+                href={`/${slug}/gerenciar`}
+                style={{
+                  fontSize: 13,
+                  color: booking.primaryColor,
+                  textDecoration: 'none',
+                  fontWeight: 500,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '6px 14px',
+                  borderRadius: 20,
+                  background: `${booking.primaryColor}10`,
+                  border: `1px solid ${booking.primaryColor}25`,
+                  transition: 'background 0.2s',
+                }}
+              >
+                <span>👤</span> Já é cliente? Acompanhe seus agendamentos
+              </a>
+            </div>
+          )}
 
           {/* Botão Voltar */}
           {booking.step > 1 && (
@@ -483,6 +505,19 @@ export default function BookingPage() {
         totalCombinedPrice={booking.totalCombinedPrice}
         cartItemCount={booking.cartItemCount}
       />
+
+      {/* Carrinho flutuante (aparece quando há produtos no carrinho) */}
+      {booking.shopEnabled && booking.step < 4 && (
+        <FloatingCartBadge
+          cart={booking.cart}
+          totalCartPrice={booking.totalCartPrice}
+          cartItemCount={booking.cartItemCount}
+          theme={booking.theme}
+          primaryColor={booking.primaryColor}
+          onRemoveFromCart={booking.removeFromCart}
+          onUpdateCartQuantity={booking.updateCartQuantity}
+        />
+      )}
 
       {/* ============================================================= */}
       {/* SEÇÃO PATROCINADORES — DESIGN PROFISSIONAL COM HIERARQUIA */}

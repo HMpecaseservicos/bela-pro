@@ -6,6 +6,7 @@ import { ServiceSearchInput } from './ServiceSearchInput';
 import { CategoryTabs } from './CategoryTabs';
 import { ServiceCardCompact } from './ServiceCardCompact';
 import { formatPrice } from '../utils';
+import { getImageUrl } from '@/lib/utils';
 
 interface ServiceListProProps {
   services: Service[];
@@ -307,6 +308,7 @@ export function ServiceListPro({
 
             if (isProduct) {
               // LOJA UNIFICADA: Card de produto
+              const productImageUrl = (service as any).imageUrl ? getImageUrl((service as any).imageUrl) : '';
               return (
                 <div
                   key={service.id}
@@ -314,12 +316,33 @@ export function ServiceListPro({
                     background: surfaceColor,
                     borderRadius: 12,
                     border: `1px solid ${cartItem ? (theme?.colors.primary || '#a07a45') : (textSecondary + '20')}`,
-                    padding: 16,
+                    padding: 0,
                     marginBottom: 10,
                     opacity: isOutOfStock ? 0.5 : 1,
                     transition: 'border-color 0.2s',
+                    overflow: 'hidden',
                   }}
                 >
+                  {/* Imagem do produto */}
+                  {productImageUrl && (
+                    <div style={{
+                      width: '100%',
+                      height: 180,
+                      overflow: 'hidden',
+                      background: '#f5f0eb',
+                    }}>
+                      <img
+                        src={productImageUrl}
+                        alt={service.name}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div style={{ padding: 16 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -446,6 +469,7 @@ export function ServiceListPro({
                       )}
                     </div>
                   )}
+                  </div>
                 </div>
               );
             }

@@ -1,17 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Service, Workspace, PaymentInfo } from '../types';
+import { Service, Workspace, PaymentInfo, CartItem } from '../types';
 import { COLORS, RADIUS, DEFAULT_COPY } from '../constants';
 import { formatPrice, formatDateFull, formatTime } from '../utils';
 
 interface PixPaymentScreenProps {
   workspace: Workspace;
   services: Service[];
-  selectedDate: string;
-  selectedSlot: string;
+  selectedDate: string | null;
+  selectedSlot: string | null;
   paymentInfo: PaymentInfo;
   primaryColor?: string;
+  cart?: CartItem[];
 }
 
 export function PixPaymentScreen({
@@ -21,12 +22,15 @@ export function PixPaymentScreen({
   selectedSlot,
   paymentInfo,
   primaryColor = COLORS.primaryFallback,
+  cart = [],
 }: PixPaymentScreenProps) {
   const [copied, setCopied] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
   const [expired, setExpired] = useState(false);
   
   const serviceNames = services.map(s => s.name).join(' + ');
+  const hasServices = services.length > 0;
+  const hasProducts = cart.length > 0;
 
   // Timer countdown
   useEffect(() => {
@@ -69,9 +73,12 @@ export function PixPaymentScreen({
     }
     
     const message = encodeURIComponent(
-      `Olá! Acabei de fazer um agendamento em ${workspace.brandName || workspace.name} ` +
-      `para ${formatDateFull(selectedDate)} às ${formatTime(selectedSlot)}. ` +
-      `Estou enviando o comprovante PIX para confirmação.`
+      hasServices && selectedDate && selectedSlot
+        ? `Olá! Acabei de fazer um agendamento em ${workspace.brandName || workspace.name} ` +
+          `para ${formatDateFull(selectedDate)} às ${formatTime(selectedSlot)}. ` +
+          `Estou enviando o comprovante PIX para confirmação.`
+        : `Olá! Acabei de fazer um pedido em ${workspace.brandName || workspace.name}. ` +
+          `Estou enviando o comprovante PIX para confirmação.`
     );
     
     window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
@@ -155,7 +162,9 @@ export function PixPaymentScreen({
         >
           {expired
             ? 'O tempo para pagamento expirou. Faça um novo agendamento.'
-            : 'Para confirmar seu agendamento, realize o pagamento PIX abaixo'}
+            : hasServices
+              ? 'Para confirmar seu agendamento, realize o pagamento PIX abaixo'
+              : 'Para confirmar seu pedido, realize o pagamento PIX abaixo'}
         </p>
 
         {!expired && (
@@ -214,21 +223,38 @@ export function PixPaymentScreen({
               }}
             >
               <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b', marginBottom: 8 }}>
-                DETALHES DO AGENDAMENTO
+                {hasServices && hasProducts ? 'DETALHES DO PEDIDO' : hasProducts ? 'DETALHES DO PEDIDO' : 'DETALHES DO AGENDAMENTO'}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Serviço{services.length > 1 ? 's' : ''}:</span>
-                  <span style={{ color: '#1e293b', fontWeight: 500 }}>{serviceNames}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Data:</span>
-                  <span style={{ color: '#1e293b', fontWeight: 500 }}>{formatDateFull(selectedDate)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#64748b' }}>Horário:</span>
-                  <span style={{ color: '#1e293b', fontWeight: 500 }}>{formatTime(selectedSlot)}</span>
-                </div>
+                {hasServices && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Serviço{services.length > 1 ? 's' : ''}:</span>
+                    <span style={{ color: '#1e293b', fontWeight: 500 }}>{serviceNames}</span>
+                  </div>
+                )}
+                {hasProducts && (
+                  <div>
+                    <span style={{ color: '#64748b', fontSize: 14 }}>Produtos:</span>
+                    {cart.map(item => (
+                      <div key={item.service.id} style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                        <span style={{ color: '#64748b', fontSize: 13 }}>• {item.service.name} × {item.quantity}</span>
+                        <span style={{ color: '#1e293b', fontWeight: 500, fontSize: 13 }}>{formatPrice(item.service.priceCents * item.quantity)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {selectedDate && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Data:</span>
+                    <span style={{ color: '#1e293b', fontWeight: 500 }}>{formatDateFull(selectedDate)}</span>
+                  </div>
+                )}
+                {selectedSlot && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Horário:</span>
+                    <span style={{ color: '#1e293b', fontWeight: 500 }}>{formatTime(selectedSlot)}</span>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -3,6 +3,7 @@
 import { Service, Workspace, CartItem, OrderPublic } from '../types';
 import { COLORS, RADIUS, DEFAULT_COPY } from '../constants';
 import { formatPrice, formatDateFull, formatTime, getServiceEmoji } from '../utils';
+import { getImageUrl } from '@/lib/utils';
 
 interface ConfirmationScreenProps {
   workspace: Workspace;
@@ -194,11 +195,23 @@ export function ConfirmationScreen({
                   Produtos
                 </p>
                 <div style={{ marginTop: 4 }}>
-                  {cart.map(item => (
-                    <p key={item.service.id} style={{ fontSize: 13, color: COLORS.textSecondary, margin: '2px 0' }}>
-                      • {item.service.name} × {item.quantity} — {formatPrice(item.service.priceCents * item.quantity)}
-                    </p>
-                  ))}
+                  {cart.map(item => {
+                    const imgUrl = (item.service as any).imageUrl ? getImageUrl((item.service as any).imageUrl) : '';
+                    return (
+                      <div key={item.service.id} style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0' }}>
+                        {imgUrl && (
+                          <img
+                            src={imgUrl}
+                            alt={item.service.name}
+                            style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover' }}
+                          />
+                        )}
+                        <span style={{ fontSize: 13, color: COLORS.textSecondary }}>
+                          {item.service.name} × {item.quantity} — {formatPrice(item.service.priceCents * item.quantity)}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
                 <p
                   style={{

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Service, CartItem } from '../types';
 import { COLORS, RADIUS, DEFAULT_COPY } from '../constants';
 import { formatPrice, formatDateFull, formatTime, formatDuration, getServiceEmoji } from '../utils';
+import { getImageUrl } from '@/lib/utils';
 
 interface ClientFormProps {
   services: Service[];
@@ -136,11 +137,23 @@ export function ClientForm({
                 </span>
               </div>
               <div style={{ marginTop: 6, paddingLeft: 28 }}>
-                {cart.map(item => (
-                  <p key={item.service.id} style={{ fontSize: 13, opacity: 0.9, margin: '2px 0' }}>
-                    • {item.service.name} × {item.quantity}
-                  </p>
-                ))}
+                {cart.map(item => {
+                  const imgUrl = (item.service as any).imageUrl ? getImageUrl((item.service as any).imageUrl) : '';
+                  return (
+                    <div key={item.service.id} style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0' }}>
+                      {imgUrl && (
+                        <img
+                          src={imgUrl}
+                          alt={item.service.name}
+                          style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover' }}
+                        />
+                      )}
+                      <p style={{ fontSize: 13, opacity: 0.9, margin: 0 }}>
+                        {item.service.name} × {item.quantity}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
