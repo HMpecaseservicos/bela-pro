@@ -53,7 +53,7 @@ export function ServiceCardPremium({ service, theme, selected, onSelect }: Servi
 
   // Gera iniciais do serviço para fallback
   const getInitials = (name: string) => {
-    return name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+    return name.split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase();
   };
 
   return (

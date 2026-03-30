@@ -21,7 +21,7 @@ export function ServiceCard({
 }: ServiceCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const hasImage = !!service.imageUrl;
-  const initials = service.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+  const initials = service.name.split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase();
 
   const borderColor = isSelected
     ? primaryColor
@@ -201,7 +201,7 @@ export function ServiceCardCompact({
   primaryColor = COLORS.primaryFallback,
   onClick,
 }: ServiceCardCompactProps) {
-  const initials = service.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+  const initials = service.name.split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase();
 
   return (
     <div

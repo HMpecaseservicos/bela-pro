@@ -34,7 +34,7 @@ export function ServiceCardCompact({
 
   // Gera iniciais do serviço para fallback
   const getInitials = (name: string) => {
-    return name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+    return name.split(' ').map((w: string) => w[0]).join('').substring(0, 2).toUpperCase();
   };
 
   return (
