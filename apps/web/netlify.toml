@@ -12,8 +12,8 @@
 [build]
   # Base directory (onde o package.json do frontend está)
   base = "apps/web"
-  # Comando de build
-  command = "npm install && npm run build"
+  # Comando de build - instala da raiz do monorepo para resolver workspaces (@bela-pro/shared)
+  command = "cd ../.. && npm install && npm run build -w @bela-pro/web"
   # Diretório de publicação (relativo ao base)
   publish = ".next"
 
