@@ -159,16 +159,16 @@ export default function ManageBookingPage() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   // Shop / Orders state
-  const [shopEnabled, setShopEnabled] = useState(false);
+  const [businessMode, setBusinessMode] = useState<'BOOKING' | 'SHOP' | 'HYBRID'>('BOOKING');
   const [clientOrders, setClientOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [activeTab, setActiveTab] = useState<'booking' | 'orders'>('booking');
 
-  // Check if workspace has shop enabled
+  // Check workspace business mode
   useEffect(() => {
     fetch(`${API_URL}/workspace/by-slug/${encodeURIComponent(slug)}`)
       .then(r => r.ok ? r.json() : null)
-      .then(ws => { if (ws?.shopEnabled) setShopEnabled(true); })
+      .then(ws => { if (ws?.businessMode) setBusinessMode(ws.businessMode); })
       .catch(() => {});
   }, [slug]);
 
@@ -218,7 +218,7 @@ export default function ManageBookingPage() {
         }
         
         // Busca pedidos também se shop habilitado
-        if (shopEnabled) {
+        if (businessMode !== 'BOOKING') {
           await fetchClientOrders();
           // Se não tem agendamentos mas tem loja, muda para aba de pedidos
           if (appointments.length === 0) {
@@ -226,7 +226,7 @@ export default function ManageBookingPage() {
           }
         }
         
-        if (appointments.length === 0 && !shopEnabled) {
+        if (appointments.length === 0 && businessMode === 'BOOKING') {
           setError('Nenhum agendamento encontrado para este telefone');
         }
       }
@@ -400,19 +400,19 @@ export default function ManageBookingPage() {
             color: COLORS.textPrimary,
             margin: '0 0 8px',
           }}>
-            Gerenciar {shopEnabled ? 'Atendimento' : 'Agendamento'}
+            Gerenciar {businessMode !== 'BOOKING' ? 'Atendimento' : 'Agendamento'}
           </h1>
           <p style={{ 
             fontSize: 14, 
             color: COLORS.textSecondary,
             margin: 0,
           }}>
-            {shopEnabled ? 'Acompanhe seus agendamentos e pedidos' : 'Reagende ou cancele seu horário'}
+            {businessMode !== 'BOOKING' ? 'Acompanhe seus agendamentos e pedidos' : 'Reagende ou cancele seu horário'}
           </p>
         </div>
 
         {/* Tabs (when shop enabled) */}
-        {shopEnabled && (
+        {businessMode !== 'BOOKING' && (
           <div style={{
             display: 'flex',
             gap: 0,
@@ -999,7 +999,7 @@ export default function ManageBookingPage() {
         )}
 
         {/* ORDERS TAB */}
-        {shopEnabled && activeTab === 'orders' && (
+        {businessMode !== 'BOOKING' && activeTab === 'orders' && (
           <div>
             {/* Phone input for order lookup */}
             {clientOrders.length === 0 && !loadingOrders && (

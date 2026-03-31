@@ -616,7 +616,7 @@ function HomeSection({
             </div>
           </button>
           )}
-          {shopEnabled && (
+          {businessMode !== 'BOOKING' && (
             <button
               onClick={() => onNavigate('shop')}
               aria-label="Ir para loja"
@@ -2623,7 +2623,6 @@ export default function BookingPage() {
         <HeroSection
           workspace={booking.workspace}
           theme={booking.theme}
-          shopEnabled={booking.shopEnabled}
           businessMode={booking.businessMode}
           onAction={handleTabChange}
           onLoginClick={() => setShowLoginModal(true)}
@@ -2901,7 +2900,7 @@ export default function BookingPage() {
                 primaryColor={booking.primaryColor}
                 onSelect={() => {}}
                 theme={booking.theme}
-                shopEnabled={true}
+                shopEnabled={booking.shopEnabled}
                 itemFilter="product"
                 onItemFilterChange={() => {}}
                 cart={booking.cart}

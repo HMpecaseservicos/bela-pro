@@ -94,7 +94,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
     setUserName(localStorage.getItem('userName') || 'Admin');
 
-    // Carregar shopEnabled do workspace + validar token
+    // Carregar businessMode do workspace + validar token
     fetch(`${API_URL}/workspace/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })

@@ -9,7 +9,6 @@ interface HeroSectionProps {
   workspace: Workspace;
   theme: ThemeConfig;
   // ULTRA PREMIUM UPGRADE: callbacks de ação
-  shopEnabled?: boolean;
   businessMode?: 'BOOKING' | 'SHOP' | 'HYBRID';
   onAction?: (tab: 'services' | 'shop') => void;
   onLoginClick?: () => void;
@@ -17,7 +16,7 @@ interface HeroSectionProps {
   ctaText?: string | null;
 }
 
-export function HeroSection({ workspace, theme, shopEnabled, businessMode = 'BOOKING', onAction, onLoginClick, clientName, ctaText }: HeroSectionProps) {
+export function HeroSection({ workspace, theme, businessMode = 'BOOKING', onAction, onLoginClick, clientName, ctaText }: HeroSectionProps) {
   const { colors } = theme;
   const hasCover = !!workspace.coverImageUrl;
   const hasLogo = !!workspace.logoUrl;

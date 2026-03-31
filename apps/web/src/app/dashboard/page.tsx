@@ -86,7 +86,7 @@ export default function DashboardPage() {
   const [dismissedMsgIds, setDismissedMsgIds] = useState<Set<string>>(new Set());
   
   // Shop / Orders
-  const [shopEnabled, setShopEnabled] = useState(false);
+  const [businessMode, setBusinessMode] = useState<'BOOKING' | 'SHOP' | 'HYBRID'>('BOOKING');
   const [orderStats, setOrderStats] = useState<OrderStats>({ totalOrders: 0, pendingOrders: 0, deliveredOrders: 0, totalRevenueCents: 0 });
 
   // Trial banner
@@ -113,14 +113,14 @@ export default function DashboardPage() {
     }
     fetchAppointments();
 
-    // Fetch workspace (para shopEnabled)
+    // Fetch workspace (para businessMode)
     fetch(`${API_URL}/workspace/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : null)
       .then(ws => {
-        if (ws?.shopEnabled) {
-          setShopEnabled(true);
+        if (ws?.businessMode) setBusinessMode(ws.businessMode);
+        if (ws?.businessMode && ws.businessMode !== 'BOOKING') {
           // Fetch order summary
           fetch(`${API_URL}/orders/summary`, {
             headers: { Authorization: `Bearer ${token}` },
@@ -269,7 +269,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ============ RESUMO DE PEDIDOS (LOJA) ============ */}
-      {shopEnabled && (orderStats.totalOrders > 0 || orderStats.pendingOrders > 0) && (
+      {businessMode !== 'BOOKING' && (orderStats.totalOrders > 0 || orderStats.pendingOrders > 0) && (
         <div style={{
           display: 'grid',
           gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
@@ -615,8 +615,8 @@ export default function DashboardPage() {
         <QuickAction href="/dashboard/servicos" label="Gerenciar Servicos" />
         <QuickAction href="/dashboard/horarios" label="Configurar Horarios" />
         <QuickAction href="/dashboard/clientes" label="Base de Clientes" />
-        {shopEnabled && <QuickAction href="/dashboard/pedidos" label="Ver Pedidos" />}
-        {shopEnabled && <QuickAction href="/dashboard/produtos" label="Gerenciar Produtos" />}
+        {businessMode !== 'BOOKING' && <QuickAction href="/dashboard/pedidos" label="Ver Pedidos" />}
+        {businessMode !== 'BOOKING' && <QuickAction href="/dashboard/produtos" label="Gerenciar Produtos" />}
       </div>
     </div>
   );
