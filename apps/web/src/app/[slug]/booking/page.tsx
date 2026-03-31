@@ -214,6 +214,7 @@ function HomeSection({
   theme,
   shopEnabled,
   onNavigate,
+  hideQuickActions,
 }: {
   workspace: any;
   services: any[];
@@ -221,14 +222,15 @@ function HomeSection({
   theme: any;
   shopEnabled: boolean;
   onNavigate: (tab: ActiveTab) => void;
+  hideQuickActions?: boolean;
 }) {
   const popularServices = services.filter(s => s.itemType !== 'PRODUCT').slice(0, 3);
   const featuredProducts = services.filter(s => s.itemType === 'PRODUCT').slice(0, 4);
   
   return (
     <div style={{ padding: '0 0 24px' }}>
-      {/* Quick Actions */}
-      <div style={{
+      {/* Quick Actions — oculto quando HeroSection já mostra CTAs */}
+      {!hideQuickActions && <div style={{
         display: 'grid',
         gridTemplateColumns: shopEnabled ? '1fr 1fr' : '1fr',
         gap: 12,
@@ -320,7 +322,7 @@ function HomeSection({
             </div>
           </button>
         )}
-      </div>
+      </div>}
 
       {/* Serviços populares */}
       {popularServices.length > 0 && (
@@ -1808,6 +1810,7 @@ export default function BookingPage() {
                 theme={booking.theme}
                 shopEnabled={booking.shopEnabled}
                 onNavigate={handleTabChange}
+                hideQuickActions={usePremiumLayout}
               />
             </>
           )}
