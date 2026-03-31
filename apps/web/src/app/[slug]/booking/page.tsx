@@ -667,11 +667,13 @@ function AccountSection({
   primaryColor,
   clientSession,
   onLogout,
+  onLogin,
 }: {
   slug: string;
   primaryColor: string;
   clientSession?: { name: string; phone: string } | null;
   onLogout?: () => void;
+  onLogin?: (data: { name: string; phone: string }) => void;
 }) {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
@@ -757,6 +759,9 @@ function AccountSection({
       }
       setLoggedIn(true);
       setActivePortalTab(apts.length > 0 ? 'appointments' : 'orders');
+      // Persistir sessão
+      const loginName = (apts.length > 0 && apts[0].client?.name) ? apts[0].client.name : cleaned;
+      onLogin?.({ name: loginName, phone: cleaned });
     } catch {
       setError('Não foi possível conectar. Verifique sua internet e tente novamente.');
     } finally {
@@ -1668,7 +1673,15 @@ export default function BookingPage() {
     setShowLoginModal(false);
     booking.setClientName(data.name);
     booking.setClientPhone(data.phone);
-  }, [booking]);
+    // Persistir sessão no localStorage
+    try {
+      localStorage.setItem(`bela-pro-client-${slug}`, JSON.stringify({
+        name: data.name,
+        phone: data.phone,
+        ts: Date.now(),
+      }));
+    } catch { /* ignore */ }
+  }, [booking, slug]);
 
   // Auto-preencher dados do cliente quando sessão restaurada do localStorage
   useEffect(() => {
@@ -2074,6 +2087,7 @@ export default function BookingPage() {
               slug={slug}
               primaryColor={booking.primaryColor}
               clientSession={clientSession}
+              onLogin={handleLogin}
               onLogout={() => {
                 setClientSession(null);
                 localStorage.removeItem(`bela-pro-client-${slug}`);
