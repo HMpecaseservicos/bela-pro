@@ -1904,8 +1904,8 @@ export default function BookingPage() {
                     onSelect={booking.toggleService}
                     theme={booking.theme}
                     shopEnabled={booking.shopEnabled}
-                    itemFilter={booking.itemFilter}
-                    onItemFilterChange={booking.setItemFilter}
+                    itemFilter="service"
+                    onItemFilterChange={() => {}}
                     cart={booking.cart}
                     onAddToCart={booking.addToCart}
                     onRemoveFromCart={booking.removeFromCart}
