@@ -94,11 +94,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
     setUserName(localStorage.getItem('userName') || 'Admin');
 
-    // Carregar shopEnabled do workspace
+    // Carregar shopEnabled do workspace + validar token
     fetch(`${API_URL}/workspace/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then(r => r.ok ? r.json() : null)
+      .then(r => {
+        if (r.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('userName');
+          router.push('/login');
+          return null;
+        }
+        return r.ok ? r.json() : null;
+      })
       .then(ws => { if (ws?.shopEnabled) setShopEnabled(true); })
       .catch(() => {});
 

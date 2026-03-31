@@ -278,6 +278,11 @@ export default function AparenciaPage() {
         }),
       });
 
+      if (res.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+        return;
+      }
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.message || 'Erro ao salvar');

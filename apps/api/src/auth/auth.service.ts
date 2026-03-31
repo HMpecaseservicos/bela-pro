@@ -502,7 +502,7 @@ export class AuthService {
       throw new Error('JWT_ACCESS_SECRET não configurado');
     }
 
-    const ttl = Number(this.config.get<string>('JWT_ACCESS_TTL_SECONDS') ?? '900');
+    const ttl = Number(this.config.get<string>('JWT_ACCESS_TTL_SECONDS') ?? '604800'); // 7 days (sem refresh token)
 
     return this.jwt.signAsync(
       { workspaceId: payload.workspaceId, role: payload.role, isSuperAdmin: payload.isSuperAdmin },
