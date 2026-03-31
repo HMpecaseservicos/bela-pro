@@ -25,6 +25,7 @@ import { ServiceListPro } from './components/ServiceListPro';
 // Constants
 import { COLORS, API_URL } from './constants';
 import { formatDateFull, formatPrice } from './utils';
+import { getImageUrl } from '@/lib/utils';
 
 // ============================================
 // TIPOS LOCAIS
@@ -417,7 +418,7 @@ function HomeSection({
                 {product.imageUrl ? (
                   <div style={{ width: '100%', height: 110, background: '#f9fafb', position: 'relative', overflow: 'hidden' }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={product.imageUrl} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={getImageUrl(product.imageUrl)} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 ) : (
                   <div style={{ width: '100%', height: 90, background: 'linear-gradient(135deg, #f9fafb, #f3f4f6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -550,7 +551,7 @@ function CartPanel({
               }}>
                 {item.service.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.service.imageUrl} alt={item.service.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={getImageUrl(item.service.imageUrl)} alt={item.service.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>

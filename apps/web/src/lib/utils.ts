@@ -25,15 +25,9 @@ export function getImageUrl(url: string | null | undefined): string {
  * Retorna a URL base da API
  */
 export function getApiBaseUrl(): string {
-  // Primeiro tenta a variável de ambiente
+  // Primeiro tenta a variável de ambiente (ex.: https://bela-pro.fly.dev/api/v1)
   if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL.replace('/api/v1', '');
-  }
-  // Em produção (Fly.io/Netlify), usa variável de ambiente configurada
-  // API está acessível via NEXT_PUBLIC_API_URL
-  if (typeof window !== 'undefined' && (window.location.hostname.includes('fly.dev') || window.location.hostname.includes('netlify.app'))) {
-    // Usa a URL da API via variável de ambiente
-    return window.location.origin;
+    return process.env.NEXT_PUBLIC_API_URL.replace(/\/api\/v1\/?$/, '');
   }
   // Fallback para localhost em desenvolvimento
   return 'http://localhost:3001';
