@@ -295,7 +295,6 @@ function HomeSection({
   const highlightScrollRef = useRef<HTMLDivElement>(null);
 
   const popularServices = services.filter(s => s.itemType !== 'PRODUCT').slice(0, 4);
-  const featuredProducts = services.filter(s => s.itemType === 'PRODUCT').slice(0, 4);
 
   // Resolve highlight service/product IDs to real objects
   const highlightIds: string[] = workspace?.highlightServiceIds || [];
@@ -693,75 +692,6 @@ function HomeSection({
                 <span style={{ fontSize: 15, fontWeight: 700, color: primaryColor, flexShrink: 0 }}>
                   {formatPrice(service.priceCents)}
                 </span>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── Produtos ── */}
-      {shopEnabled && featuredProducts.length > 0 && (
-        <section aria-label="Produtos em destaque" style={{ marginBottom: 36 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{
-                width: 4, height: 28, borderRadius: 2,
-                background: 'linear-gradient(180deg, #10b981, #10b98160)',
-              }} />
-              <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.4 }}>
-                Produtos
-              </h3>
-            </div>
-            <button
-              onClick={() => onNavigate('shop')}
-              aria-label="Ver todos os produtos"
-              style={{ background: 'none', border: 'none', color: primaryColor, fontSize: 13, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
-            >
-              Ver todos →
-            </button>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            {featuredProducts.map(product => (
-              <button
-                key={product.id}
-                onClick={() => onNavigate('shop')}
-                aria-label={`Ver produto ${product.name} - ${formatPrice(product.priceCents)}`}
-                style={{
-                  background: '#fff', borderRadius: 18, border: 'none',
-                  overflow: 'hidden', cursor: 'pointer',
-                  transition: 'transform 0.12s ease, box-shadow 0.2s ease',
-                  textAlign: 'left', padding: 0, WebkitTapHighlightColor: 'transparent',
-                  boxShadow: '0 3px 16px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04)',
-                }}
-                onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.97)')}
-                onMouseUp={e => (e.currentTarget.style.transform = 'scale(1)')}
-                onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
-                onTouchStart={e => (e.currentTarget.style.transform = 'scale(0.97)')}
-                onTouchEnd={e => (e.currentTarget.style.transform = 'scale(1)')}
-              >
-                {product.imageUrl ? (
-                  <div style={{ width: '100%', aspectRatio: '4/3', background: '#f9fafb', overflow: 'hidden' }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={getImageUrl(product.imageUrl)} alt={product.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </div>
-                ) : (
-                  <div style={{ width: '100%', aspectRatio: '4/3', background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(16,185,129,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                        <path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" />
-                      </svg>
-                    </div>
-                  </div>
-                )}
-                <div style={{ padding: '10px 12px 14px' }}>
-                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: COLORS.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {product.name}
-                  </p>
-                  <p style={{ margin: '5px 0 0', fontSize: 16, fontWeight: 800, color: '#059669' }}>
-                    {formatPrice(product.priceCents)}
-                  </p>
-                </div>
               </button>
             ))}
           </div>
