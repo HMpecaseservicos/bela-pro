@@ -48,6 +48,12 @@ export class PublicBookingService {
       throw new BadRequestException('Um ou mais serviços não encontrados ou inativos.');
     }
 
+    // Valida que são apenas serviços (não produtos)
+    const nonServiceItems = services.filter(s => (s as any).itemType && (s as any).itemType !== 'SERVICE');
+    if (nonServiceItems.length > 0) {
+      throw new BadRequestException('Produtos não podem ser agendados. Use o checkout unificado.');
+    }
+
     // Calcula duração total (soma das durações) e preço total
     const totalDurationMinutes = services.reduce((sum, s) => sum + s.durationMinutes, 0);
     const totalPriceCents = services.reduce((sum, s) => sum + s.priceCents, 0);

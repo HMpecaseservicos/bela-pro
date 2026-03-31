@@ -183,12 +183,11 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
     }));
     
     try {
-      // Usa o primeiro serviço para buscar disponibilidade (simplificação)
-      // Backend considera duração total na validação de conflito
-      const firstServiceId = state.selectedServices[0].id;
+      // Envia TODOS os serviceIds para calcular disponibilidade com duração total combinada
+      const serviceIds = state.selectedServices.map(s => s.id).join(',');
       const today = new Date().toISOString().split('T')[0];
       const res = await fetch(
-        `${API_URL}/availability/days?workspaceId=${state.workspace.id}&serviceId=${firstServiceId}&from=${today}&limit=14`
+        `${API_URL}/availability/days?workspaceId=${state.workspace.id}&serviceIds=${serviceIds}&from=${today}&limit=14`
       );
       
       const days: string[] = await res.json();
@@ -220,10 +219,10 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
     }));
     
     try {
-      // Usa primeiro serviço para buscar slots (backend valida duração total)
-      const firstServiceId = state.selectedServices[0].id;
+      // Envia TODOS os serviceIds para calcular slots com duração total combinada
+      const serviceIds = state.selectedServices.map(s => s.id).join(',');
       const res = await fetch(
-        `${API_URL}/availability/slots?workspaceId=${state.workspace.id}&serviceId=${firstServiceId}&date=${date}`
+        `${API_URL}/availability/slots?workspaceId=${state.workspace.id}&serviceIds=${serviceIds}&date=${date}`
       );
       
       const slots: TimeSlot[] = await res.json();
@@ -434,11 +433,10 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
       
       const newStep = (prev.step - 1) as BookingStep;
       
-      // Limpar seleções ao voltar
+      // Limpar seleções ao voltar — NÃO apaga selectedServices para preservar escolhas do cliente
       const updates: Partial<BookingState> = { step: newStep, error: null };
       
       if (newStep < 2) {
-        updates.selectedServices = [];
         updates.availableDays = [];
       }
       if (newStep < 3) {

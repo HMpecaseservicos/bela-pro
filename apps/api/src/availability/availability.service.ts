@@ -12,18 +12,21 @@ export class AvailabilityService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Retorna horários disponíveis para um serviço em uma data específica
-   * RESPEITA todas as configurações do workspace:
-   * - slotIntervalMinutes
-   * - minLeadTimeMinutes
-   * - bufferMinutes
-   * - maxBookingDaysAhead
+   * Retorna horários disponíveis para um ou mais serviços em uma data específica.
+   * Aceita serviceIds (array) para calcular duração total combinada.
+   * Mantém compatibilidade com serviceId (string) para chamadas legadas.
    */
   async getAvailableSlots(
     workspaceId: string,
-    serviceId: string,
+    serviceIdOrIds: string | string[],
     date: string, // formato: YYYY-MM-DD
   ): Promise<TimeSlot[]> {
+    const serviceIds = Array.isArray(serviceIdOrIds) ? serviceIdOrIds : [serviceIdOrIds];
+
+    if (serviceIds.length === 0) {
+      throw new BadRequestException('Nenhum serviço informado.');
+    }
+
     // 1. Busca workspace para pegar configurações
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
@@ -40,15 +43,27 @@ export class AvailabilityService {
       throw new BadRequestException('Workspace não encontrado.');
     }
 
-    // 2. Valida que serviço existe e pertence ao workspace
-    // TENANT ISOLATION: findFirst com workspaceId no WHERE para evitar enumeração de IDs
-    const service = await this.prisma.service.findFirst({
-      where: { id: serviceId, workspaceId, isActive: true },
+    // 2. Valida que TODOS os serviços existem, pertencem ao workspace, estão ativos e são do tipo SERVICE
+    const services = await this.prisma.service.findMany({
+      where: {
+        id: { in: serviceIds },
+        workspaceId,
+        isActive: true,
+      },
     });
 
-    if (!service) {
-      throw new BadRequestException('Serviço não encontrado ou inativo.');
+    if (services.length !== serviceIds.length) {
+      throw new BadRequestException('Um ou mais serviços não encontrados ou inativos.');
     }
+
+    // Valida itemType — apenas SERVICE pode ser agendado
+    const nonServiceItems = services.filter(s => (s as any).itemType && (s as any).itemType !== 'SERVICE');
+    if (nonServiceItems.length > 0) {
+      throw new BadRequestException('Produtos não podem ser agendados. Selecione apenas serviços.');
+    }
+
+    // 3. Calcula duração TOTAL combinada de todos os serviços
+    const totalDurationMinutes = services.reduce((sum, s) => sum + s.durationMinutes, 0);
 
     const targetDate = new Date(date);
     const now = new Date();
@@ -143,14 +158,14 @@ export class AvailabilityService {
       // Ex: 07:15 → 07:30, 07:45 → 08:00, 07:00 → 07:00
       let currentMinutes = this.roundUpToSlotInterval(rule.startTimeMinutes, slotIntervalMinutes);
 
-      while (currentMinutes + service.durationMinutes <= rule.endTimeMinutes) {
+      while (currentMinutes + totalDurationMinutes <= rule.endTimeMinutes) {
         // Cria o slot no horário UTC (adiciona offset do timezone)
         const slotStart = new Date(targetDate);
         slotStart.setUTCHours(0, 0, 0, 0);
         slotStart.setUTCMinutes(currentMinutes + timezoneOffsetMinutes);
 
         const slotEnd = new Date(slotStart);
-        slotEnd.setUTCMinutes(slotStart.getUTCMinutes() + service.durationMinutes);
+        slotEnd.setUTCMinutes(slotStart.getUTCMinutes() + totalDurationMinutes);
 
         // Verifica minLeadTimeMinutes (antecedência mínima)
         if (slotStart < minStartTime) {
@@ -225,10 +240,11 @@ export class AvailabilityService {
 
   /**
    * Retorna próximos dias disponíveis (com pelo menos 1 horário livre)
+   * Aceita serviceIds (array) para calcular duração total combinada.
    */
   async getAvailableDays(
     workspaceId: string,
-    serviceId: string,
+    serviceIdOrIds: string | string[],
     fromDate: string,
     limit = 30,
   ): Promise<string[]> {
@@ -238,7 +254,7 @@ export class AvailabilityService {
 
     while (availableDays.length < limit && daysChecked < 90) {
       const dateStr = currentDate.toISOString().split('T')[0];
-      const slots = await this.getAvailableSlots(workspaceId, serviceId, dateStr);
+      const slots = await this.getAvailableSlots(workspaceId, serviceIdOrIds, dateStr);
 
       if (slots.some((slot) => slot.available)) {
         availableDays.push(dateStr);
