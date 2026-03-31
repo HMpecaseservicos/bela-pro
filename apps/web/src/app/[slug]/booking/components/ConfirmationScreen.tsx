@@ -2,7 +2,7 @@
 
 import { Service, Workspace, CartItem, OrderPublic } from '../types';
 import { COLORS, RADIUS, DEFAULT_COPY } from '../constants';
-import { formatPrice, formatDateFull, formatTime, getServiceEmoji } from '../utils';
+import { formatPrice, formatDateFull, formatTime } from '../utils';
 import { getImageUrl } from '@/lib/utils';
 
 interface ConfirmationScreenProps {
@@ -30,9 +30,6 @@ export function ConfirmationScreen({
 }: ConfirmationScreenProps) {
   const hasServices = services.length > 0;
   const hasProducts = cart.length > 0 || !!orderResult;
-  const emoji = hasServices 
-    ? (services.length === 1 ? getServiceEmoji(services[0].name) : '✨')
-    : '🛍️';
   const totalServicePrice = services.reduce((sum, s) => sum + s.priceCents, 0);
   const totalCartPrice = cart.reduce((sum, item) => sum + item.service.priceCents * item.quantity, 0);
   const totalPrice = totalServicePrice + totalCartPrice;
@@ -135,7 +132,9 @@ export function ConfirmationScreen({
                 borderBottom: `1px solid ${COLORS.border}`,
               }}
             >
-              <span style={{ fontSize: 24 }}>{emoji}</span>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: `${primaryColor}12`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              </div>
               <div style={{ flex: 1 }}>
                 <p
                   style={{
@@ -182,7 +181,9 @@ export function ConfirmationScreen({
                 borderBottom: `1px solid ${COLORS.border}`,
               }}
             >
-              <span style={{ fontSize: 24 }}>🛍️</span>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: '#10b98112', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+              </div>
               <div style={{ flex: 1 }}>
                 <p
                   style={{
@@ -200,6 +201,7 @@ export function ConfirmationScreen({
                     return (
                       <div key={item.service.id} style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0' }}>
                         {imgUrl && (
+                          // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={imgUrl}
                             alt={item.service.name}
@@ -246,7 +248,7 @@ export function ConfirmationScreen({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {selectedDate && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 18 }}>📅</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={COLORS.textSecondary} strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
                 <span style={{ fontSize: 14, color: COLORS.textSecondary }}>
                   {formatDateFull(selectedDate)}
                 </span>
@@ -255,7 +257,7 @@ export function ConfirmationScreen({
 
             {selectedSlot && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 18 }}>⏰</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={COLORS.textSecondary} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                 <span style={{ fontSize: 14, color: COLORS.textSecondary }}>
                   {formatTime(selectedSlot)}
                 </span>
@@ -264,7 +266,7 @@ export function ConfirmationScreen({
 
             {address && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 18 }}>📍</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={COLORS.textSecondary} strokeWidth="2" strokeLinecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
                 <span style={{ fontSize: 14, color: COLORS.textSecondary }}>
                   {address}
                 </span>
@@ -369,6 +371,7 @@ export function ConfirmationScreen({
           }}
         >
           <span style={{ fontSize: 11, color: COLORS.textMuted }}>Powered by</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo.png"
             alt="BELA PRO"

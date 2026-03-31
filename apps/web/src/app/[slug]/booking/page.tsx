@@ -24,7 +24,7 @@ import { ServiceListPro } from './components/ServiceListPro';
 
 // Constants
 import { COLORS, API_URL } from './constants';
-import { formatDateFull, formatPrice, getServiceEmoji } from './utils';
+import { formatDateFull, formatPrice } from './utils';
 
 // ============================================
 // TIPOS LOCAIS
@@ -362,10 +362,9 @@ function HomeSection({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 18,
                   flexShrink: 0,
                 }}>
-                  {getServiceEmoji(service.name)}
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: COLORS.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -761,13 +760,13 @@ function AccountSection({
   };
 
   const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string; icon: string }> = {
-    PENDING: { label: 'Pendente', bg: '#fef9c3', color: '#854d0e', icon: '⏳' },
-    PENDING_PAYMENT: { label: 'Aguardando pgto', bg: '#ffedd5', color: '#9a3412', icon: '💳' },
+    PENDING: { label: 'Pendente', bg: '#fef9c3', color: '#854d0e', icon: '○' },
+    PENDING_PAYMENT: { label: 'Aguardando pgto', bg: '#ffedd5', color: '#9a3412', icon: '$' },
     CONFIRMED: { label: 'Confirmado', bg: '#dbeafe', color: '#1d4ed8', icon: '✓' },
     COMPLETED: { label: 'Concluído', bg: '#dcfce7', color: '#166534', icon: '✓' },
     CANCELLED: { label: 'Cancelado', bg: '#fef2f2', color: '#b91c1c', icon: '✕' },
     NO_SHOW: { label: 'Não compareceu', bg: '#f3f4f6', color: '#4b5563', icon: '—' },
-    PREPARING: { label: 'Em preparo', bg: '#ede9fe', color: '#6d28d9', icon: '⚡' },
+    PREPARING: { label: 'Em preparo', bg: '#ede9fe', color: '#6d28d9', icon: '◦' },
     READY: { label: 'Pronto p/ retirada', bg: '#cffafe', color: '#0e7490', icon: '✓' },
     DELIVERED: { label: 'Entregue', bg: '#dcfce7', color: '#166534', icon: '✓' },
   };

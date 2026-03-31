@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Service, CartItem } from '../types';
 import { COLORS, RADIUS, DEFAULT_COPY } from '../constants';
-import { formatPrice, formatDateFull, formatTime, formatDuration, getServiceEmoji } from '../utils';
+import { formatPrice, formatDateFull, formatTime, formatDuration } from '../utils';
 import { getImageUrl } from '@/lib/utils';
 
 interface ClientFormProps {
@@ -48,9 +48,13 @@ export function ClientForm({
   const displayPrice = totalCombinedPrice !== undefined ? totalCombinedPrice : (totalPrice + totalCartPrice);
   const hasServices = services.length > 0;
   const hasProducts = cart.length > 0;
-  const emoji = hasServices 
-    ? (services.length === 1 ? getServiceEmoji(services[0].name) : '✨')
-    : '🛍️';
+  // SVG icons inline para o resumo
+  const ServiceIcon = () => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+  );
+  const ProductIcon = () => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+  );
   const gradientBg = `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColorSimple(primaryColor, -40)} 100%)`;
 
   const isNameValid = clientName.trim().length >= 3;
@@ -95,11 +99,12 @@ export function ClientForm({
       >
         <p
           style={{
-            fontSize: 12,
-            opacity: 0.8,
+            fontSize: 11,
+            opacity: 0.75,
             margin: 0,
             textTransform: 'uppercase',
-            letterSpacing: '0.05em',
+            letterSpacing: '0.1em',
+            fontWeight: 600,
           }}
         >
           {DEFAULT_COPY.summaryLabel}
@@ -108,9 +113,11 @@ export function ClientForm({
         <div style={{ marginTop: 12 }}>
           {hasServices && (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 20 }}>{emoji}</span>
-                <span style={{ fontSize: 18, fontWeight: 700 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <ServiceIcon />
+                </div>
+                <span style={{ fontSize: 17, fontWeight: 700 }}>
                   {services.length === 1 ? services[0].name : `${services.length} serviços`}
                 </span>
               </div>
@@ -130,8 +137,10 @@ export function ClientForm({
           {/* LOJA UNIFICADA: Itens do carrinho */}
           {hasProducts && (
             <div style={{ marginTop: hasServices ? 12 : 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 20 }}>🛍️</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <ProductIcon />
+                </div>
                 <span style={{ fontSize: 16, fontWeight: 600 }}>
                   {cart.reduce((sum, item) => sum + item.quantity, 0)} produto{cart.reduce((sum, item) => sum + item.quantity, 0) > 1 ? 's' : ''}
                 </span>
@@ -142,6 +151,7 @@ export function ClientForm({
                   return (
                     <div key={item.service.id} style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0' }}>
                       {imgUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={imgUrl}
                           alt={item.service.name}
@@ -161,19 +171,19 @@ export function ClientForm({
           <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
             {selectedDate && (
               <p style={{ fontSize: 14, opacity: 0.95, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>📅</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
                 {formatDateFull(selectedDate)}
               </p>
             )}
             {selectedSlot && (
               <p style={{ fontSize: 14, opacity: 0.95, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>🕐</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                 {formatTime(selectedSlot)}
               </p>
             )}
             {hasServices && totalDuration > 0 && (
               <p style={{ fontSize: 14, opacity: 0.95, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>⏱</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg>
                 {formatDuration(totalDuration)}
               </p>
             )}
@@ -306,17 +316,18 @@ export function ClientForm({
         disabled={!canSubmit}
         style={{
           width: '100%',
-          padding: 18,
+          padding: '18px 24px',
           background: canSubmit ? gradientBg : COLORS.border,
           color: canSubmit ? 'white' : COLORS.textMuted,
           border: 'none',
-          borderRadius: RADIUS.md,
+          borderRadius: 16,
           fontSize: 16,
-          fontWeight: 600,
+          fontWeight: 700,
           cursor: canSubmit ? 'pointer' : 'not-allowed',
-          transition: 'all 0.2s ease',
-          boxShadow: canSubmit ? `0 4px 15px ${primaryColor}44` : 'none',
+          transition: 'all 0.25s ease',
+          boxShadow: canSubmit ? `0 6px 20px ${primaryColor}40` : 'none',
           opacity: loading ? 0.7 : 1,
+          letterSpacing: -0.2,
         }}
       >
         {loading ? (
