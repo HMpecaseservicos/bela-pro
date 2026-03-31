@@ -119,6 +119,26 @@ export function ServiceListPro({
     return groups;
   }, [services, categories, searchQuery, selectedCategoryId, shopEnabled, itemFilter]);
 
+  // Filtra categorias visíveis baseado no filtro de tipo (serviço/produto)
+  const filteredCategories = useMemo(() => {
+    if (!shopEnabled || itemFilter === 'all') return categories;
+
+    return categories.filter(cat => {
+      // 1. Checar categoryType da própria categoria
+      if (cat.categoryType) {
+        if (itemFilter === 'service' && cat.categoryType === 'SERVICE') return true;
+        if (itemFilter === 'product' && cat.categoryType === 'PRODUCT') return true;
+      }
+      // 2. Fallback: checar se a categoria tem itens do tipo selecionado
+      const hasMatchingItems = services.some(s => {
+        if (s.categoryId !== cat.id) return false;
+        const sType = (s as any).itemType || 'SERVICE';
+        return itemFilter === 'service' ? sType === 'SERVICE' : sType === 'PRODUCT';
+      });
+      return hasMatchingItems;
+    });
+  }, [categories, services, shopEnabled, itemFilter]);
+
   // Total de serviços filtrados
   const totalFiltered = groupedServices.reduce(
     (sum, group) => sum + group.services.length,
@@ -175,15 +195,24 @@ export function ServiceListPro({
           paddingBottom: 4,
         }}>
           {([
-            { key: 'all' as const, label: 'Tudo', icon: '🏪' },
-            { key: 'service' as const, label: 'Serviços', icon: '✂️' },
-            { key: 'product' as const, label: 'Produtos', icon: '🛍️' },
+            { key: 'all' as const, label: 'Tudo', icon: (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            )},
+            { key: 'service' as const, label: 'Serviços', icon: (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="6" cy="6" r="3"/><path d="M8.12 8.12L18 18"/><path d="M20.59 14.41a2 2 0 0 1 0 2.83l-3.35 3.35a2 2 0 0 1-2.83 0"/></svg>
+            )},
+            { key: 'product' as const, label: 'Produtos', icon: (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            )},
           ]).map(tab => {
             const isActive = itemFilter === tab.key;
             return (
               <button
                 key={tab.key}
-                onClick={() => onItemFilterChange?.(tab.key)}
+                onClick={() => {
+                  onItemFilterChange?.(tab.key);
+                  setSelectedCategoryId(null); // Reset categoria ao mudar tipo
+                }}
                 style={{
                   padding: '8px 16px',
                   borderRadius: 20,
@@ -200,7 +229,7 @@ export function ServiceListPro({
                   transition: 'all 0.2s',
                 }}
               >
-                <span style={{ fontSize: 14 }}>{tab.icon}</span>
+                <span style={{ fontSize: 14, display: 'flex', alignItems: 'center' }}>{tab.icon}</span>
                 {tab.label}
               </button>
             );
@@ -208,9 +237,9 @@ export function ServiceListPro({
         </div>
       )}
 
-      {/* Tabs de categoria */}
+      {/* Tabs de categoria (filtradas por tipo) */}
       <CategoryTabs
-        categories={categories}
+        categories={filteredCategories}
         selectedCategoryId={selectedCategoryId}
         onSelect={setSelectedCategoryId}
         theme={theme}
