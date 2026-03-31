@@ -19,6 +19,7 @@ import {
   Spinner,
   skeletonStyles,
   HeroSection,
+  GalleryLightbox,
 } from './components';
 import { ServiceListPro } from './components/ServiceListPro';
 
@@ -70,6 +71,13 @@ const NavIcons = {
       <path d="M20 21a8 8 0 1 0-16 0" />
     </svg>
   ),
+  gallery: (_active: boolean, _color: string) => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={_active ? _color : '#9ca3af'} strokeWidth={_active ? 1.5 : 1.8} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <path d="m21 15-5-5L5 21" />
+    </svg>
+  ),
 };
 
 // ============================================
@@ -81,16 +89,21 @@ function BottomNav({
   shopEnabled,
   cartItemCount,
   primaryColor,
+  hasGallery,
+  onGalleryOpen,
 }: {
   activeTab: ActiveTab;
   onTabChange: (tab: ActiveTab) => void;
   shopEnabled: boolean;
   cartItemCount: number;
   primaryColor: string;
+  hasGallery?: boolean;
+  onGalleryOpen?: () => void;
 }) {
-  const tabs: { id: ActiveTab; label: string; show: boolean }[] = [
+  const tabs: { id: string; label: string; show: boolean; isGallery?: boolean }[] = [
     { id: 'home', label: 'Início', show: true },
     { id: 'services', label: 'Agendar', show: true },
+    { id: 'gallery', label: 'Galeria', show: !!hasGallery, isGallery: true },
     { id: 'shop', label: 'Loja', show: shopEnabled },
     { id: 'account', label: 'Conta', show: true },
   ];
@@ -119,12 +132,12 @@ function BottomNav({
       }}
     >
       {visibleTabs.map(tab => {
-        const isActive = activeTab === tab.id;
-        const renderIcon = NavIcons[tab.id];
+        const isActive = !tab.isGallery && activeTab === tab.id;
+        const renderIcon = NavIcons[tab.id as keyof typeof NavIcons];
         return (
           <button
             key={tab.id}
-            onClick={() => onTabChange(tab.id)}
+            onClick={() => tab.isGallery ? onGalleryOpen?.() : onTabChange(tab.id as ActiveTab)}
             aria-label={tab.label}
             aria-current={isActive ? 'page' : undefined}
             style={{
@@ -1586,6 +1599,7 @@ export default function BookingPage() {
   // ULTRA PREMIUM UPGRADE: Login modal + client session
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [clientSession, setClientSession] = useState<{ name: string; phone: string } | null>(null);
+  const [galleryLightboxOpen, setGalleryLightboxOpen] = useState(false);
 
   // Hook com toda a lógica de booking
   const booking = useBooking({ slug });
@@ -2306,6 +2320,17 @@ export default function BookingPage() {
           shopEnabled={booking.shopEnabled}
           cartItemCount={booking.cartItemCount}
           primaryColor={booking.primaryColor}
+          hasGallery={!!(booking.workspace.galleryUrls && booking.workspace.galleryUrls.length > 0)}
+          onGalleryOpen={() => setGalleryLightboxOpen(true)}
+        />
+      )}
+
+      {/* Gallery Lightbox */}
+      {galleryLightboxOpen && booking.workspace.galleryUrls && booking.workspace.galleryUrls.length > 0 && (
+        <GalleryLightbox
+          images={booking.workspace.galleryUrls}
+          initialIndex={0}
+          onClose={() => setGalleryLightboxOpen(false)}
         />
       )}
     </div>

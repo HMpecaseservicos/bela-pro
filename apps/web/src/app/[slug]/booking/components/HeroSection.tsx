@@ -1,11 +1,9 @@
 // ULTRA PREMIUM UPGRADE — HeroSection com CTAs de ação e link de login
 'use client';
 
-import { useState } from 'react';
 import { Workspace, ThemeConfig } from '../types';
 import { SPACING, RADIUS } from '../constants';
 import { getImageUrl } from '@/lib/utils';
-import { GalleryLightbox } from './GalleryLightbox';
 
 interface HeroSectionProps {
   workspace: Workspace;
@@ -21,15 +19,6 @@ export function HeroSection({ workspace, theme, shopEnabled, onAction, onLoginCl
   const { colors } = theme;
   const hasCover = !!workspace.coverImageUrl;
   const hasLogo = !!workspace.logoUrl;
-  const hasGallery = workspace.galleryUrls && workspace.galleryUrls.length > 0;
-  
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxIndex, setLightboxIndex] = useState(0);
-  
-  const openGallery = (index: number) => {
-    setLightboxIndex(index);
-    setLightboxOpen(true);
-  };
   
   const brandName = workspace.brandName || workspace.name;
   const welcomeText = workspace.welcomeText || 'Agende seu horário';
@@ -246,34 +235,6 @@ export function HeroSection({ workspace, theme, shopEnabled, onAction, onLoginCl
                 </span>
               </button>
             )}
-
-            {hasGallery && (
-              <button
-                onClick={() => openGallery(0)}
-                style={{
-                  padding: '10px 20px',
-                  background: 'rgba(255,255,255,0.2)',
-                  backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)',
-                  border: '1px solid rgba(255,255,255,0.3)',
-                  borderRadius: 50,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  WebkitTapHighlightColor: 'transparent',
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <path d="m21 15-5-5L5 21" />
-                </svg>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>
-                  Galeria
-                </span>
-              </button>
-            )}
           </div>
         )}
 
@@ -322,15 +283,6 @@ export function HeroSection({ workspace, theme, shopEnabled, onAction, onLoginCl
           </div>
         )}
       </div>
-      
-      {/* Lightbox Modal */}
-      {lightboxOpen && hasGallery && (
-        <GalleryLightbox
-          images={workspace.galleryUrls!}
-          initialIndex={lightboxIndex}
-          onClose={() => setLightboxOpen(false)}
-        />
-      )}
     </div>
   );
 }
