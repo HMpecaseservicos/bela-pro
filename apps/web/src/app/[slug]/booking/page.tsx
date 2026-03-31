@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 
 // Hooks
@@ -650,9 +650,13 @@ function CartPanel({
 function AccountSection({
   slug,
   primaryColor,
+  clientSession,
+  onLogout,
 }: {
   slug: string;
   primaryColor: string;
+  clientSession?: { name: string; phone: string } | null;
+  onLogout?: () => void;
 }) {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
@@ -662,6 +666,39 @@ function AccountSection({
   const [loggedIn, setLoggedIn] = useState(false);
   const [clientName, setClientName] = useState('');
   const [activePortalTab, setActivePortalTab] = useState<'appointments' | 'orders'>('appointments');
+
+  // Auto-login quando houver sessão ativa
+  const sessionApplied = useRef(false);
+  useEffect(() => {
+    if (clientSession && !loggedIn && !sessionApplied.current) {
+      sessionApplied.current = true;
+      const cleaned = clientSession.phone.replace(/\D/g, '');
+      setPhone(cleaned);
+      setClientName(clientSession.name);
+      // Buscar dados automaticamente
+      (async () => {
+        setLoading(true);
+        try {
+          const [aptsRes, ordersRes] = await Promise.all([
+            fetch(`${API_URL}/public-booking/appointments?phone=${encodeURIComponent(cleaned)}&slug=${encodeURIComponent(slug)}`),
+            fetch(`${API_URL}/public-booking/orders?phone=${encodeURIComponent(cleaned)}&slug=${encodeURIComponent(slug)}`),
+          ]);
+          const aptsData = aptsRes.ok ? await aptsRes.json() : [];
+          const ordersData = ordersRes.ok ? await ordersRes.json() : [];
+          const apts = Array.isArray(aptsData) ? aptsData : [];
+          const ords = Array.isArray(ordersData) ? ordersData : [];
+          if (apts.length > 0 || ords.length > 0) {
+            setAppointments(apts);
+            setOrders(ords);
+            if (apts.length > 0 && apts[0].client?.name) setClientName(apts[0].client.name);
+            setLoggedIn(true);
+            setActivePortalTab(apts.length > 0 ? 'appointments' : 'orders');
+          }
+        } catch { /* silent */ }
+        setLoading(false);
+      })();
+    }
+  }, [clientSession, loggedIn, slug]);
 
   const formatPhoneInput = (val: string) => {
     const cleaned = val.replace(/\D/g, '').slice(0, 11);
@@ -719,6 +756,8 @@ function AccountSection({
     setClientName('');
     setPhone('');
     setError(null);
+    sessionApplied.current = false;
+    if (onLogout) onLogout();
   };
 
   const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string; icon: string }> = {
@@ -1190,6 +1229,346 @@ function AccountSection({
   );
 }
 
+// ============================================
+// COMPONENTE: Modal de Login/Cadastro Premium
+// ULTRA PREMIUM UPGRADE
+// ============================================
+function LoginModal({
+  slug,
+  primaryColor,
+  onClose,
+  onLogin,
+}: {
+  slug: string;
+  primaryColor: string;
+  onClose: () => void;
+  onLogin: (data: { name: string; phone: string }) => void;
+}) {
+  const [phone, setPhone] = useState('');
+  const [name, setName] = useState('');
+  const [step, setStep] = useState<'phone' | 'name'>('phone');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [remember, setRemember] = useState(true);
+
+  const formatPhoneInput = (val: string) => {
+    const cleaned = val.replace(/\D/g, '').slice(0, 11);
+    if (cleaned.length <= 2) return cleaned;
+    if (cleaned.length <= 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+  };
+
+  const phoneClean = phone.replace(/\D/g, '');
+  const phoneValid = phoneClean.length >= 10;
+
+  const handleLookup = async () => {
+    if (!phoneValid) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Tenta buscar cliente existente pelos endpoints públicos
+      const res = await fetch(
+        `${API_URL}/public-booking/appointments?phone=${encodeURIComponent(phoneClean)}&slug=${encodeURIComponent(slug)}`
+      );
+      const data = res.ok ? await res.json() : [];
+      const apts = Array.isArray(data) ? data : [];
+
+      if (apts.length > 0 && apts[0].client?.name) {
+        // Cliente já conhecido — login direto
+        const clientName = apts[0].client.name;
+        finishLogin(clientName, phoneClean);
+      } else {
+        // Primeiro acesso — pedir nome
+        setStep('name');
+      }
+    } catch {
+      // Erro de rede — permitir continuar com nome
+      setStep('name');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmitName = () => {
+    const trimmed = name.trim();
+    if (trimmed.length < 3) {
+      setError('Digite seu nome completo');
+      return;
+    }
+    finishLogin(trimmed, phoneClean);
+  };
+
+  const finishLogin = (clientName: string, clientPhone: string) => {
+    if (remember) {
+      try {
+        localStorage.setItem(`bela-pro-client-${slug}`, JSON.stringify({
+          name: clientName,
+          phone: clientPhone,
+          ts: Date.now(),
+        }));
+      } catch { /* ignore */ }
+    }
+    onLogin({ name: clientName, phone: clientPhone });
+  };
+
+  return (
+    <>
+      {/* Overlay */}
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          zIndex: 2000,
+          animation: 'fadeIn 0.2s ease',
+        }}
+      />
+      {/* Modal */}
+      <div style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        maxHeight: '85vh',
+        background: '#fff',
+        borderRadius: '24px 24px 0 0',
+        zIndex: 2100,
+        animation: 'slideUp 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
+        boxShadow: '0 -8px 40px rgba(0,0,0,0.2)',
+        display: 'flex',
+        flexDirection: 'column',
+      }}>
+        {/* Handle */}
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
+          <div style={{ width: 40, height: 4, borderRadius: 2, background: '#e5e7eb' }} />
+        </div>
+
+        <div style={{ padding: '8px 24px 32px', overflowY: 'auto' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+            <div>
+              <h2 style={{ margin: '0 0 4px', fontSize: 22, fontWeight: 800, color: '#1f2937', letterSpacing: -0.5 }}>
+                {step === 'phone' ? 'Entrar na sua conta' : 'Bem-vindo!'}
+              </h2>
+              <p style={{ margin: 0, fontSize: 14, color: '#6b7280', lineHeight: 1.4 }}>
+                {step === 'phone'
+                  ? 'Acesse seus agendamentos e pedidos'
+                  : 'Precisamos do seu nome para continuar'}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              aria-label="Fechar"
+              style={{
+                width: 36, height: 36, borderRadius: 10, border: '1px solid #e5e7eb',
+                background: '#fafafa', cursor: 'pointer', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', fontSize: 16,
+                color: '#6b7280', flexShrink: 0, marginTop: 2,
+                WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Ilustração */}
+          <div style={{
+            width: 72, height: 72, borderRadius: 20, margin: '0 auto 24px',
+            background: `linear-gradient(135deg, ${primaryColor}12, ${primaryColor}06)`,
+            border: `1.5px solid ${primaryColor}15`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            {step === 'phone' ? (
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+              </svg>
+            ) : (
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="1.8" strokeLinecap="round">
+                <circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/>
+              </svg>
+            )}
+          </div>
+
+          {/* Step: Phone */}
+          {step === 'phone' && (
+            <>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#6b7280', marginBottom: 8, letterSpacing: 0.2 }}>
+                Seu telefone
+              </label>
+              <div style={{ position: 'relative', marginBottom: error ? 12 : 16 }}>
+                <div style={{
+                  position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
+                  display: 'flex', alignItems: 'center', gap: 6, pointerEvents: 'none',
+                }}>
+                  <span style={{ fontSize: 16, lineHeight: 1 }}>🇧🇷</span>
+                  <span style={{ fontWeight: 500, fontSize: 15, color: '#6b7280' }}>+55</span>
+                </div>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={e => { setPhone(formatPhoneInput(e.target.value)); setError(null); }}
+                  placeholder="(11) 99999-9999"
+                  onKeyDown={e => e.key === 'Enter' && phoneValid && handleLookup()}
+                  autoComplete="tel"
+                  autoFocus
+                  style={{
+                    width: '100%',
+                    padding: '16px 16px 16px 80px',
+                    border: `2px solid ${error ? '#fca5a5' : '#e5e7eb'}`,
+                    borderRadius: 14,
+                    fontSize: 17,
+                    fontWeight: 500,
+                    background: '#fafafa',
+                    letterSpacing: 0.5,
+                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                  }}
+                  onFocus={e => { e.target.style.borderColor = primaryColor; e.target.style.background = '#fff'; e.target.style.boxShadow = `0 0 0 3px ${primaryColor}12`; }}
+                  onBlur={e => { e.target.style.borderColor = error ? '#fca5a5' : '#e5e7eb'; e.target.style.background = '#fafafa'; e.target.style.boxShadow = 'none'; }}
+                />
+              </div>
+
+              {error && (
+                <div style={{
+                  background: '#fef2f2', color: '#dc2626', padding: '11px 14px', borderRadius: 12,
+                  fontSize: 13, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8,
+                  fontWeight: 500, border: '1px solid #fecaca',
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                  {error}
+                </div>
+              )}
+
+              {/* Lembrar */}
+              <label style={{
+                display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20,
+                cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+              }}>
+                <div
+                  onClick={() => setRemember(!remember)}
+                  style={{
+                    width: 22, height: 22, borderRadius: 7, flexShrink: 0,
+                    border: `2px solid ${remember ? primaryColor : '#d1d5db'}`,
+                    background: remember ? primaryColor : '#fff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {remember && (
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                  )}
+                </div>
+                <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 500 }}>
+                  Lembrar meu telefone neste dispositivo
+                </span>
+              </label>
+
+              <button
+                onClick={handleLookup}
+                disabled={loading || !phoneValid}
+                style={{
+                  width: '100%', padding: '16px',
+                  background: phoneValid ? `linear-gradient(135deg, ${primaryColor}, ${primaryColor}DD)` : '#e5e7eb',
+                  color: phoneValid ? '#fff' : '#9ca3af',
+                  border: 'none', borderRadius: 14, fontSize: 16, fontWeight: 700,
+                  cursor: loading || !phoneValid ? 'default' : 'pointer',
+                  opacity: loading ? 0.7 : 1, transition: 'all 0.25s ease',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  boxShadow: phoneValid ? `0 4px 14px ${primaryColor}30` : 'none',
+                  letterSpacing: -0.2,
+                }}
+              >
+                {loading ? (
+                  <>
+                    <span style={{ width: 18, height: 18, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.6s linear infinite', display: 'inline-block' }} />
+                    Consultando...
+                  </>
+                ) : 'Continuar →'}
+              </button>
+            </>
+          )}
+
+          {/* Step: Name */}
+          {step === 'name' && (
+            <>
+              <p style={{ fontSize: 14, color: '#6b7280', marginBottom: 16, textAlign: 'center' }}>
+                Primeira vez por aqui? Informe seu nome para criarmos sua conta.
+              </p>
+
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#6b7280', marginBottom: 8, letterSpacing: 0.2 }}>
+                Nome completo
+              </label>
+              <input
+                type="text"
+                value={name}
+                onChange={e => { setName(e.target.value); setError(null); }}
+                placeholder="Maria Silva"
+                onKeyDown={e => e.key === 'Enter' && handleSubmitName()}
+                autoFocus
+                autoComplete="name"
+                style={{
+                  width: '100%', padding: '16px',
+                  border: `2px solid ${error ? '#fca5a5' : '#e5e7eb'}`,
+                  borderRadius: 14, fontSize: 16, fontWeight: 500,
+                  background: '#fafafa', marginBottom: error ? 12 : 20,
+                  transition: 'border-color 0.2s, box-shadow 0.2s',
+                }}
+                onFocus={e => { e.target.style.borderColor = primaryColor; e.target.style.background = '#fff'; e.target.style.boxShadow = `0 0 0 3px ${primaryColor}12`; }}
+                onBlur={e => { e.target.style.borderColor = error ? '#fca5a5' : '#e5e7eb'; e.target.style.background = '#fafafa'; e.target.style.boxShadow = 'none'; }}
+              />
+
+              {error && (
+                <div style={{
+                  background: '#fef2f2', color: '#dc2626', padding: '11px 14px', borderRadius: 12,
+                  fontSize: 13, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8,
+                  fontWeight: 500, border: '1px solid #fecaca',
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                  {error}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => setStep('phone')}
+                  style={{
+                    padding: '16px', border: `1.5px solid #e5e7eb`, borderRadius: 14,
+                    background: '#fff', fontSize: 15, fontWeight: 600, color: '#6b7280',
+                    cursor: 'pointer', flex: 1, WebkitTapHighlightColor: 'transparent',
+                  }}
+                >
+                  Voltar
+                </button>
+                <button
+                  onClick={handleSubmitName}
+                  style={{
+                    flex: 2, padding: '16px',
+                    background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}DD)`,
+                    color: '#fff', border: 'none', borderRadius: 14,
+                    fontSize: 16, fontWeight: 700, cursor: 'pointer',
+                    boxShadow: `0 4px 14px ${primaryColor}30`,
+                    letterSpacing: -0.2, WebkitTapHighlightColor: 'transparent',
+                  }}
+                >
+                  Criar conta →
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Privacy hint */}
+          <p style={{ textAlign: 'center', fontSize: 11, color: '#9ca3af', marginTop: 16, lineHeight: 1.5 }}>
+            Seus dados são consultados de forma segura e não são compartilhados.
+          </p>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function BookingPage() {
   const params = useParams();
   const slug = params.slug as string;
@@ -1202,12 +1581,29 @@ export default function BookingPage() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('home');
   const [showCartPanel, setShowCartPanel] = useState(false);
 
+  // ULTRA PREMIUM UPGRADE: Login modal + client session
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [clientSession, setClientSession] = useState<{ name: string; phone: string } | null>(null);
+
   // Hook com toda a lógica de booking
   const booking = useBooking({ slug });
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    // ULTRA PREMIUM UPGRADE: Restaurar sessão do localStorage
+    try {
+      const saved = localStorage.getItem(`bela-pro-client-${slug}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Cookie de 30 dias
+        if (parsed.name && parsed.phone && Date.now() - (parsed.ts || 0) < 30 * 24 * 60 * 60 * 1000) {
+          setClientSession({ name: parsed.name, phone: parsed.phone });
+        } else {
+          localStorage.removeItem(`bela-pro-client-${slug}`);
+        }
+      }
+    } catch { /* ignore */ }
+  }, [slug]);
 
   // Fechar CartPanel automaticamente quando carrinho esvaziar
   useEffect(() => {
@@ -1249,6 +1645,23 @@ export default function BookingPage() {
     setActiveTab('services');
     booking.proceedToDateSelection();
   }, [booking.proceedToDateSelection]);
+
+  // Login do cliente via modal
+  const handleLogin = useCallback((data: { name: string; phone: string }) => {
+    setClientSession(data);
+    setShowLoginModal(false);
+    booking.setClientName(data.name);
+    booking.setClientPhone(data.phone);
+  }, [booking]);
+
+  // Auto-preencher dados do cliente quando sessão restaurada do localStorage
+  useEffect(() => {
+    if (clientSession && booking.workspace) {
+      booking.setClientName(clientSession.name);
+      booking.setClientPhone(clientSession.phone);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientSession?.name, clientSession?.phone, booking.workspace?.id]);
 
   // CSS global + animações
   const globalStyles = `
@@ -1343,7 +1756,14 @@ export default function BookingPage() {
       {/* HEADER */}
       {/* ============================================ */}
       {usePremiumLayout ? (
-        <HeroSection workspace={booking.workspace} theme={booking.theme} />
+        <HeroSection
+          workspace={booking.workspace}
+          theme={booking.theme}
+          shopEnabled={booking.shopEnabled}
+          onAction={handleTabChange}
+          onLoginClick={() => setShowLoginModal(true)}
+          clientName={clientSession?.name}
+        />
       ) : (
         <BookingHeader workspace={booking.workspace} primaryColor={booking.primaryColor} />
       )}
@@ -1628,56 +2048,20 @@ export default function BookingPage() {
                 onRemoveFromCart={booking.removeFromCart}
                 onUpdateCartQuantity={booking.updateCartQuantity}
               />
-
-              {/* Floating cart bar */}
-              {booking.cart.length > 0 && (
-                <div style={{
-                  position: 'fixed',
-                  bottom: BOTTOM_NAV_HEIGHT + SAFE_AREA_BOTTOM + 8,
-                  left: 0,
-                  right: 0,
-                  zIndex: 900,
-                  animation: 'slideUp 0.25s ease',
-                }}>
-                  <div style={{
-                    maxWidth: 560,
-                    marginInline: 'auto',
-                    padding: '0 16px',
-                  }}>
-                    <button
-                      onClick={() => setShowCartPanel(true)}
-                      style={{
-                        width: '100%',
-                        padding: '15px 20px',
-                        background: `linear-gradient(135deg, ${booking.primaryColor}, ${booking.primaryColor}DD)`,
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: 16,
-                        fontSize: 15,
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        boxShadow: `0 6px 24px ${booking.primaryColor}40`,
-                        WebkitTapHighlightColor: 'transparent',
-                      }}
-                    >
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/></svg>
-                        Ver Carrinho ({booking.cartItemCount})
-                      </span>
-                      <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.3 }}>{formatPrice(booking.totalCartPrice)}</span>
-                    </button>
-                  </div>
-                </div>
-              )}
             </>
           )}
 
           {/* ======== TAB: ACCOUNT ======== */}
           {activeTab === 'account' && (
-            <AccountSection slug={slug} primaryColor={booking.primaryColor} />
+            <AccountSection
+              slug={slug}
+              primaryColor={booking.primaryColor}
+              clientSession={clientSession}
+              onLogout={() => {
+                setClientSession(null);
+                localStorage.removeItem(`bela-pro-client-${slug}`);
+              }}
+            />
           )}
 
         </div>
@@ -1833,6 +2217,65 @@ export default function BookingPage() {
           </div>
           <p style={{ color: COLORS.textMuted, fontSize: 10, margin: 0, opacity: 0.6 }}>Sistema de agendamento profissional</p>
         </footer>
+      )}
+
+      {/* ============================================ */}
+      {/* FLOATING CART BAR (global — visível em todas as tabs) */}
+      {/* ============================================ */}
+      {booking.cart.length > 0 && !showCartPanel && (
+        <div style={{
+          position: 'fixed',
+          bottom: BOTTOM_NAV_HEIGHT + SAFE_AREA_BOTTOM + 8,
+          left: 0,
+          right: 0,
+          zIndex: 900,
+          animation: 'slideUp 0.25s ease',
+        }}>
+          <div style={{
+            maxWidth: 560,
+            marginInline: 'auto',
+            padding: '0 16px',
+          }}>
+            <button
+              onClick={() => setShowCartPanel(true)}
+              style={{
+                width: '100%',
+                padding: '15px 20px',
+                background: `linear-gradient(135deg, ${booking.primaryColor}, ${booking.primaryColor}DD)`,
+                color: '#fff',
+                border: 'none',
+                borderRadius: 16,
+                fontSize: 15,
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                boxShadow: `0 6px 24px ${booking.primaryColor}40`,
+                WebkitTapHighlightColor: 'transparent',
+              }}
+              aria-label="Abrir carrinho"
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18"/></svg>
+                Ver Carrinho ({booking.cartItemCount})
+              </span>
+              <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.3 }}>{formatPrice(booking.totalCartPrice)}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================ */}
+      {/* LOGIN MODAL */}
+      {/* ============================================ */}
+      {showLoginModal && booking.workspace && (
+        <LoginModal
+          slug={slug}
+          primaryColor={booking.primaryColor}
+          onLogin={handleLogin}
+          onClose={() => setShowLoginModal(false)}
+        />
       )}
 
       {/* ============================================ */}
