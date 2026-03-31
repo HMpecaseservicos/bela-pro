@@ -266,4 +266,45 @@ export class AvailabilityService {
 
     return availableDays;
   }
+
+  /**
+   * Retorna o próximo horário disponível para o workspace (usa o serviço mais curto como referência).
+   * Busca hoje + próximos 7 dias.
+   */
+  async getNextAvailableSlot(workspaceId: string): Promise<{ startAt: string; endAt: string; dayLabel: string } | null> {
+    // Pega o serviço ativo mais curto do workspace como referência
+    const shortestService = await this.prisma.service.findFirst({
+      where: { workspaceId, isActive: true, itemType: 'SERVICE' },
+      orderBy: { durationMinutes: 'asc' },
+      select: { id: true },
+    });
+
+    if (!shortestService) return null;
+
+    const now = new Date();
+
+    for (let i = 0; i < 7; i++) {
+      const checkDate = new Date(now);
+      checkDate.setDate(checkDate.getDate() + i);
+      const dateStr = checkDate.toISOString().split('T')[0];
+
+      try {
+        const slots = await this.getAvailableSlots(workspaceId, [shortestService.id], dateStr);
+        const available = slots.find((s) => s.available);
+        if (available) {
+          let dayLabel = 'Hoje';
+          if (i === 1) dayLabel = 'Amanhã';
+          else if (i > 1) {
+            dayLabel = checkDate.toLocaleDateString('pt-BR', { weekday: 'long' });
+            dayLabel = dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1);
+          }
+          return { startAt: available.startAt, endAt: available.endAt, dayLabel };
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    return null;
+  }
 }

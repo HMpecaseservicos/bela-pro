@@ -179,6 +179,41 @@ export class WorkspaceService {
   }
 
   /**
+   * Retorna horários de funcionamento da semana (público)
+   * dayOfWeek: 0=Dom, 1=Seg ... 6=Sab
+   */
+  async getPublicScheduleHours(workspaceId: string) {
+    const rules = await this.prisma.scheduleRule.findMany({
+      where: { workspaceId, isActive: true },
+      select: {
+        dayOfWeek: true,
+        startTimeMinutes: true,
+        endTimeMinutes: true,
+      },
+      orderBy: [{ dayOfWeek: 'asc' }, { startTimeMinutes: 'asc' }],
+    });
+    return rules;
+  }
+
+  /**
+   * Lista depoimentos ativos do workspace (público)
+   */
+  async getPublicTestimonials(workspaceId: string) {
+    return this.prisma.testimonial.findMany({
+      where: { workspaceId, isActive: true },
+      select: {
+        id: true,
+        clientName: true,
+        rating: true,
+        text: true,
+        sortOrder: true,
+        createdAt: true,
+      },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
+    });
+  }
+
+  /**
    * Atualiza configurações do workspace (autenticado)
    */
   async update(workspaceId: string, input: unknown) {

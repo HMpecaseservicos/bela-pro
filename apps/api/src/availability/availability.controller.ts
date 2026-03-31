@@ -44,6 +44,15 @@ export class AvailabilityController {
   }
 
   /**
+   * GET /availability/next-slot?workspaceId=xxx
+   * Público - retorna o próximo horário disponível (qualquer serviço)
+   */
+  @Get('next-slot')
+  async getNextSlot(@Query('workspaceId') workspaceId: string) {
+    return this.availabilityService.getNextAvailableSlot(workspaceId);
+  }
+
+  /**
    * Parse serviceIds (comma-separated) ou serviceId (singular) para array
    */
   private parseServiceIds(serviceIds?: string, serviceId?: string): string[] {

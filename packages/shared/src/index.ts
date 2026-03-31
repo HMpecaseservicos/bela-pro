@@ -256,3 +256,28 @@ export interface UnifiedCheckoutResponse {
   paymentInfo: PaymentInfo | null;
   requiresPayment: boolean;
 }
+
+// ============================================
+// Testimonials / Schedule Hours
+// ============================================
+
+export interface TestimonialPublic {
+  id: Id;
+  clientName: string;
+  rating: number;
+  text: string;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface ScheduleHourRule {
+  dayOfWeek: number; // 0=Dom..6=Sab
+  startTimeMinutes: number;
+  endTimeMinutes: number;
+}
+
+export interface NextSlotInfo {
+  startAt: string;
+  endAt: string;
+  dayLabel: string;
+}

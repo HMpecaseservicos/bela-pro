@@ -228,6 +228,9 @@ model Workspace {
   // LOJA UNIFICADA: Pedidos do workspace
   orders Order[]
 
+  // Depoimentos / Avaliações
+  testimonials Testimonial[]
+
   // Origem do convite (se veio de um convite)
   inviteSource BusinessInvite? @relation("InviteToWorkspace")
 }
@@ -1638,5 +1641,23 @@ model AdminMessageDismissal {
 
   @@unique([messageId, workspaceId])
   @@index([workspaceId])
+}
+
+// Depoimentos / Avaliações de clientes
+model Testimonial {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspaceId String
+  clientName  String
+  rating      Int      @default(5) // 1-5
+  text        String
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, isActive])
 }
 

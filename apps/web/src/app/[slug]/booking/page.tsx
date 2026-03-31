@@ -293,6 +293,32 @@ function HomeSection({
 }) {
   const [highlightScrollIndex, setHighlightScrollIndex] = useState(0);
   const highlightScrollRef = useRef<HTMLDivElement>(null);
+  const [testimonialScrollIndex, setTestimonialScrollIndex] = useState(0);
+  const testimonialScrollRef = useRef<HTMLDivElement>(null);
+
+  // ── Data fetching for new homepage sections ──
+  const [nextSlot, setNextSlot] = useState<{ startAt: string; endAt: string; dayLabel: string } | null>(null);
+  const [testimonials, setTestimonials] = useState<{ id: string; clientName: string; rating: number; text: string }[]>([]);
+  const [scheduleHours, setScheduleHours] = useState<{ dayOfWeek: number; startTimeMinutes: number; endTimeMinutes: number }[]>([]);
+
+  useEffect(() => {
+    if (!workspace?.id) return;
+    // Next available slot
+    fetch(`${API_URL}/availability/next-slot?workspaceId=${workspace.id}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setNextSlot(d); })
+      .catch(() => {});
+    // Public testimonials
+    fetch(`${API_URL}/workspace/${workspace.id}/testimonials`)
+      .then(r => r.ok ? r.json() : [])
+      .then(setTestimonials)
+      .catch(() => {});
+    // Schedule hours
+    fetch(`${API_URL}/workspace/${workspace.id}/schedule-hours`)
+      .then(r => r.ok ? r.json() : [])
+      .then(setScheduleHours)
+      .catch(() => {});
+  }, [workspace?.id]);
 
   const popularServices = services.filter(s => s.itemType !== 'PRODUCT').slice(0, 4);
 
@@ -329,6 +355,42 @@ function HomeSection({
     el.addEventListener('scroll', handleScroll, { passive: true });
     return () => el.removeEventListener('scroll', handleScroll);
   }, [highlightItems.length]);
+
+  // Track testimonial carousel scroll
+  useEffect(() => {
+    const el = testimonialScrollRef.current;
+    if (!el || testimonials.length <= 1) return;
+    const handleScroll = () => {
+      const scrollLeft = el.scrollLeft;
+      const cardWidth = 280;
+      const index = Math.round(scrollLeft / cardWidth);
+      setTestimonialScrollIndex(Math.min(index, testimonials.length - 1));
+    };
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [testimonials.length]);
+
+  // Schedule helpers
+  const DAY_NAMES = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+  const DAY_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  const formatMinutes = (m: number) => {
+    const h = Math.floor(m / 60);
+    const min = m % 60;
+    return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+  };
+  const isOpenNow = () => {
+    if (scheduleHours.length === 0) return null;
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const todayRules = scheduleHours.filter(r => r.dayOfWeek === dayOfWeek);
+    if (todayRules.length === 0) return { open: false, nextOpen: null as string | null };
+    const openRule = todayRules.find(r => currentMinutes >= r.startTimeMinutes && currentMinutes < r.endTimeMinutes);
+    if (openRule) return { open: true, closesAt: formatMinutes(openRule.endTimeMinutes) };
+    const nextRule = todayRules.find(r => r.startTimeMinutes > currentMinutes);
+    return { open: false, nextOpen: nextRule ? formatMinutes(nextRule.startTimeMinutes) : null };
+  };
+  const openStatus = scheduleHours.length > 0 ? isOpenNow() : null;
 
   if (loading) return <HomeSkeleton />;
 
@@ -392,8 +454,8 @@ function HomeSection({
         </div>
       )}
 
-      {/* ── Info Strip — Localização + Rating ── */}
-      {hideQuickActions && (workspace?.profile?.addressLine || workspace?.ratingScore) && (
+      {/* ── Info Strip — Localização + Rating + Status ── */}
+      {hideQuickActions && (workspace?.profile?.addressLine || workspace?.ratingScore || openStatus) && (
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           gap: 16, flexWrap: 'wrap',
@@ -401,6 +463,27 @@ function HomeSection({
           background: '#f8fafc', borderRadius: 14,
           fontSize: 13, color: COLORS.textSecondary, fontWeight: 500,
         }}>
+          {openStatus && (
+            <>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: openStatus.open ? '#22c55e' : '#ef4444',
+                  boxShadow: openStatus.open ? '0 0 6px #22c55e80' : 'none',
+                }} />
+                {openStatus.open ? (
+                  <span style={{ color: '#22c55e', fontWeight: 600 }}>Aberto agora</span>
+                ) : (
+                  <span>
+                    Fechado{(openStatus as any).nextOpen ? ` · Abre às ${(openStatus as any).nextOpen}` : ''}
+                  </span>
+                )}
+              </span>
+              {(workspace?.profile?.addressLine || workspace?.ratingScore) && (
+                <span style={{ color: '#d1d5db' }}>·</span>
+              )}
+            </>
+          )}
           {workspace.profile?.addressLine && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2.5" strokeLinecap="round">
@@ -898,6 +981,259 @@ function HomeSection({
               )}
             </div>
           )}
+        </section>
+      )}
+
+      {/* ── 2.3 Próximo Horário Disponível ── */}
+      {nextSlot && (
+        <section
+          aria-label="Próximo horário disponível"
+          onClick={() => onNavigate('services')}
+          style={{
+            marginBottom: 20,
+            padding: '18px 20px',
+            background: `linear-gradient(135deg, ${primaryColor}12 0%, ${primaryColor}05 100%)`,
+            borderRadius: 18,
+            border: `1px solid ${primaryColor}20`,
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 14,
+            transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+          }}
+        >
+          <div style={{
+            width: 48, height: 48, borderRadius: 14,
+            background: `linear-gradient(135deg, ${primaryColor}25, ${primaryColor}10)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2" strokeLinecap="round">
+              <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+            </svg>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Próximo horário
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: COLORS.textPrimary, marginTop: 2 }}>
+              {nextSlot.dayLabel}, {new Date(nextSlot.startAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          </div>
+          <div style={{
+            padding: '8px 16px', borderRadius: 12,
+            background: primaryColor, color: '#fff',
+            fontSize: 13, fontWeight: 700,
+            whiteSpace: 'nowrap',
+          }}>
+            Agendar →
+          </div>
+        </section>
+      )}
+
+      {/* ── 2.4 Avaliações / Depoimentos ── */}
+      {testimonials.length > 0 && (
+        <section aria-label="Depoimentos de clientes" style={{ marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: '#fef3c708', border: '1px solid #f59e0b20',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <span style={{ fontSize: 16 }}>⭐</span>
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.2 }}>
+                Avaliações
+              </h3>
+              <p style={{ margin: 0, fontSize: 12, color: COLORS.textMuted }}>
+                O que nossos clientes dizem
+              </p>
+            </div>
+          </div>
+          <div
+            ref={testimonialScrollRef}
+            style={{
+              display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8,
+              scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch',
+              msOverflowStyle: 'none', scrollbarWidth: 'none',
+            }}
+          >
+            {testimonials.map(t => (
+              <div
+                key={t.id}
+                style={{
+                  minWidth: 260, maxWidth: 280, flex: '0 0 auto',
+                  padding: '20px', background: '#fff', borderRadius: 18,
+                  border: '1px solid #f3f4f6',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+                  scrollSnapAlign: 'start',
+                }}
+              >
+                <div style={{ display: 'flex', gap: 2, marginBottom: 10 }}>
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <span key={i} style={{ color: i <= t.rating ? '#f59e0b' : '#e5e7eb', fontSize: 14 }}>★</span>
+                  ))}
+                </div>
+                <p style={{
+                  margin: '0 0 12px', fontSize: 14, color: COLORS.textSecondary,
+                  lineHeight: 1.6, fontStyle: 'italic',
+                  display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                }}>
+                  &ldquo;{t.text}&rdquo;
+                </p>
+                <div style={{ fontSize: 13, fontWeight: 700, color: COLORS.textPrimary }}>
+                  {t.clientName}
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Dot indicators */}
+          {testimonials.length > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 10 }}>
+              {testimonials.map((_, i) => (
+                <span key={i} style={{
+                  width: i === testimonialScrollIndex ? 20 : 6,
+                  height: 6, borderRadius: 3,
+                  background: i === testimonialScrollIndex ? primaryColor : `${primaryColor}30`,
+                  transition: 'all 0.3s ease',
+                }} />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ── 2.5 Instagram Feed (Gallery) ── */}
+      {workspace?.galleryUrls?.length > 0 && instagramUrl && (
+        <section aria-label="Instagram Feed" style={{ marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 10,
+                background: '#E4405F08', border: '1px solid #E4405F20',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E4405F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1.5" fill="#E4405F" stroke="none"/>
+                </svg>
+              </div>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.2 }}>
+                Instagram
+              </h3>
+            </div>
+            <a
+              href={instagramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                fontSize: 13, fontWeight: 600, color: '#E4405F',
+                textDecoration: 'none',
+              }}
+            >
+              Ver mais →
+            </a>
+          </div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: 4,
+            borderRadius: 16,
+            overflow: 'hidden',
+          }}>
+            {workspace.galleryUrls.slice(0, 6).map((url: string, i: number) => (
+              <a
+                key={i}
+                href={instagramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  aspectRatio: '1/1',
+                  overflow: 'hidden',
+                  position: 'relative',
+                  display: 'block',
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={getImageUrl(url)}
+                  alt={`Foto ${i + 1}`}
+                  loading="lazy"
+                  style={{
+                    width: '100%', height: '100%', objectFit: 'cover',
+                    transition: 'transform 0.3s ease',
+                  }}
+                />
+                {i === 5 && workspace.galleryUrls.length > 6 && (
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    background: 'rgba(0,0,0,0.5)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#fff', fontSize: 16, fontWeight: 700,
+                  }}>
+                    +{workspace.galleryUrls.length - 6}
+                  </div>
+                )}
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── 4.2 Horário de Funcionamento ── */}
+      {scheduleHours.length > 0 && (
+        <section aria-label="Horário de funcionamento" style={{
+          marginBottom: 28,
+          padding: '22px 20px',
+          background: '#fff',
+          borderRadius: 20,
+          boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+          border: '1px solid #f3f4f6',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: `${primaryColor}0A`, border: `1px solid ${primaryColor}15`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2" strokeLinecap="round">
+                <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+              </svg>
+            </div>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.2 }}>
+              Horário de Funcionamento
+            </h3>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {[1, 2, 3, 4, 5, 6, 0].map(day => {
+              const rules = scheduleHours.filter(r => r.dayOfWeek === day);
+              const isToday = new Date().getDay() === day;
+              return (
+                <div key={day} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '10px 14px',
+                  background: isToday ? `${primaryColor}08` : 'transparent',
+                  borderRadius: 10,
+                  border: isToday ? `1px solid ${primaryColor}20` : '1px solid transparent',
+                }}>
+                  <span style={{
+                    fontSize: 14, fontWeight: isToday ? 700 : 500,
+                    color: isToday ? primaryColor : COLORS.textSecondary,
+                  }}>
+                    {DAY_SHORT[day]}
+                    {isToday && <span style={{ fontSize: 11, marginLeft: 6, color: primaryColor, fontWeight: 600 }}>HOJE</span>}
+                  </span>
+                  <span style={{
+                    fontSize: 14, fontWeight: isToday ? 700 : 500,
+                    color: rules.length > 0 ? (isToday ? COLORS.textPrimary : COLORS.textSecondary) : COLORS.textMuted,
+                  }}>
+                    {rules.length > 0
+                      ? rules.map(r => `${formatMinutes(r.startTimeMinutes)} - ${formatMinutes(r.endTimeMinutes)}`).join(', ')
+                      : 'Fechado'
+                    }
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </section>
       )}
 

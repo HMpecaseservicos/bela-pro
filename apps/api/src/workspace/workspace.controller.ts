@@ -56,6 +56,24 @@ export class WorkspaceController {
   }
 
   /**
+   * GET /workspace/:workspaceId/schedule-hours
+   * Público - retorna horários de funcionamento da semana
+   */
+  @Get(':workspaceId/schedule-hours')
+  async getScheduleHours(@Param('workspaceId') workspaceId: string) {
+    return this.workspaceService.getPublicScheduleHours(workspaceId);
+  }
+
+  /**
+   * GET /workspace/:workspaceId/testimonials
+   * Público - lista depoimentos ativos
+   */
+  @Get(':workspaceId/testimonials')
+  async getTestimonials(@Param('workspaceId') workspaceId: string) {
+    return this.workspaceService.getPublicTestimonials(workspaceId);
+  }
+
+  /**
    * GET /workspace/:workspaceId
    * Autenticado - retorna dados completos para o painel admin
    * SECURITY: Valida que workspaceId do URL corresponde ao do token

@@ -18,6 +18,7 @@ import {
   Tags,
   ShoppingBag,
   ClipboardList,
+  Star,
   type LucideIcon,
 } from 'lucide-react';
 import WorkspaceSwitcher from './components/WorkspaceSwitcher';
@@ -49,6 +50,7 @@ const menuItems = [
   { href: '/dashboard/horarios', label: 'Horarios', icon: Clock3 },
   { href: '/dashboard/equipe', label: 'Equipe', icon: UserRound },
   { href: '/dashboard/aparencia', label: 'Aparencia', icon: Palette },
+  { href: '/dashboard/depoimentos', label: 'Depoimentos', icon: Star },
   { href: '/dashboard/config', label: 'Configuracoes', icon: Settings },
 ];
 
@@ -69,6 +71,7 @@ const moreMenuItems = [
   { href: '/dashboard/horarios', label: 'Horários', icon: Clock3 },
   { href: '/dashboard/equipe', label: 'Equipe', icon: UserRound },
   { href: '/dashboard/aparencia', label: 'Aparência', icon: Palette },
+  { href: '/dashboard/depoimentos', label: 'Depoimentos', icon: Star },
   { href: '/dashboard/config', label: 'Configurações', icon: Settings },
 ];
 
