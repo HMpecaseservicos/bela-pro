@@ -10,13 +10,14 @@ interface HeroSectionProps {
   theme: ThemeConfig;
   // ULTRA PREMIUM UPGRADE: callbacks de ação
   shopEnabled?: boolean;
+  businessMode?: 'BOOKING' | 'SHOP' | 'HYBRID';
   onAction?: (tab: 'services' | 'shop') => void;
   onLoginClick?: () => void;
   clientName?: string | null;
   ctaText?: string | null;
 }
 
-export function HeroSection({ workspace, theme, shopEnabled, onAction, onLoginClick, clientName, ctaText }: HeroSectionProps) {
+export function HeroSection({ workspace, theme, shopEnabled, businessMode = 'BOOKING', onAction, onLoginClick, clientName, ctaText }: HeroSectionProps) {
   const { colors } = theme;
   const hasCover = !!workspace.coverImageUrl;
   const hasLogo = !!workspace.logoUrl;
@@ -187,6 +188,7 @@ export function HeroSection({ workspace, theme, shopEnabled, onAction, onLoginCl
             flexWrap: 'wrap',
             justifyContent: 'center',
           }}>
+            {businessMode !== 'SHOP' && (
             <button
               onClick={() => onAction('services')}
               style={{
@@ -210,8 +212,9 @@ export function HeroSection({ workspace, theme, shopEnabled, onAction, onLoginCl
                 {ctaText || 'Agendar'}
               </span>
             </button>
+            )}
 
-            {shopEnabled && (
+            {businessMode !== 'BOOKING' && (
               <button
                 onClick={() => onAction('shop')}
                 style={{

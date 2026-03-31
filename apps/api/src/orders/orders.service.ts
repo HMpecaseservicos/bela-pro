@@ -74,10 +74,10 @@ export class OrdersService {
     // Verificar que o workspace tem loja habilitada
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { shopEnabled: true },
+      select: { businessMode: true },
     });
 
-    if (!workspace?.shopEnabled) {
+    if (!workspace || workspace.businessMode === 'BOOKING') {
       throw new BadRequestException(
         'A loja não está habilitada neste workspace.',
       );

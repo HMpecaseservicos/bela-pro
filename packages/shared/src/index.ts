@@ -74,6 +74,9 @@ export type SponsorTier = 'DIAMOND' | 'GOLD' | 'SILVER' | 'BRONZE';
 // LOJA UNIFICADA
 export type ServiceItemType = 'SERVICE' | 'PRODUCT';
 
+// MODO DE NEGÓCIO
+export type BusinessMode = 'BOOKING' | 'SHOP' | 'HYBRID';
+
 export type OrderStatus =
   | 'PENDING'
   | 'PENDING_PAYMENT'
@@ -124,7 +127,8 @@ export interface WorkspacePublic {
   welcomeText: string | null;
   description: string | null;
   profile: ProfessionalProfile | null;
-  shopEnabled?: boolean; // LOJA UNIFICADA
+  shopEnabled?: boolean; // LOJA UNIFICADA (legado — derivado de businessMode)
+  businessMode?: BusinessMode;
   highlightTitle: string | null;
   highlightSubtitle: string | null;
   highlightServiceIds: string[];

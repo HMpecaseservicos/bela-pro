@@ -102,6 +102,12 @@ enum ServiceItemType {
   PRODUCT // Produto físico para venda
 }
 
+enum BusinessMode {
+  BOOKING // Só agendamento (padrão)
+  SHOP    // Só loja / e-commerce
+  HYBRID  // Agendamento + Loja
+}
+
 enum OrderStatus {
   PENDING         // Aguardando pagamento
   PENDING_PAYMENT // Aguardando confirmação PIX
@@ -167,7 +173,8 @@ model Workspace {
   pixCity       String? // Cidade (para QR Code)
 
   // ==================== LOJA UNIFICADA ====================
-  shopEnabled Boolean @default(false) // Ativar Loja / Venda de Produtos
+  shopEnabled  Boolean      @default(false) // Legado — derivado de businessMode
+  businessMode BusinessMode @default(BOOKING) // Modo de operação do workspace
 
   // ==================== PREMIUM HOMEPAGE ====================
   highlightTitle      String?  // Título da seção destaque (ex: "Promoção da Semana")

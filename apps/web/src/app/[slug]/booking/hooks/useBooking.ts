@@ -39,6 +39,7 @@ interface UseBookingReturn extends BookingState {
   totalPrice: number;
   // LOJA UNIFICADA: Computed
   shopEnabled: boolean;
+  businessMode: 'BOOKING' | 'SHOP' | 'HYBRID';
   hasServices: boolean;
   hasProducts: boolean;
   totalCartPrice: number;
@@ -80,7 +81,8 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
   const totalPrice = state.selectedServices.reduce((sum, s) => sum + s.priceCents, 0);
 
   // LOJA UNIFICADA: computed values
-  const shopEnabled = state.workspace?.shopEnabled === true;
+  const businessMode = (state.workspace?.businessMode as 'BOOKING' | 'SHOP' | 'HYBRID') || 'BOOKING';
+  const shopEnabled = businessMode !== 'BOOKING';
   const hasServices = state.selectedServices.length > 0;
   const hasProducts = state.cart.length > 0;
   const totalCartPrice = state.cart.reduce((sum, item) => sum + item.service.priceCents * item.quantity, 0);
@@ -509,6 +511,7 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
     totalPrice,
     // LOJA UNIFICADA: computed
     shopEnabled,
+    businessMode,
     hasServices,
     hasProducts,
     totalCartPrice,

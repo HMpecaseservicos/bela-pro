@@ -87,6 +87,7 @@ function BottomNav({
   activeTab,
   onTabChange,
   shopEnabled,
+  businessMode,
   cartItemCount,
   primaryColor,
   hasGallery,
@@ -95,16 +96,20 @@ function BottomNav({
   activeTab: ActiveTab;
   onTabChange: (tab: ActiveTab) => void;
   shopEnabled: boolean;
+  businessMode: 'BOOKING' | 'SHOP' | 'HYBRID';
   cartItemCount: number;
   primaryColor: string;
   hasGallery?: boolean;
   onGalleryOpen?: () => void;
 }) {
+  const showServices = businessMode !== 'SHOP';
+  const showShop = businessMode !== 'BOOKING';
+
   const tabs: { id: string; label: string; show: boolean; isGallery?: boolean }[] = [
     { id: 'home', label: 'Início', show: true },
-    { id: 'services', label: 'Agendar', show: true },
+    { id: 'services', label: 'Agendar', show: showServices },
     { id: 'gallery', label: 'Galeria', show: !!hasGallery, isGallery: true },
-    { id: 'shop', label: 'Loja', show: shopEnabled },
+    { id: 'shop', label: 'Loja', show: showShop },
     { id: 'account', label: 'Conta', show: true },
   ];
 
@@ -276,6 +281,7 @@ function HomeSection({
   primaryColor,
   theme,
   shopEnabled,
+  businessMode,
   onNavigate,
   hideQuickActions,
   clientName,
@@ -286,6 +292,7 @@ function HomeSection({
   primaryColor: string;
   theme: any;
   shopEnabled: boolean;
+  businessMode: 'BOOKING' | 'SHOP' | 'HYBRID';
   onNavigate: (tab: ActiveTab) => void;
   hideQuickActions?: boolean;
   clientName?: string;
@@ -569,10 +576,11 @@ function HomeSection({
       {!hideQuickActions && (
         <div style={{
           display: 'grid',
-          gridTemplateColumns: shopEnabled ? '1fr 1fr' : '1fr',
+          gridTemplateColumns: businessMode === 'HYBRID' ? '1fr 1fr' : '1fr',
           gap: 12,
           marginBottom: 32,
         }}>
+          {businessMode !== 'SHOP' && (
           <button
             onClick={() => onNavigate('services')}
             aria-label="Ir para agendamento"
@@ -607,6 +615,7 @@ function HomeSection({
               <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.3 }}>Escolha serviço e horário</p>
             </div>
           </button>
+          )}
           {shopEnabled && (
             <button
               onClick={() => onNavigate('shop')}
@@ -985,7 +994,7 @@ function HomeSection({
       )}
 
       {/* ── 2.3 Próximo Horário Disponível ── */}
-      {nextSlot && (
+      {businessMode !== 'SHOP' && nextSlot && (
         <section
           aria-label="Próximo horário disponível"
           onClick={() => onNavigate('services')}
@@ -1179,7 +1188,7 @@ function HomeSection({
       )}
 
       {/* ── 4.2 Horário de Funcionamento ── */}
-      {scheduleHours.length > 0 && (
+      {businessMode !== 'SHOP' && scheduleHours.length > 0 && (
         <section aria-label="Horário de funcionamento" style={{
           marginBottom: 28,
           padding: '22px 20px',
@@ -2615,6 +2624,7 @@ export default function BookingPage() {
           workspace={booking.workspace}
           theme={booking.theme}
           shopEnabled={booking.shopEnabled}
+          businessMode={booking.businessMode}
           onAction={handleTabChange}
           onLoginClick={() => setShowLoginModal(true)}
           clientName={clientSession?.name}
@@ -2654,6 +2664,7 @@ export default function BookingPage() {
                 primaryColor={booking.primaryColor}
                 theme={booking.theme}
                 shopEnabled={booking.shopEnabled}
+                businessMode={booking.businessMode}
                 onNavigate={handleTabChange}
                 hideQuickActions={usePremiumLayout}
                 clientName={clientSession?.name}
@@ -2857,7 +2868,7 @@ export default function BookingPage() {
           )}
 
           {/* ======== TAB: SHOP ======== */}
-          {activeTab === 'shop' && booking.shopEnabled && (
+          {activeTab === 'shop' && booking.businessMode !== 'BOOKING' && (
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 22 }}>
                 <div style={{
@@ -3209,6 +3220,7 @@ export default function BookingPage() {
           activeTab={activeTab}
           onTabChange={handleTabChange}
           shopEnabled={booking.shopEnabled}
+          businessMode={booking.businessMode}
           cartItemCount={booking.cartItemCount}
           primaryColor={booking.primaryColor}
           hasGallery={!!(booking.workspace.galleryUrls && booking.workspace.galleryUrls.length > 0)}

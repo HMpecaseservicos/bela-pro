@@ -454,7 +454,7 @@ export class PublicBookingService {
     }
 
     // Se tem produtos, workspace precisa ter loja habilitada
-    if (hasProducts && !workspace.shopEnabled) {
+    if (hasProducts && workspace.businessMode === 'BOOKING') {
       throw new BadRequestException(
         'A loja não está habilitada neste workspace.',
       );
@@ -716,9 +716,9 @@ export class PublicBookingService {
   async findClientOrders(slug: string, phone: string) {
     const workspace = await this.prisma.workspace.findUnique({
       where: { slug },
-      select: { id: true, shopEnabled: true },
+      select: { id: true, businessMode: true },
     });
-    if (!workspace || !workspace.shopEnabled) return [];
+    if (!workspace || workspace.businessMode === 'BOOKING') return [];
 
     const phoneE164 = normalizePhoneE164(phone);
     const client = await this.prisma.client.findUnique({

@@ -25,7 +25,8 @@ const updateWorkspaceSchema = z.object({
   maxBookingDaysAhead: z.number().int().min(1).max(365).optional(),
   slotIntervalMinutes: z.number().int().refine((v: number) => [15, 30, 60].includes(v)).optional(),
   slug: z.string().min(2).max(50).optional(),
-  shopEnabled: z.boolean().optional(), // LOJA UNIFICADA
+  shopEnabled: z.boolean().optional(), // LOJA UNIFICADA (legado)
+  businessMode: z.enum(['BOOKING', 'SHOP', 'HYBRID']).optional(),
   // PREMIUM HOMEPAGE
   highlightTitle: z.string().max(100).optional().nullable(),
   highlightSubtitle: z.string().max(200).optional().nullable(),
@@ -78,6 +79,7 @@ export class WorkspaceService {
         slotIntervalMinutes: true,
         // LOJA UNIFICADA
         shopEnabled: true,
+        businessMode: true,
         // PREMIUM HOMEPAGE
         highlightTitle: true,
         highlightSubtitle: true,
@@ -218,6 +220,11 @@ export class WorkspaceService {
    */
   async update(workspaceId: string, input: unknown) {
     const { profile, ...workspaceData } = updateWorkspaceSchema.parse(input);
+
+    // Derivar shopEnabled a partir de businessMode (compatibilidade legado)
+    if (workspaceData.businessMode) {
+      workspaceData.shopEnabled = workspaceData.businessMode !== 'BOOKING';
+    }
 
     // Verifica se workspace existe
     const workspace = await this.prisma.workspace.findUnique({

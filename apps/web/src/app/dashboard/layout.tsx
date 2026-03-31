@@ -82,7 +82,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
-  const [shopEnabled, setShopEnabled] = useState(false);
+  const [businessMode, setBusinessMode] = useState<'BOOKING' | 'SHOP' | 'HYBRID'>('BOOKING');
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
@@ -107,7 +107,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
         return r.ok ? r.json() : null;
       })
-      .then(ws => { if (ws?.shopEnabled) setShopEnabled(true); })
+      .then(ws => { if (ws?.businessMode) setBusinessMode(ws.businessMode); })
       .catch(() => {});
 
     const checkMobile = () => {
@@ -148,13 +148,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return pathname.startsWith(href);
   }
 
-  const shopPaths = ['/dashboard/produtos', '/dashboard/pedidos'];
-  const filteredMenuItems = shopEnabled
-    ? menuItems
-    : menuItems.filter(i => !shopPaths.includes(i.href));
-  const filteredMoreMenuItems = shopEnabled
-    ? moreMenuItems
-    : moreMenuItems.filter(i => !shopPaths.includes(i.href));
+  // Paths filtrados por modo de negócio
+  const bookingOnlyPaths = ['/dashboard/produtos', '/dashboard/pedidos'];
+  const shopOnlyPaths = ['/dashboard/agenda', '/dashboard/servicos', '/dashboard/horarios'];
+
+  const hiddenPaths = businessMode === 'BOOKING'
+    ? bookingOnlyPaths
+    : businessMode === 'SHOP'
+      ? shopOnlyPaths
+      : [];
+
+  const filteredMenuItems = menuItems.filter(i => !hiddenPaths.includes(i.href));
+  const filteredMoreMenuItems = moreMenuItems.filter(i => !hiddenPaths.includes(i.href));
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: THEME.page }}>

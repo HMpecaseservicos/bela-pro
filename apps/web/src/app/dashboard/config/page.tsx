@@ -16,7 +16,7 @@ interface WorkspaceConfig {
   autoConfirm: boolean;
   minLeadTimeMinutes: number;
   slotIntervalMinutes: number;
-  shopEnabled: boolean; // LOJA UNIFICADA
+  businessMode: 'BOOKING' | 'SHOP' | 'HYBRID';
 }
 
 export default function ConfigPage() {
@@ -31,7 +31,7 @@ export default function ConfigPage() {
     autoConfirm: true,
     minLeadTimeMinutes: 120,
     slotIntervalMinutes: 15,
-    shopEnabled: false,
+    businessMode: 'BOOKING',
   });
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -90,7 +90,7 @@ export default function ConfigPage() {
           autoConfirm: true, // TODO: adicionar campo no schema
           minLeadTimeMinutes: workspace.minLeadTimeMinutes || 120,
           slotIntervalMinutes: workspace.slotIntervalMinutes || 15,
-          shopEnabled: workspace.shopEnabled || false,
+          businessMode: workspace.businessMode || 'BOOKING',
         });
       } catch (err) {
         console.error('Erro ao carregar workspace:', err);
@@ -103,14 +103,15 @@ export default function ConfigPage() {
     loadWorkspace();
   }, []);
 
-  async function handleToggleShop() {
-    const newValue = !config.shopEnabled;
-    setConfig({ ...config, shopEnabled: newValue });
+  async function handleChangeBusinessMode(newMode: 'BOOKING' | 'SHOP' | 'HYBRID') {
+    const prevMode = config.businessMode;
+    if (newMode === prevMode) return;
+    setConfig({ ...config, businessMode: newMode });
 
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        setConfig({ ...config, shopEnabled: !newValue });
+        setConfig({ ...config, businessMode: prevMode });
         setError('Você precisa estar logado');
         return;
       }
@@ -121,15 +122,15 @@ export default function ConfigPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ shopEnabled: newValue }),
+        body: JSON.stringify({ businessMode: newMode }),
       });
 
       if (!res.ok) {
-        setConfig({ ...config, shopEnabled: !newValue });
-        setError('Erro ao salvar configuração da loja');
+        setConfig({ ...config, businessMode: prevMode });
+        setError('Erro ao salvar modo de negócio');
       }
     } catch {
-      setConfig({ ...config, shopEnabled: !newValue });
+      setConfig({ ...config, businessMode: prevMode });
       setError('Erro de conexão com o servidor');
     }
   }
@@ -159,7 +160,7 @@ export default function ConfigPage() {
           maxBookingDaysAhead: config.maxAdvanceDays,
           minLeadTimeMinutes: config.minLeadTimeMinutes,
           slotIntervalMinutes: config.slotIntervalMinutes,
-          shopEnabled: config.shopEnabled,
+          businessMode: config.businessMode,
           profile: {
             phoneE164: config.phone,
             addressLine: config.address,
@@ -614,61 +615,59 @@ export default function ConfigPage() {
         marginBottom: isMobile ? 16 : 24,
       }}>
         <h3 style={{ margin: '0 0 24px', fontSize: isMobile ? 16 : 18, fontWeight: 600, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span>🛍️</span> Loja de Produtos
+          <span>🏢</span> Modo de Negócio
         </h3>
 
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: 20,
-          background: config.shopEnabled ? '#f0fdf4' : '#f8fafc',
-          borderRadius: 12,
-          border: config.shopEnabled ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
-          transition: 'all 0.2s',
-        }}>
-          <div>
-            <div style={{ fontWeight: 500, color: '#1e293b', marginBottom: 4 }}>
-              Ativar Loja
-            </div>
-            <div style={{ fontSize: 13, color: '#64748b' }}>
-              Permita que seus clientes comprem produtos junto com os agendamentos
-            </div>
-          </div>
-          <button
-            onClick={handleToggleShop}
-            style={{
-              width: 50,
-              height: 28,
-              borderRadius: 14,
-              border: 'none',
-              background: config.shopEnabled ? '#22c55e' : '#e5e7eb',
-              cursor: 'pointer',
-              position: 'relative',
-              transition: 'background 0.2s',
-            }}
-          >
-            <div style={{
-              width: 22,
-              height: 22,
-              borderRadius: '50%',
-              background: 'white',
-              position: 'absolute',
-              top: 3,
-              left: config.shopEnabled ? 25 : 3,
-              transition: 'left 0.2s',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-            }} />
-          </button>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: 16 }}>
+          {([
+            { value: 'BOOKING' as const, icon: '📅', label: 'Agendamento', desc: 'Apenas serviços e agendamentos. Ideal para salões, clínicas e consultorias.' },
+            { value: 'SHOP' as const, icon: '🛍️', label: 'Loja', desc: 'Apenas produtos e pedidos. Ideal para lojas virtuais e e-commerce.' },
+            { value: 'HYBRID' as const, icon: '📅🛍️', label: 'Ambos', desc: 'Agendamento + Loja juntos. Ideal para negócios que oferecem os dois.' },
+          ]).map(mode => {
+            const selected = config.businessMode === mode.value;
+            return (
+              <button
+                key={mode.value}
+                onClick={() => handleChangeBusinessMode(mode.value)}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '24px 16px',
+                  borderRadius: 14,
+                  border: selected ? '2px solid #a07a45' : '2px solid #e2e8f0',
+                  background: selected ? 'linear-gradient(135deg, #fdf8f0 0%, #fef3e2 100%)' : '#f8fafc',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: selected ? '0 4px 12px rgba(160, 122, 69, 0.15)' : 'none',
+                  textAlign: 'center',
+                }}
+              >
+                <span style={{ fontSize: 32 }}>{mode.icon}</span>
+                <span style={{ fontWeight: 600, fontSize: 15, color: selected ? '#a07a45' : '#1e293b' }}>
+                  {mode.label}
+                </span>
+                <span style={{ fontSize: 12, color: '#64748b', lineHeight: 1.4 }}>
+                  {mode.desc}
+                </span>
+                {selected && (
+                  <span style={{
+                    marginTop: 4,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: '#fff',
+                    background: '#a07a45',
+                    padding: '3px 12px',
+                    borderRadius: 20,
+                  }}>
+                    Ativo
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
-
-        {config.shopEnabled && (
-          <div style={{ marginTop: 16, padding: 16, background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0' }}>
-            <p style={{ margin: 0, fontSize: 13, color: '#15803d' }}>
-              ✅ Loja ativada! Acesse <strong>Produtos</strong> no menu lateral para cadastrar itens e <strong>Pedidos</strong> para gerenciá-los.
-            </p>
-          </div>
-        )}
       </div>
 
       {/* Danger Zone */}
