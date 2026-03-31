@@ -218,13 +218,55 @@ function BottomNav({
 }
 
 // ============================================
-// COMPONENTE: Seção de Início (Home) — Premium
+// COMPONENTE: Seção de Início (Home) — Ultra Premium
 // ============================================
 function getGreeting(): string {
   const h = new Date().getHours();
   if (h < 12) return 'Bom dia';
   if (h < 18) return 'Boa tarde';
   return 'Boa noite';
+}
+
+function HomeSkeleton() {
+  const shimmerBg = {
+    background: 'linear-gradient(90deg, #f0f1f3 25%, #e8e9eb 50%, #f0f1f3 75%)',
+    backgroundSize: '200% 100%',
+    animation: 'shimmer 1.5s ease-in-out infinite',
+  } as const;
+  return (
+    <div style={{ padding: '0 0 24px' }}>
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ width: 200, height: 24, borderRadius: 8, ...shimmerBg }} />
+        <div style={{ width: 160, height: 16, borderRadius: 6, marginTop: 8, ...shimmerBg }} />
+      </div>
+      <div style={{ display: 'flex', gap: 14, marginBottom: 32, overflow: 'hidden' }}>
+        {[1, 2].map(i => (
+          <div key={i} style={{ minWidth: 200, height: 210, borderRadius: 18, ...shimmerBg, flexShrink: 0 }} />
+        ))}
+      </div>
+      {[1, 2, 3].map(i => (
+        <div key={i} style={{ height: 68, borderRadius: 14, marginBottom: 10, ...shimmerBg }} />
+      ))}
+    </div>
+  );
+}
+
+function HighlightDots({ count, activeIndex }: { count: number; activeIndex: number }) {
+  if (count <= 1) return null;
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 12 }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} style={{
+          width: i === activeIndex ? 16 : 6,
+          height: 6,
+          borderRadius: 3,
+          background: i === activeIndex ? 'currentColor' : '#d1d5db',
+          transition: 'all 0.3s ease',
+          opacity: i === activeIndex ? 1 : 0.5,
+        }} />
+      ))}
+    </div>
+  );
 }
 
 function HomeSection({
@@ -236,6 +278,7 @@ function HomeSection({
   onNavigate,
   hideQuickActions,
   clientName,
+  loading,
 }: {
   workspace: any;
   services: any[];
@@ -245,8 +288,12 @@ function HomeSection({
   onNavigate: (tab: ActiveTab) => void;
   hideQuickActions?: boolean;
   clientName?: string;
+  loading?: boolean;
 }) {
-  const popularServices = services.filter(s => s.itemType !== 'PRODUCT').slice(0, 3);
+  const [highlightScrollIndex, setHighlightScrollIndex] = useState(0);
+  const highlightScrollRef = useRef<HTMLDivElement>(null);
+
+  const popularServices = services.filter(s => s.itemType !== 'PRODUCT').slice(0, 4);
   const featuredProducts = services.filter(s => s.itemType === 'PRODUCT').slice(0, 4);
 
   // Resolve highlight service/product IDs to real objects
@@ -260,91 +307,101 @@ function HomeSection({
   const aboutText = workspace?.aboutText;
 
   const greeting = getGreeting();
-  const displayName = clientName ? `, ${clientName.split(' ')[0]}` : '';
+  const firstName = clientName ? clientName.split(' ')[0] : '';
+
+  // Track scroll position for dot indicators
+  useEffect(() => {
+    const el = highlightScrollRef.current;
+    if (!el || highlightItems.length <= 1) return;
+    const handleScroll = () => {
+      const scrollLeft = el.scrollLeft;
+      const cardWidth = 214; // minWidth + gap
+      const index = Math.round(scrollLeft / cardWidth);
+      setHighlightScrollIndex(Math.min(index, highlightItems.length - 1));
+    };
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [highlightItems.length]);
+
+  if (loading) return <HomeSkeleton />;
 
   return (
     <div style={{ padding: '0 0 24px' }}>
-      {/* Smart Greeting */}
-      <div style={{ marginBottom: 28 }}>
-        <h2 style={{
-          margin: 0,
-          fontSize: 22,
-          fontWeight: 800,
-          color: COLORS.textPrimary,
-          letterSpacing: -0.5,
-          lineHeight: 1.2,
-        }}>
-          {greeting}{displayName} 👋
-        </h2>
-        <p style={{
-          margin: '6px 0 0',
-          fontSize: 14,
-          color: COLORS.textSecondary,
-          lineHeight: 1.4,
-        }}>
-          {workspace?.welcomeText || 'O que deseja hoje?'}
-        </p>
-      </div>
 
-      {/* Quick Actions — oculto quando HeroSection já mostra CTAs */}
-      {!hideQuickActions && <div style={{
-        display: 'grid',
-        gridTemplateColumns: shopEnabled ? '1fr 1fr' : '1fr',
-        gap: 12,
-        marginBottom: 32,
-      }}>
-        <button
-          onClick={() => onNavigate('services')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 14,
-            padding: '20px',
-            background: `linear-gradient(135deg, ${primaryColor}0D 0%, ${primaryColor}05 100%)`,
-            border: `1.5px solid ${primaryColor}18`,
-            borderRadius: 18,
-            cursor: 'pointer',
-            textAlign: 'left',
-            transition: 'all 0.2s',
-            WebkitTapHighlightColor: 'transparent',
-          }}
-        >
+      {/* ── Smart Greeting ── */}
+      {hideQuickActions ? (
+        /* Premium layout: status bar compacta */
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '14px 18px',
+          background: `linear-gradient(135deg, ${primaryColor}08 0%, ${primaryColor}03 100%)`,
+          borderRadius: 16,
+          border: `1px solid ${primaryColor}10`,
+          marginBottom: 28,
+        }}>
           <div style={{
-            width: 46,
-            height: 46,
-            borderRadius: 13,
-            background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}CC)`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            width: 40, height: 40, borderRadius: 12,
+            background: `linear-gradient(135deg, ${primaryColor}18, ${primaryColor}0A)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
-            boxShadow: `0 4px 12px ${primaryColor}30`,
           }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2" />
-              <path d="M16 2v4M8 2v4M3 10h18" />
-            </svg>
+            <span style={{ fontSize: 20 }}>
+              {greeting === 'Bom dia' ? '☀️' : greeting === 'Boa tarde' ? '🌤' : '🌙'}
+            </span>
           </div>
-          <div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: COLORS.textPrimary, letterSpacing: -0.2 }}>
-              Agendar
+              {greeting}{firstName ? `, ${firstName}` : ''} 👋
             </p>
-            <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.3 }}>
-              Escolha serviço e horário
+            <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textSecondary }}>
+              {workspace?.welcomeText || 'O que deseja hoje?'}
             </p>
           </div>
-        </button>
-        
-        {shopEnabled && (
+        </div>
+      ) : (
+        /* Layout padrão: greeting grande */
+        <div style={{ marginBottom: 28 }}>
+          <h2 style={{
+            margin: 0,
+            fontSize: 22,
+            fontWeight: 800,
+            color: COLORS.textPrimary,
+            letterSpacing: -0.5,
+            lineHeight: 1.2,
+          }}>
+            {greeting}{firstName ? `, ${firstName}` : ''} 👋
+          </h2>
+          <p style={{
+            margin: '6px 0 0',
+            fontSize: 14,
+            color: COLORS.textSecondary,
+            lineHeight: 1.4,
+          }}>
+            {workspace?.welcomeText || 'O que deseja hoje?'}
+          </p>
+        </div>
+      )}
+
+      {/* ── Quick Actions ── */}
+      {!hideQuickActions && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: shopEnabled ? '1fr 1fr' : '1fr',
+          gap: 12,
+          marginBottom: 32,
+        }}>
           <button
-            onClick={() => onNavigate('shop')}
+            onClick={() => onNavigate('services')}
+            aria-label="Ir para agendamento"
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 14,
               padding: '20px',
-              background: 'linear-gradient(135deg, #ecfdf50D 0%, #ecfdf505 100%)',
-              border: '1.5px solid #10b98118',
+              background: `linear-gradient(135deg, ${primaryColor}0D 0%, ${primaryColor}05 100%)`,
+              border: `1.5px solid ${primaryColor}18`,
               borderRadius: 18,
               cursor: 'pointer',
               textAlign: 'left',
@@ -353,63 +410,87 @@ function HomeSection({
             }}
           >
             <div style={{
-              width: 46,
-              height: 46,
-              borderRadius: 13,
-              background: 'linear-gradient(135deg, #10b981, #059669)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              width: 46, height: 46, borderRadius: 13,
+              background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}CC)`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0,
-              boxShadow: '0 4px 12px rgba(16,185,129,0.3)',
+              boxShadow: `0 4px 12px ${primaryColor}30`,
             }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                <path d="M3 6h18" />
-                <path d="M16 10a4 4 0 0 1-8 0" />
+                <rect x="3" y="4" width="18" height="18" rx="2" />
+                <path d="M16 2v4M8 2v4M3 10h18" />
               </svg>
             </div>
             <div>
-              <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: COLORS.textPrimary, letterSpacing: -0.2 }}>
-                Loja
-              </p>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.3 }}>
-                Produtos disponíveis
-              </p>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: COLORS.textPrimary, letterSpacing: -0.2 }}>Agendar</p>
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.3 }}>Escolha serviço e horário</p>
             </div>
           </button>
-        )}
-      </div>}
+          {shopEnabled && (
+            <button
+              onClick={() => onNavigate('shop')}
+              aria-label="Ir para loja"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 14, padding: '20px',
+                background: 'linear-gradient(135deg, #ecfdf50D 0%, #ecfdf505 100%)',
+                border: '1.5px solid #10b98118',
+                borderRadius: 18, cursor: 'pointer', textAlign: 'left',
+                transition: 'all 0.2s', WebkitTapHighlightColor: 'transparent',
+              }}
+            >
+              <div style={{
+                width: 46, height: 46, borderRadius: 13,
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, boxShadow: '0 4px 12px rgba(16,185,129,0.3)',
+              }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                  <path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" />
+                </svg>
+              </div>
+              <div>
+                <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: COLORS.textPrimary, letterSpacing: -0.2 }}>Loja</p>
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.3 }}>Produtos disponíveis</p>
+              </div>
+            </button>
+          )}
+        </div>
+      )}
 
-      {/* Em Destaque — Admin-configurable highlight section */}
+      {/* ── Em Destaque 2.0 ── */}
       {highlightItems.length > 0 && (
-        <div style={{ marginBottom: 32 }}>
+        <section aria-label="Itens em destaque" style={{ marginBottom: 32 }}>
           <div style={{ marginBottom: 16 }}>
-            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.3 }}>
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.3 }}>
               {highlightTitle}
             </h3>
             {highlightSubtitle && (
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: COLORS.textSecondary }}>
+              <p style={{ margin: '4px 0 0', fontSize: 13, color: COLORS.textSecondary, lineHeight: 1.4 }}>
                 {highlightSubtitle}
               </p>
             )}
           </div>
-          <div style={{
-            display: 'flex',
-            gap: 14,
-            overflowX: 'auto',
-            paddingBottom: 8,
-            scrollSnapType: 'x mandatory',
-            WebkitOverflowScrolling: 'touch',
-            msOverflowStyle: 'none',
-            scrollbarWidth: 'none',
-          }}>
+          <div
+            ref={highlightScrollRef}
+            style={{
+              display: 'flex',
+              gap: 14,
+              overflowX: 'auto',
+              paddingBottom: 4,
+              scrollSnapType: 'x mandatory',
+              WebkitOverflowScrolling: 'touch',
+              msOverflowStyle: 'none',
+              scrollbarWidth: 'none',
+            }}
+          >
             {highlightItems.map((item: any) => {
               const isProduct = item.itemType === 'PRODUCT';
               return (
-                <div
+                <button
                   key={item.id}
                   onClick={() => onNavigate(isProduct ? 'shop' : 'services')}
+                  aria-label={`${isProduct ? 'Ver produto' : 'Agendar'}: ${item.name} - ${formatPrice(item.priceCents)}`}
                   style={{
                     minWidth: highlightItems.length === 1 ? '100%' : 200,
                     maxWidth: highlightItems.length === 1 ? '100%' : 220,
@@ -419,97 +500,119 @@ function HomeSection({
                     border: '1px solid #f0f1f3',
                     overflow: 'hidden',
                     cursor: 'pointer',
-                    transition: 'box-shadow 0.2s, transform 0.15s',
+                    transition: 'transform 0.15s ease, box-shadow 0.2s ease',
                     flexShrink: 0,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                    boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+                    padding: 0,
+                    textAlign: 'left',
+                    WebkitTapHighlightColor: 'transparent',
                   }}
+                  onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.97)')}
+                  onMouseUp={e => (e.currentTarget.style.transform = 'scale(1)')}
+                  onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+                  onTouchStart={e => (e.currentTarget.style.transform = 'scale(0.97)')}
+                  onTouchEnd={e => (e.currentTarget.style.transform = 'scale(1)')}
                 >
-                  {/* Image */}
+                  {/* Image with aspect ratio */}
                   <div style={{
                     width: '100%',
-                    height: 130,
+                    aspectRatio: '16/10',
                     background: item.imageUrl
-                      ? `url(${getImageUrl(item.imageUrl)}) center/cover no-repeat`
-                      : `linear-gradient(135deg, ${primaryColor}15, ${primaryColor}08)`,
+                      ? undefined
+                      : `linear-gradient(135deg, ${primaryColor}12, ${primaryColor}06)`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     position: 'relative',
+                    overflow: 'hidden',
                   }}>
-                    {!item.imageUrl && (
-                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={`${primaryColor}40`} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                        {isProduct ? (
-                          <>
-                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                            <path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" />
-                          </>
-                        ) : (
-                          <>
-                            <rect x="3" y="4" width="18" height="18" rx="2"/>
-                            <path d="M16 2v4M8 2v4M3 10h18"/>
-                          </>
-                        )}
-                      </svg>
+                    {item.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={getImageUrl(item.imageUrl)}
+                        alt={item.name}
+                        loading="lazy"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <div style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                      }}>
+                        <div style={{
+                          width: 48, height: 48, borderRadius: 14,
+                          background: `${primaryColor}10`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={`${primaryColor}60`} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            {isProduct ? (
+                              <><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" /></>
+                            ) : (
+                              <><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></>
+                            )}
+                          </svg>
+                        </div>
+                        <span style={{ fontSize: 11, color: '#9ca3af', fontWeight: 500 }}>
+                          {isProduct ? 'Produto' : 'Serviço'}
+                        </span>
+                      </div>
                     )}
                     {/* Badge */}
                     <span style={{
-                      position: 'absolute',
-                      top: 10,
-                      left: 10,
-                      fontSize: 10,
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                      letterSpacing: 0.5,
-                      padding: '4px 8px',
-                      borderRadius: 6,
-                      background: isProduct ? 'rgba(16,185,129,0.9)' : `${primaryColor}E6`,
+                      position: 'absolute', top: 10, left: 10,
+                      fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+                      letterSpacing: 0.5, padding: '4px 10px', borderRadius: 8,
+                      background: isProduct ? 'rgba(16,185,129,0.92)' : `${primaryColor}E8`,
                       color: '#fff',
+                      backdropFilter: 'blur(4px)',
                     }}>
-                      {isProduct ? 'Produto' : 'Serviço'}
+                      {isProduct ? '🛍 Produto' : '⭐ Destaque'}
                     </span>
                   </div>
                   {/* Info */}
-                  <div style={{ padding: '12px 14px 14px' }}>
-                    <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: COLORS.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ padding: '12px 14px 16px' }}>
+                    <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: COLORS.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {item.name}
                     </p>
                     {!isProduct && item.durationMinutes && (
-                      <p style={{ margin: '3px 0 0', fontSize: 12, color: COLORS.textSecondary }}>
+                      <p style={{ margin: '3px 0 0', fontSize: 12, color: COLORS.textSecondary, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                         {item.durationMinutes} min
                       </p>
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-                      <span style={{ fontSize: 16, fontWeight: 800, color: isProduct ? '#059669' : primaryColor }}>
+                      <span style={{ fontSize: 17, fontWeight: 800, color: isProduct ? '#059669' : primaryColor }}>
                         {formatPrice(item.priceCents)}
                       </span>
                       <span style={{
-                        fontSize: 11,
-                        fontWeight: 600,
-                        color: primaryColor,
-                        padding: '5px 10px',
-                        background: `${primaryColor}0D`,
-                        borderRadius: 8,
+                        fontSize: 11, fontWeight: 700, color: '#fff',
+                        padding: '6px 12px', borderRadius: 10,
+                        background: isProduct
+                          ? 'linear-gradient(135deg, #10b981, #059669)'
+                          : `linear-gradient(135deg, ${primaryColor}, ${primaryColor}CC)`,
+                        boxShadow: isProduct ? '0 2px 8px rgba(16,185,129,0.25)' : `0 2px 8px ${primaryColor}25`,
                       }}>
-                        {isProduct ? 'Ver →' : 'Agendar →'}
+                        {isProduct ? 'Ver' : 'Agendar'} →
                       </span>
                     </div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
-        </div>
+          <HighlightDots count={highlightItems.length} activeIndex={highlightScrollIndex} />
+        </section>
       )}
 
-      {/* Serviços populares — fallback when no highlights configured */}
+      {/* ── Serviços populares — fallback ── */}
       {highlightItems.length === 0 && popularServices.length > 0 && (
-        <div style={{ marginBottom: 32 }}>
+        <section aria-label="Serviços populares" style={{ marginBottom: 32 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
-            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.3 }}>
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.3 }}>
               Serviços em destaque
             </h3>
             <button
               onClick={() => onNavigate('services')}
+              aria-label="Ver todos os serviços"
               style={{ background: 'none', border: 'none', color: primaryColor, fontSize: 13, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
             >
               Ver todos →
@@ -520,58 +623,65 @@ function HomeSection({
               <button
                 key={service.id}
                 onClick={() => onNavigate('services')}
+                aria-label={`Agendar ${service.name} - ${formatPrice(service.priceCents)}`}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 14,
-                  padding: '14px 16px',
-                  background: '#fff',
-                  borderRadius: 14,
-                  border: '1px solid #f0f1f3',
-                  cursor: 'pointer',
-                  transition: 'border-color 0.2s, box-shadow 0.2s',
-                  textAlign: 'left',
-                  WebkitTapHighlightColor: 'transparent',
+                  display: 'flex', alignItems: 'center', gap: 14,
+                  padding: '14px 16px', background: '#fff', borderRadius: 14,
+                  border: '1px solid #f0f1f3', cursor: 'pointer',
+                  transition: 'transform 0.12s ease, box-shadow 0.2s ease',
+                  textAlign: 'left', WebkitTapHighlightColor: 'transparent',
                 }}
+                onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.98)')}
+                onMouseUp={e => (e.currentTarget.style.transform = 'scale(1)')}
+                onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+                onTouchStart={e => (e.currentTarget.style.transform = 'scale(0.98)')}
+                onTouchEnd={e => (e.currentTarget.style.transform = 'scale(1)')}
               >
-                <div style={{
-                  width: 42,
-                  height: 42,
-                  borderRadius: 11,
-                  background: `${primaryColor}0A`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-                </div>
+                {service.imageUrl ? (
+                  <div style={{
+                    width: 50, height: 50, borderRadius: 13, overflow: 'hidden', flexShrink: 0,
+                    border: '1px solid #f0f1f3',
+                  }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={getImageUrl(service.imageUrl)} alt="" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                ) : (
+                  <div style={{
+                    width: 50, height: 50, borderRadius: 13,
+                    background: `${primaryColor}08`, border: `1px solid ${primaryColor}10`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                  }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                  </div>
+                )}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: COLORS.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {service.name}
                   </p>
-                  <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textSecondary }}>
+                  <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textSecondary, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                     {service.durationMinutes} min
                   </p>
                 </div>
-                <span style={{ fontSize: 14, fontWeight: 700, color: primaryColor, flexShrink: 0 }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: primaryColor, flexShrink: 0 }}>
                   {formatPrice(service.priceCents)}
                 </span>
               </button>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Produtos em destaque */}
+      {/* ── Produtos ── */}
       {shopEnabled && featuredProducts.length > 0 && (
-        <div style={{ marginBottom: 32 }}>
+        <section aria-label="Produtos em destaque" style={{ marginBottom: 32 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
-            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.3 }}>
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.3 }}>
               Produtos
             </h3>
             <button
               onClick={() => onNavigate('shop')}
+              aria-label="Ver todos os produtos"
               style={{ background: 'none', border: 'none', color: primaryColor, fontSize: 13, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
             >
               Ver todos →
@@ -582,69 +692,138 @@ function HomeSection({
               <button
                 key={product.id}
                 onClick={() => onNavigate('shop')}
+                aria-label={`Ver produto ${product.name} - ${formatPrice(product.priceCents)}`}
                 style={{
-                  background: '#fff',
-                  borderRadius: 16,
-                  border: '1px solid #f0f1f3',
-                  overflow: 'hidden',
-                  cursor: 'pointer',
-                  transition: 'border-color 0.2s, box-shadow 0.2s',
-                  textAlign: 'left',
-                  padding: 0,
-                  WebkitTapHighlightColor: 'transparent',
+                  background: '#fff', borderRadius: 16, border: '1px solid #f0f1f3',
+                  overflow: 'hidden', cursor: 'pointer',
+                  transition: 'transform 0.12s ease, box-shadow 0.2s ease',
+                  textAlign: 'left', padding: 0, WebkitTapHighlightColor: 'transparent',
                 }}
+                onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.97)')}
+                onMouseUp={e => (e.currentTarget.style.transform = 'scale(1)')}
+                onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+                onTouchStart={e => (e.currentTarget.style.transform = 'scale(0.97)')}
+                onTouchEnd={e => (e.currentTarget.style.transform = 'scale(1)')}
               >
                 {product.imageUrl ? (
-                  <div style={{ width: '100%', height: 110, background: '#f9fafb', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ width: '100%', aspectRatio: '4/3', background: '#f9fafb', overflow: 'hidden' }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={getImageUrl(product.imageUrl)} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={getImageUrl(product.imageUrl)} alt={product.name} loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 ) : (
-                  <div style={{ width: '100%', height: 90, background: 'linear-gradient(135deg, #f9fafb, #f3f4f6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                      <path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" />
-                    </svg>
+                  <div style={{ width: '100%', aspectRatio: '4/3', background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(16,185,129,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                        <path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" />
+                      </svg>
+                    </div>
                   </div>
                 )}
-                <div style={{ padding: '10px 12px 12px' }}>
+                <div style={{ padding: '10px 12px 14px' }}>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: COLORS.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {product.name}
                   </p>
-                  <p style={{ margin: '4px 0 0', fontSize: 15, fontWeight: 800, color: '#059669' }}>
+                  <p style={{ margin: '5px 0 0', fontSize: 16, fontWeight: 800, color: '#059669' }}>
                     {formatPrice(product.priceCents)}
                   </p>
                 </div>
               </button>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Sobre */}
+      {/* ── Sobre — Premium ── */}
       {aboutText && (
-        <div style={{
-          marginBottom: 32,
-          padding: '20px 22px',
+        <section aria-label="Sobre o estabelecimento" style={{
+          marginBottom: 24,
+          padding: '22px 22px 24px',
           background: '#fff',
-          borderRadius: 18,
+          borderRadius: 20,
           border: '1px solid #f0f1f3',
-          boxShadow: '0 1px 4px rgba(0,0,0,0.03)',
+          boxShadow: '0 1px 6px rgba(0,0,0,0.03)',
+          position: 'relative',
+          overflow: 'hidden',
         }}>
-          <h3 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.2 }}>
-            Sobre
-          </h3>
+          {/* Accent bar */}
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+            background: `linear-gradient(90deg, ${primaryColor}, ${primaryColor}80)`,
+          }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: `${primaryColor}0A`, border: `1px solid ${primaryColor}15`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2" strokeLinecap="round">
+                <circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/>
+              </svg>
+            </div>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.2 }}>
+              Sobre {workspace?.brandName || workspace?.name || ''}
+            </h3>
+          </div>
           <p style={{
-            margin: 0,
-            fontSize: 14,
-            color: COLORS.textSecondary,
-            lineHeight: 1.6,
-            whiteSpace: 'pre-line',
+            margin: 0, fontSize: 14, color: COLORS.textSecondary,
+            lineHeight: 1.7, whiteSpace: 'pre-line',
           }}>
             {aboutText}
           </p>
-        </div>
+          {/* Address if available */}
+          {workspace?.profile?.addressLine && (
+            <div style={{
+              marginTop: 16, paddingTop: 14, borderTop: '1px solid #f3f4f6',
+              display: 'flex', alignItems: 'center', gap: 8,
+              fontSize: 13, color: COLORS.textSecondary,
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2" strokeLinecap="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+              <span>{workspace.profile.addressLine}</span>
+            </div>
+          )}
+        </section>
       )}
+
+      {/* ── Trust Badges Premium ── */}
+      <div style={{
+        display: 'flex', justifyContent: 'center', gap: 6,
+        flexWrap: 'wrap', padding: '16px 12px',
+        background: `${primaryColor}04`, borderRadius: 16,
+        border: `1px solid ${primaryColor}08`,
+      }}>
+        {[
+          { icon: (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="M9 12l2 2 4-4"/>
+            </svg>
+          ), text: 'Confirmação automática' },
+          { icon: (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2.5" strokeLinecap="round">
+              <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+            </svg>
+          ), text: 'Horários em tempo real' },
+          { icon: (
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={primaryColor} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+              <path d="M9 16l2 2 4-4"/>
+            </svg>
+          ), text: 'Cancelamento fácil' },
+        ].map((badge, i) => (
+          <span key={i} style={{
+            fontSize: 11, fontWeight: 600, color: COLORS.textSecondary,
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '6px 10px', background: '#fff', borderRadius: 10,
+            border: '1px solid #f0f1f3', whiteSpace: 'nowrap',
+          }}>
+            {badge.icon}
+            {badge.text}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1895,6 +2074,7 @@ export default function BookingPage() {
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     @keyframes spin { to { transform: rotate(360deg); } }
     @keyframes badgePop { 0% { transform: scale(0.5); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
   `;
 
   if (!mounted) return null;
@@ -1992,12 +2172,12 @@ export default function BookingPage() {
       <div style={{
         background: COLORS.surface,
         marginTop: -40,
-        borderRadius: '20px 20px 0 0',
+        borderRadius: '24px 24px 0 0',
         maxWidth: 560,
         marginInline: 'auto',
         position: 'relative',
         zIndex: 1,
-        boxShadow: usePremiumLayout ? '0 -4px 20px rgba(0,0,0,0.1)' : 'none',
+        boxShadow: usePremiumLayout ? '0 -8px 30px rgba(0,0,0,0.12)' : 'none',
         minHeight: `calc(100vh - 200px)`,
         paddingBottom: BOTTOM_NAV_HEIGHT + SAFE_AREA_BOTTOM + 20,
       }}>
@@ -2019,16 +2199,8 @@ export default function BookingPage() {
                 onNavigate={handleTabChange}
                 hideQuickActions={usePremiumLayout}
                 clientName={clientSession?.name}
+                loading={booking.loading}
               />
-              {usePremiumLayout && (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 24, marginBottom: 8, flexWrap: 'wrap' }}>
-                  {['✓ Confirmação automática', '✓ Horários em tempo real', '✓ Cancelamento fácil'].map((badge, i) => (
-                    <span key={i} style={{ fontSize: 12, color: COLORS.textSecondary, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      {badge}
-                    </span>
-                  ))}
-                </div>
-              )}
             </>
           )}
 
@@ -2430,13 +2602,32 @@ export default function BookingPage() {
 
       {/* Footer branding */}
       {activeTab === 'home' && (
-        <footer style={{ textAlign: 'center', padding: '28px 20px 44px', paddingBottom: BOTTOM_NAV_HEIGHT + SAFE_AREA_BOTTOM + 28, background: '#f3f4f6' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 6 }}>
-            <span style={{ color: COLORS.textMuted, fontSize: 12 }}>Powered by</span>
+        <footer style={{
+          textAlign: 'center',
+          padding: '32px 20px 44px',
+          paddingBottom: BOTTOM_NAV_HEIGHT + SAFE_AREA_BOTTOM + 32,
+          background: `linear-gradient(180deg, #f5f5f5 0%, #ebebeb 100%)`,
+          borderTop: '1px solid #e5e7eb',
+        }}>
+          {/* Business name */}
+          {booking.workspace?.brandName && (
+            <p style={{ color: COLORS.textSecondary, fontSize: 12, fontWeight: 600, margin: '0 0 12px', letterSpacing: 0.3 }}>
+              © {new Date().getFullYear()} {booking.workspace.brandName}
+            </p>
+          )}
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '8px 16px', borderRadius: 10,
+            background: 'rgba(255,255,255,0.7)',
+            border: '1px solid rgba(0,0,0,0.06)',
+          }}>
+            <span style={{ color: COLORS.textMuted, fontSize: 11, fontWeight: 500 }}>Powered by</span>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="BELA PRO" style={{ height: 22, width: 'auto', opacity: 0.8 }} />
+            <img src="/logo.png" alt="BELA PRO" style={{ height: 20, width: 'auto', opacity: 0.7 }} />
           </div>
-          <p style={{ color: COLORS.textMuted, fontSize: 10, margin: 0, opacity: 0.6 }}>Sistema de agendamento profissional</p>
+          <p style={{ color: COLORS.textMuted, fontSize: 10, margin: '8px 0 0', opacity: 0.5, letterSpacing: 0.3 }}>
+            Agendamento profissional
+          </p>
         </footer>
       )}
 
