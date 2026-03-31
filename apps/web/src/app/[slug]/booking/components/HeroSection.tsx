@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Workspace, ThemeConfig } from '../types';
 import { SPACING, RADIUS } from '../constants';
 import { getImageUrl } from '@/lib/utils';
-import { GalleryLightbox, GalleryPreview } from './GalleryLightbox';
+import { GalleryLightbox } from './GalleryLightbox';
 
 interface HeroSectionProps {
   workspace: Workspace;
@@ -40,7 +40,7 @@ export function HeroSection({ workspace, theme, shopEnabled, onAction, onLoginCl
       style={{
         position: 'relative',
         width: '100%',
-        minHeight: hasCover ? 380 : 300,
+        minHeight: hasCover ? 340 : 280,
         background: hasCover 
           ? `url(${getImageUrl(workspace.coverImageUrl)}) center/cover no-repeat`
           : colors.gradient,
@@ -48,7 +48,7 @@ export function HeroSection({ workspace, theme, shopEnabled, onAction, onLoginCl
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: `${SPACING.xl}px ${SPACING.lg}px 60px`,
+        padding: `${SPACING.xl}px ${SPACING.lg}px 52px`,
         overflow: 'hidden',
       }}
     >
@@ -188,45 +188,35 @@ export function HeroSection({ workspace, theme, shopEnabled, onAction, onLoginCl
           </div>
         )}
 
-        {/* ULTRA PREMIUM UPGRADE: CTAs de ação */}
+        {/* CTAs compactos + Galeria */}
         {onAction && (
           <div style={{
             display: 'flex',
-            gap: 10,
-            marginTop: 20,
-            width: '100%',
-            maxWidth: 340,
+            gap: 8,
+            marginTop: 16,
+            flexWrap: 'wrap',
+            justifyContent: 'center',
           }}>
             <button
               onClick={() => onAction('services')}
               style={{
-                flex: 1,
-                padding: '14px 12px',
-                background: 'rgba(255,255,255,0.97)',
+                padding: '10px 20px',
+                background: 'rgba(255,255,255,0.95)',
                 border: 'none',
-                borderRadius: 14,
+                borderRadius: 50,
                 cursor: 'pointer',
                 display: 'flex',
-                flexDirection: 'column',
                 alignItems: 'center',
-                gap: 6,
-                boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+                gap: 8,
+                boxShadow: '0 2px 12px rgba(0,0,0,0.18)',
                 WebkitTapHighlightColor: 'transparent',
-                transition: 'transform 0.15s ease',
               }}
             >
-              <div style={{
-                width: 40, height: 40, borderRadius: 12,
-                background: `linear-gradient(135deg, ${colors.primary}, ${colors.primary}CC)`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: `0 3px 10px ${colors.primary}40`,
-              }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" />
-                  <path d="M16 2v4M8 2v4M3 10h18" />
-                </svg>
-              </div>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#1f2937', letterSpacing: -0.2 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.primary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" />
+                <path d="M16 2v4M8 2v4M3 10h18" />
+              </svg>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#1f2937' }}>
                 Agendar
               </span>
             </button>
@@ -235,34 +225,52 @@ export function HeroSection({ workspace, theme, shopEnabled, onAction, onLoginCl
               <button
                 onClick={() => onAction('shop')}
                 style={{
-                  flex: 1,
-                  padding: '14px 12px',
-                  background: 'rgba(255,255,255,0.97)',
+                  padding: '10px 20px',
+                  background: 'rgba(255,255,255,0.95)',
                   border: 'none',
-                  borderRadius: 14,
+                  borderRadius: 50,
                   cursor: 'pointer',
                   display: 'flex',
-                  flexDirection: 'column',
                   alignItems: 'center',
-                  gap: 6,
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+                  gap: 8,
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.18)',
                   WebkitTapHighlightColor: 'transparent',
-                  transition: 'transform 0.15s ease',
                 }}
               >
-                <div style={{
-                  width: 40, height: 40, borderRadius: 12,
-                  background: 'linear-gradient(135deg, #10b981, #059669)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 3px 10px rgba(16,185,129,0.3)',
-                }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                    <path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" />
-                  </svg>
-                </div>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#1f2937', letterSpacing: -0.2 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                  <path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" />
+                </svg>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#1f2937' }}>
                   Produtos
+                </span>
+              </button>
+            )}
+
+            {hasGallery && (
+              <button
+                onClick={() => openGallery(0)}
+                style={{
+                  padding: '10px 20px',
+                  background: 'rgba(255,255,255,0.2)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  borderRadius: 50,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  WebkitTapHighlightColor: 'transparent',
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <path d="m21 15-5-5L5 21" />
+                </svg>
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>
+                  Galeria
                 </span>
               </button>
             )}
@@ -314,15 +322,6 @@ export function HeroSection({ workspace, theme, shopEnabled, onAction, onLoginCl
           </div>
         )}
       </div>
-
-      {/* Galeria preview - Nova versão com Lightbox */}
-      {hasGallery && (
-        <GalleryPreview
-          images={workspace.galleryUrls!}
-          onOpen={openGallery}
-          primaryColor={colors.primary}
-        />
-      )}
       
       {/* Lightbox Modal */}
       {lightboxOpen && hasGallery && (
