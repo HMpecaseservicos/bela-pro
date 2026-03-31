@@ -13,9 +13,10 @@ interface HeroSectionProps {
   onAction?: (tab: 'services' | 'shop') => void;
   onLoginClick?: () => void;
   clientName?: string | null;
+  ctaText?: string | null;
 }
 
-export function HeroSection({ workspace, theme, shopEnabled, onAction, onLoginClick, clientName }: HeroSectionProps) {
+export function HeroSection({ workspace, theme, shopEnabled, onAction, onLoginClick, clientName, ctaText }: HeroSectionProps) {
   const { colors } = theme;
   const hasCover = !!workspace.coverImageUrl;
   const hasLogo = !!workspace.logoUrl;
@@ -206,7 +207,7 @@ export function HeroSection({ workspace, theme, shopEnabled, onAction, onLoginCl
                 <path d="M16 2v4M8 2v4M3 10h18" />
               </svg>
               <span style={{ fontSize: 13, fontWeight: 700, color: '#1f2937' }}>
-                Agendar
+                {ctaText || 'Agendar'}
               </span>
             </button>
 

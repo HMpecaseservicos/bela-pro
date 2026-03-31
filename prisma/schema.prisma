@@ -175,6 +175,18 @@ model Workspace {
   highlightServiceIds String[] // IDs dos itens em destaque (até 3)
   aboutText           String?  // Texto "Sobre nós" da página pública
 
+  // ==================== REDES SOCIAIS / LINKS ====================
+  instagramUrl  String? // URL do Instagram
+  whatsappUrl   String? // WhatsApp link (wa.me/55...)
+  facebookUrl   String? // URL do Facebook
+
+  // ==================== QUICK STATS / CTA ====================
+  ctaText         String? // Texto do botão principal (ex: "Agendar agora")
+  yearsInMarket   Int?    // Anos no mercado
+  clientsServed   String? // Clientes atendidos (texto livre: "500+", "1.2k")
+  ratingScore     String? // Nota de avaliação (ex: "4.9")
+  totalReviews    String? // Total de avaliações (ex: "127")
+
   // ==================== PATROCINADORES ====================
   // Controle de exibição de sponsors na página de booking
   showGlobalSponsors   Boolean @default(true)  // Mostra sponsors globais (FREE=true, Pagos podem desativar)

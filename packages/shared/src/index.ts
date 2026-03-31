@@ -129,6 +129,16 @@ export interface WorkspacePublic {
   highlightSubtitle: string | null;
   highlightServiceIds: string[];
   aboutText: string | null;
+  // Redes sociais
+  instagramUrl: string | null;
+  whatsappUrl: string | null;
+  facebookUrl: string | null;
+  // Quick stats / CTA
+  ctaText: string | null;
+  yearsInMarket: number | null;
+  clientsServed: string | null;
+  ratingScore: string | null;
+  totalReviews: string | null;
 }
 
 export interface ServiceCategory {

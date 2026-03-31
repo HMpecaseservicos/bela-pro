@@ -29,6 +29,14 @@ interface WorkspaceConfig {
   highlightSubtitle: string | null;
   highlightServiceIds: string[];
   aboutText: string | null;
+  instagramUrl: string | null;
+  whatsappUrl: string | null;
+  facebookUrl: string | null;
+  ctaText: string | null;
+  yearsInMarket: number | null;
+  clientsServed: string | null;
+  ratingScore: string | null;
+  totalReviews: string | null;
 }
 
 interface ServiceOption {
@@ -54,6 +62,14 @@ export default function AparenciaPage() {
     highlightSubtitle: '',
     highlightServiceIds: [] as string[],
     aboutText: '',
+    instagramUrl: '',
+    whatsappUrl: '',
+    facebookUrl: '',
+    ctaText: '',
+    yearsInMarket: '' as string | number,
+    clientsServed: '',
+    ratingScore: '',
+    totalReviews: '',
   });
   const [serviceOptions, setServiceOptions] = useState<ServiceOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,6 +143,14 @@ export default function AparenciaPage() {
         highlightSubtitle: data.highlightSubtitle || '',
         highlightServiceIds: data.highlightServiceIds || [],
         aboutText: data.aboutText || '',
+        instagramUrl: data.instagramUrl || '',
+        whatsappUrl: data.whatsappUrl || '',
+        facebookUrl: data.facebookUrl || '',
+        ctaText: data.ctaText || '',
+        yearsInMarket: data.yearsInMarket ?? '',
+        clientsServed: data.clientsServed || '',
+        ratingScore: data.ratingScore || '',
+        totalReviews: data.totalReviews || '',
       });
     } catch {
       setError('Erro ao carregar configurações');
@@ -243,6 +267,14 @@ export default function AparenciaPage() {
           highlightSubtitle: config.highlightSubtitle || null,
           highlightServiceIds: config.highlightServiceIds,
           aboutText: config.aboutText || null,
+          instagramUrl: config.instagramUrl || null,
+          whatsappUrl: config.whatsappUrl || null,
+          facebookUrl: config.facebookUrl || null,
+          ctaText: config.ctaText || null,
+          yearsInMarket: config.yearsInMarket === '' ? null : Number(config.yearsInMarket) || null,
+          clientsServed: config.clientsServed || null,
+          ratingScore: config.ratingScore || null,
+          totalReviews: config.totalReviews || null,
         }),
       });
 
@@ -760,6 +792,107 @@ export default function AparenciaPage() {
           }}
         />
         <p style={{ margin: '8px 0 0', color: '#9ca3af', fontSize: 12, textAlign: 'right' }}>{config.aboutText.length}/500</p>
+      </div>
+
+      {/* Redes Sociais */}
+      <div style={sectionStyle}>
+        <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 600, color: '#1e293b' }}>🔗 Redes Sociais</h3>
+        <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: 13 }}>Links exibidos na page pública (Sobre e Footer).</p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <label style={labelStyle}>Instagram</label>
+            <input
+              value={config.instagramUrl}
+              onChange={e => setConfig({ ...config, instagramUrl: e.target.value })}
+              placeholder="https://instagram.com/seunegocio"
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>WhatsApp</label>
+            <input
+              value={config.whatsappUrl}
+              onChange={e => setConfig({ ...config, whatsappUrl: e.target.value })}
+              placeholder="https://wa.me/5511999999999"
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Facebook</label>
+            <input
+              value={config.facebookUrl}
+              onChange={e => setConfig({ ...config, facebookUrl: e.target.value })}
+              placeholder="https://facebook.com/seunegocio"
+              style={inputStyle}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Stats */}
+      <div style={sectionStyle}>
+        <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 600, color: '#1e293b' }}>📊 Estatísticas Rápidas</h3>
+        <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: 13 }}>Dados exibidos na página inicial para transmitir confiança.</p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div>
+            <label style={labelStyle}>Anos no mercado</label>
+            <input
+              type="number"
+              value={config.yearsInMarket}
+              onChange={e => setConfig({ ...config, yearsInMarket: e.target.value })}
+              placeholder="Ex: 5"
+              min={0}
+              max={100}
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Clientes atendidos</label>
+            <input
+              value={config.clientsServed}
+              onChange={e => setConfig({ ...config, clientsServed: e.target.value })}
+              placeholder="Ex: 500+"
+              maxLength={20}
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Nota de avaliação</label>
+            <input
+              value={config.ratingScore}
+              onChange={e => setConfig({ ...config, ratingScore: e.target.value })}
+              placeholder="Ex: 4.9"
+              maxLength={5}
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Total de avaliações</label>
+            <input
+              value={config.totalReviews}
+              onChange={e => setConfig({ ...config, totalReviews: e.target.value })}
+              placeholder="Ex: 127"
+              maxLength={20}
+              style={inputStyle}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* CTA Personalizado */}
+      <div style={sectionStyle}>
+        <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 600, color: '#1e293b' }}>🎯 Botão Principal (CTA)</h3>
+        <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: 13 }}>Texto do botão de ação no topo da página.</p>
+
+        <input
+          value={config.ctaText}
+          onChange={e => setConfig({ ...config, ctaText: e.target.value })}
+          placeholder="Agendar agora (padrão)"
+          maxLength={50}
+          style={inputStyle}
+        />
       </div>
 
       {/* Preview */}

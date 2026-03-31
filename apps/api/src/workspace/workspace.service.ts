@@ -31,6 +31,16 @@ const updateWorkspaceSchema = z.object({
   highlightSubtitle: z.string().max(200).optional().nullable(),
   highlightServiceIds: z.array(z.string().min(1)).max(3).optional(),
   aboutText: z.string().max(500).optional().nullable(),
+  // REDES SOCIAIS
+  instagramUrl: z.string().max(300).optional().nullable(),
+  whatsappUrl: z.string().max(300).optional().nullable(),
+  facebookUrl: z.string().max(300).optional().nullable(),
+  // QUICK STATS / CTA
+  ctaText: z.string().max(50).optional().nullable(),
+  yearsInMarket: z.number().int().min(0).max(100).optional().nullable(),
+  clientsServed: z.string().max(20).optional().nullable(),
+  ratingScore: z.string().max(5).optional().nullable(),
+  totalReviews: z.string().max(20).optional().nullable(),
   profile: profileSchema,
 });
 
@@ -73,6 +83,16 @@ export class WorkspaceService {
         highlightSubtitle: true,
         highlightServiceIds: true,
         aboutText: true,
+        // REDES SOCIAIS
+        instagramUrl: true,
+        whatsappUrl: true,
+        facebookUrl: true,
+        // QUICK STATS / CTA
+        ctaText: true,
+        yearsInMarket: true,
+        clientsServed: true,
+        ratingScore: true,
+        totalReviews: true,
         // Profile
         profile: {
           select: {
