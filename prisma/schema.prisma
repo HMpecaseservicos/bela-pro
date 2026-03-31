@@ -169,6 +169,12 @@ model Workspace {
   // ==================== LOJA UNIFICADA ====================
   shopEnabled Boolean @default(false) // Ativar Loja / Venda de Produtos
 
+  // ==================== PREMIUM HOMEPAGE ====================
+  highlightTitle      String?  // Título da seção destaque (ex: "Promoção da Semana")
+  highlightSubtitle   String?  // Texto curto de chamada (ex: "20% off no combo")
+  highlightServiceIds String[] // IDs dos itens em destaque (até 3)
+  aboutText           String?  // Texto "Sobre nós" da página pública
+
   // ==================== PATROCINADORES ====================
   // Controle de exibição de sponsors na página de booking
   showGlobalSponsors   Boolean @default(true)  // Mostra sponsors globais (FREE=true, Pagos podem desativar)

@@ -25,6 +25,17 @@ interface WorkspaceConfig {
   coverImageUrl: string | null;
   galleryUrls: string[];
   themePreset: string | null;
+  highlightTitle: string | null;
+  highlightSubtitle: string | null;
+  highlightServiceIds: string[];
+  aboutText: string | null;
+}
+
+interface ServiceOption {
+  id: string;
+  name: string;
+  itemType: string;
+  priceCents: number;
 }
 
 export default function AparenciaPage() {
@@ -39,7 +50,12 @@ export default function AparenciaPage() {
     coverImageUrl: '',
     galleryUrls: [] as string[],
     themePreset: '' as string,
+    highlightTitle: '',
+    highlightSubtitle: '',
+    highlightServiceIds: [] as string[],
+    aboutText: '',
   });
+  const [serviceOptions, setServiceOptions] = useState<ServiceOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -64,7 +80,22 @@ export default function AparenciaPage() {
 
   useEffect(() => {
     fetchWorkspace();
+    fetchServices();
   }, []);
+
+  async function fetchServices() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/services`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setServiceOptions(data.filter((s: any) => s.isActive !== false));
+      }
+    } catch { /* ignore */ }
+  }
 
   async function fetchWorkspace() {
     const token = localStorage.getItem('token');
@@ -92,6 +123,10 @@ export default function AparenciaPage() {
         coverImageUrl: data.coverImageUrl || '',
         galleryUrls: data.galleryUrls || [],
         themePreset: data.themePreset || '',
+        highlightTitle: data.highlightTitle || '',
+        highlightSubtitle: data.highlightSubtitle || '',
+        highlightServiceIds: data.highlightServiceIds || [],
+        aboutText: data.aboutText || '',
       });
     } catch {
       setError('Erro ao carregar configurações');
@@ -204,6 +239,10 @@ export default function AparenciaPage() {
           coverImageUrl: config.coverImageUrl || null,
           galleryUrls: config.galleryUrls,
           themePreset: config.themePreset || null,
+          highlightTitle: config.highlightTitle || null,
+          highlightSubtitle: config.highlightSubtitle || null,
+          highlightServiceIds: config.highlightServiceIds,
+          aboutText: config.aboutText || null,
         }),
       });
 
@@ -602,6 +641,125 @@ export default function AparenciaPage() {
             />
           </div>
         </div>
+      </div>
+
+      {/* Destaques da Home */}
+      <div style={sectionStyle}>
+        <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 600, color: '#1e293b' }}>⭐ Destaques da Home</h3>
+        <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: 13 }}>Configure a seção &quot;Em Destaque&quot; na página inicial. Selecione até 3 serviços ou produtos.</p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <div>
+            <label style={labelStyle}>Título da Seção</label>
+            <input
+              type="text"
+              value={config.highlightTitle}
+              onChange={e => setConfig({ ...config, highlightTitle: e.target.value })}
+              placeholder="Ex: Em Destaque"
+              maxLength={100}
+              style={inputStyle}
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>Subtítulo (opcional)</label>
+            <input
+              type="text"
+              value={config.highlightSubtitle}
+              onChange={e => setConfig({ ...config, highlightSubtitle: e.target.value })}
+              placeholder="Ex: Nossos serviços mais procurados"
+              maxLength={200}
+              style={inputStyle}
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>Itens em Destaque ({config.highlightServiceIds.length}/3)</label>
+            {config.highlightServiceIds.map((sid, idx) => {
+              const svc = serviceOptions.find(s => s.id === sid);
+              return (
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <select
+                    value={sid}
+                    onChange={e => {
+                      const ids = [...config.highlightServiceIds];
+                      ids[idx] = e.target.value;
+                      setConfig({ ...config, highlightServiceIds: ids });
+                    }}
+                    style={{ ...inputStyle, flex: 1 }}
+                  >
+                    <option value="">Selecione...</option>
+                    {serviceOptions.map(s => (
+                      <option key={s.id} value={s.id} disabled={config.highlightServiceIds.includes(s.id) && s.id !== sid}>
+                        {s.name} ({s.itemType === 'PRODUCT' ? 'Produto' : 'Serviço'})
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => {
+                      const ids = config.highlightServiceIds.filter((_, i) => i !== idx);
+                      setConfig({ ...config, highlightServiceIds: ids });
+                    }}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 8,
+                      border: '1px solid #fecaca',
+                      background: '#fef2f2',
+                      color: '#ef4444',
+                      cursor: 'pointer',
+                      fontSize: 18,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
+            {config.highlightServiceIds.length < 3 && (
+              <button
+                onClick={() => setConfig({ ...config, highlightServiceIds: [...config.highlightServiceIds, ''] })}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: 8,
+                  border: '2px dashed #d1d5db',
+                  background: '#fafafa',
+                  color: '#6b7280',
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  width: '100%',
+                }}
+              >
+                + Adicionar item
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Sobre */}
+      <div style={sectionStyle}>
+        <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 600, color: '#1e293b' }}>📝 Sobre</h3>
+        <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: 13 }}>Texto que aparece na seção &quot;Sobre&quot; da página inicial.</p>
+
+        <textarea
+          value={config.aboutText}
+          onChange={e => setConfig({ ...config, aboutText: e.target.value })}
+          placeholder="Conte sobre sua história, experiência, diferenciais..."
+          rows={4}
+          maxLength={500}
+          style={{
+            ...inputStyle,
+            resize: 'vertical',
+            fontFamily: 'inherit',
+          }}
+        />
+        <p style={{ margin: '8px 0 0', color: '#9ca3af', fontSize: 12, textAlign: 'right' }}>{config.aboutText.length}/500</p>
       </div>
 
       {/* Preview */}

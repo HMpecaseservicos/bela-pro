@@ -218,8 +218,15 @@ function BottomNav({
 }
 
 // ============================================
-// COMPONENTE: Seção de Início (Home)
+// COMPONENTE: Seção de Início (Home) — Premium
 // ============================================
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return 'Bom dia';
+  if (h < 18) return 'Boa tarde';
+  return 'Boa noite';
+}
+
 function HomeSection({
   workspace,
   services,
@@ -228,6 +235,7 @@ function HomeSection({
   shopEnabled,
   onNavigate,
   hideQuickActions,
+  clientName,
 }: {
   workspace: any;
   services: any[];
@@ -236,12 +244,48 @@ function HomeSection({
   shopEnabled: boolean;
   onNavigate: (tab: ActiveTab) => void;
   hideQuickActions?: boolean;
+  clientName?: string;
 }) {
   const popularServices = services.filter(s => s.itemType !== 'PRODUCT').slice(0, 3);
   const featuredProducts = services.filter(s => s.itemType === 'PRODUCT').slice(0, 4);
-  
+
+  // Resolve highlight service/product IDs to real objects
+  const highlightIds: string[] = workspace?.highlightServiceIds || [];
+  const highlightItems = highlightIds
+    .map((id: string) => services.find(s => s.id === id))
+    .filter(Boolean);
+
+  const highlightTitle = workspace?.highlightTitle || 'Em Destaque';
+  const highlightSubtitle = workspace?.highlightSubtitle;
+  const aboutText = workspace?.aboutText;
+
+  const greeting = getGreeting();
+  const displayName = clientName ? `, ${clientName.split(' ')[0]}` : '';
+
   return (
     <div style={{ padding: '0 0 24px' }}>
+      {/* Smart Greeting */}
+      <div style={{ marginBottom: 28 }}>
+        <h2 style={{
+          margin: 0,
+          fontSize: 22,
+          fontWeight: 800,
+          color: COLORS.textPrimary,
+          letterSpacing: -0.5,
+          lineHeight: 1.2,
+        }}>
+          {greeting}{displayName} 👋
+        </h2>
+        <p style={{
+          margin: '6px 0 0',
+          fontSize: 14,
+          color: COLORS.textSecondary,
+          lineHeight: 1.4,
+        }}>
+          {workspace?.welcomeText || 'O que deseja hoje?'}
+        </p>
+      </div>
+
       {/* Quick Actions — oculto quando HeroSection já mostra CTAs */}
       {!hideQuickActions && <div style={{
         display: 'grid',
@@ -337,8 +381,128 @@ function HomeSection({
         )}
       </div>}
 
-      {/* Serviços populares */}
-      {popularServices.length > 0 && (
+      {/* Em Destaque — Admin-configurable highlight section */}
+      {highlightItems.length > 0 && (
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ marginBottom: 16 }}>
+            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.3 }}>
+              {highlightTitle}
+            </h3>
+            {highlightSubtitle && (
+              <p style={{ margin: '4px 0 0', fontSize: 13, color: COLORS.textSecondary }}>
+                {highlightSubtitle}
+              </p>
+            )}
+          </div>
+          <div style={{
+            display: 'flex',
+            gap: 14,
+            overflowX: 'auto',
+            paddingBottom: 8,
+            scrollSnapType: 'x mandatory',
+            WebkitOverflowScrolling: 'touch',
+            msOverflowStyle: 'none',
+            scrollbarWidth: 'none',
+          }}>
+            {highlightItems.map((item: any) => {
+              const isProduct = item.itemType === 'PRODUCT';
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => onNavigate(isProduct ? 'shop' : 'services')}
+                  style={{
+                    minWidth: highlightItems.length === 1 ? '100%' : 200,
+                    maxWidth: highlightItems.length === 1 ? '100%' : 220,
+                    scrollSnapAlign: 'start',
+                    background: '#fff',
+                    borderRadius: 18,
+                    border: '1px solid #f0f1f3',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    transition: 'box-shadow 0.2s, transform 0.15s',
+                    flexShrink: 0,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  }}
+                >
+                  {/* Image */}
+                  <div style={{
+                    width: '100%',
+                    height: 130,
+                    background: item.imageUrl
+                      ? `url(${getImageUrl(item.imageUrl)}) center/cover no-repeat`
+                      : `linear-gradient(135deg, ${primaryColor}15, ${primaryColor}08)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'relative',
+                  }}>
+                    {!item.imageUrl && (
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={`${primaryColor}40`} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        {isProduct ? (
+                          <>
+                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                            <path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" />
+                          </>
+                        ) : (
+                          <>
+                            <rect x="3" y="4" width="18" height="18" rx="2"/>
+                            <path d="M16 2v4M8 2v4M3 10h18"/>
+                          </>
+                        )}
+                      </svg>
+                    )}
+                    {/* Badge */}
+                    <span style={{
+                      position: 'absolute',
+                      top: 10,
+                      left: 10,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: 0.5,
+                      padding: '4px 8px',
+                      borderRadius: 6,
+                      background: isProduct ? 'rgba(16,185,129,0.9)' : `${primaryColor}E6`,
+                      color: '#fff',
+                    }}>
+                      {isProduct ? 'Produto' : 'Serviço'}
+                    </span>
+                  </div>
+                  {/* Info */}
+                  <div style={{ padding: '12px 14px 14px' }}>
+                    <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: COLORS.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.name}
+                    </p>
+                    {!isProduct && item.durationMinutes && (
+                      <p style={{ margin: '3px 0 0', fontSize: 12, color: COLORS.textSecondary }}>
+                        {item.durationMinutes} min
+                      </p>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: isProduct ? '#059669' : primaryColor }}>
+                        {formatPrice(item.priceCents)}
+                      </span>
+                      <span style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: primaryColor,
+                        padding: '5px 10px',
+                        background: `${primaryColor}0D`,
+                        borderRadius: 8,
+                      }}>
+                        {isProduct ? 'Ver →' : 'Agendar →'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Serviços populares — fallback when no highlights configured */}
+      {highlightItems.length === 0 && popularServices.length > 0 && (
         <div style={{ marginBottom: 32 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
             <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.3 }}>
@@ -401,7 +565,7 @@ function HomeSection({
 
       {/* Produtos em destaque */}
       {shopEnabled && featuredProducts.length > 0 && (
-        <div>
+        <div style={{ marginBottom: 32 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
             <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.3 }}>
               Produtos
@@ -454,6 +618,31 @@ function HomeSection({
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Sobre */}
+      {aboutText && (
+        <div style={{
+          marginBottom: 32,
+          padding: '20px 22px',
+          background: '#fff',
+          borderRadius: 18,
+          border: '1px solid #f0f1f3',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.03)',
+        }}>
+          <h3 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.2 }}>
+            Sobre
+          </h3>
+          <p style={{
+            margin: 0,
+            fontSize: 14,
+            color: COLORS.textSecondary,
+            lineHeight: 1.6,
+            whiteSpace: 'pre-line',
+          }}>
+            {aboutText}
+          </p>
         </div>
       )}
     </div>
@@ -1829,6 +2018,7 @@ export default function BookingPage() {
                 shopEnabled={booking.shopEnabled}
                 onNavigate={handleTabChange}
                 hideQuickActions={usePremiumLayout}
+                clientName={clientSession?.name}
               />
               {usePremiumLayout && (
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 24, marginBottom: 8, flexWrap: 'wrap' }}>

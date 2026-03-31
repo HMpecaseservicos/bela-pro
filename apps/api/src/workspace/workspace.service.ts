@@ -26,6 +26,11 @@ const updateWorkspaceSchema = z.object({
   slotIntervalMinutes: z.number().int().refine((v: number) => [15, 30, 60].includes(v)).optional(),
   slug: z.string().min(2).max(50).optional(),
   shopEnabled: z.boolean().optional(), // LOJA UNIFICADA
+  // PREMIUM HOMEPAGE
+  highlightTitle: z.string().max(100).optional().nullable(),
+  highlightSubtitle: z.string().max(200).optional().nullable(),
+  highlightServiceIds: z.array(z.string().min(1)).max(3).optional(),
+  aboutText: z.string().max(500).optional().nullable(),
   profile: profileSchema,
 });
 
@@ -63,6 +68,11 @@ export class WorkspaceService {
         slotIntervalMinutes: true,
         // LOJA UNIFICADA
         shopEnabled: true,
+        // PREMIUM HOMEPAGE
+        highlightTitle: true,
+        highlightSubtitle: true,
+        highlightServiceIds: true,
+        aboutText: true,
         // Profile
         profile: {
           select: {

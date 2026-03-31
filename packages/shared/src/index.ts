@@ -125,6 +125,10 @@ export interface WorkspacePublic {
   description: string | null;
   profile: ProfessionalProfile | null;
   shopEnabled?: boolean; // LOJA UNIFICADA
+  highlightTitle: string | null;
+  highlightSubtitle: string | null;
+  highlightServiceIds: string[];
+  aboutText: string | null;
 }
 
 export interface ServiceCategory {
