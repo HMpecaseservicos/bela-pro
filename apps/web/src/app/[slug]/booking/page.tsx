@@ -1821,15 +1821,6 @@ export default function BookingPage() {
               {!usePremiumLayout && (
                 <WelcomeSection workspace={booking.workspace} primaryColor={booking.primaryColor} showBadges={true} />
               )}
-              {usePremiumLayout && (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
-                  {['✓ Confirmação automática', '✓ Horários em tempo real', '✓ Cancelamento fácil'].map((badge, i) => (
-                    <span key={i} style={{ fontSize: 12, color: COLORS.textSecondary, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      {badge}
-                    </span>
-                  ))}
-                </div>
-              )}
               <HomeSection
                 workspace={booking.workspace}
                 services={booking.services}
@@ -1839,6 +1830,15 @@ export default function BookingPage() {
                 onNavigate={handleTabChange}
                 hideQuickActions={usePremiumLayout}
               />
+              {usePremiumLayout && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 24, marginBottom: 8, flexWrap: 'wrap' }}>
+                  {['✓ Confirmação automática', '✓ Horários em tempo real', '✓ Cancelamento fácil'].map((badge, i) => (
+                    <span key={i} style={{ fontSize: 12, color: COLORS.textSecondary, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {badge}
+                    </span>
+                  ))}
+                </div>
+              )}
             </>
           )}
 
