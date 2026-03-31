@@ -40,7 +40,7 @@ export function HeroSection({ workspace, theme, shopEnabled, onAction, onLoginCl
       style={{
         position: 'relative',
         width: '100%',
-        minHeight: hasCover ? 340 : 280,
+        minHeight: hasCover ? 380 : 300,
         background: hasCover 
           ? `url(${getImageUrl(workspace.coverImageUrl)}) center/cover no-repeat`
           : colors.gradient,
@@ -48,7 +48,7 @@ export function HeroSection({ workspace, theme, shopEnabled, onAction, onLoginCl
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: `${SPACING.xl}px ${SPACING.lg}px`,
+        padding: `${SPACING.xl}px ${SPACING.lg}px 60px`,
         overflow: 'hidden',
       }}
     >
