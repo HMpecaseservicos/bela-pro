@@ -254,15 +254,16 @@ function HomeSkeleton() {
 function HighlightDots({ count, activeIndex }: { count: number; activeIndex: number }) {
   if (count <= 1) return null;
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 12 }}>
+    <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} style={{
-          width: i === activeIndex ? 16 : 6,
-          height: 6,
-          borderRadius: 3,
+          width: i === activeIndex ? 22 : 8,
+          height: 8,
+          borderRadius: 4,
           background: i === activeIndex ? 'currentColor' : '#d1d5db',
-          transition: 'all 0.3s ease',
-          opacity: i === activeIndex ? 1 : 0.5,
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          opacity: i === activeIndex ? 1 : 0.4,
+          boxShadow: i === activeIndex ? '0 2px 6px rgba(0,0,0,0.15)' : 'none',
         }} />
       ))}
     </div>
@@ -330,32 +331,33 @@ function HomeSection({
 
       {/* ── Smart Greeting ── */}
       {hideQuickActions ? (
-        /* Premium layout: status bar compacta */
+        /* Premium layout: card greeting elegante */
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 10,
-          padding: '14px 18px',
-          background: `linear-gradient(135deg, ${primaryColor}08 0%, ${primaryColor}03 100%)`,
-          borderRadius: 16,
-          border: `1px solid ${primaryColor}10`,
+          gap: 14,
+          padding: '18px 20px',
+          background: `linear-gradient(135deg, ${primaryColor}15 0%, ${primaryColor}05 100%)`,
+          borderRadius: 20,
+          border: `1px solid ${primaryColor}20`,
           marginBottom: 28,
+          boxShadow: `0 4px 20px ${primaryColor}10`,
         }}>
           <div style={{
-            width: 40, height: 40, borderRadius: 12,
-            background: `linear-gradient(135deg, ${primaryColor}18, ${primaryColor}0A)`,
+            width: 48, height: 48, borderRadius: 16,
+            background: `linear-gradient(135deg, ${primaryColor}30, ${primaryColor}10)`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
           }}>
-            <span style={{ fontSize: 20 }}>
+            <span style={{ fontSize: 24 }}>
               {greeting === 'Bom dia' ? '☀️' : greeting === 'Boa tarde' ? '🌤' : '🌙'}
             </span>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: COLORS.textPrimary, letterSpacing: -0.2 }}>
+            <p style={{ margin: 0, fontSize: 17, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.3 }}>
               {greeting}{firstName ? `, ${firstName}` : ''} 👋
             </p>
-            <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textSecondary }}>
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: COLORS.textSecondary, lineHeight: 1.4 }}>
               {workspace?.welcomeText || 'O que deseja hoje?'}
             </p>
           </div>
@@ -365,7 +367,7 @@ function HomeSection({
         <div style={{ marginBottom: 28 }}>
           <h2 style={{
             margin: 0,
-            fontSize: 22,
+            fontSize: 24,
             fontWeight: 800,
             color: COLORS.textPrimary,
             letterSpacing: -0.5,
@@ -374,10 +376,10 @@ function HomeSection({
             {greeting}{firstName ? `, ${firstName}` : ''} 👋
           </h2>
           <p style={{
-            margin: '6px 0 0',
-            fontSize: 14,
+            margin: '8px 0 0',
+            fontSize: 15,
             color: COLORS.textSecondary,
-            lineHeight: 1.4,
+            lineHeight: 1.5,
           }}>
             {workspace?.welcomeText || 'O que deseja hoje?'}
           </p>
@@ -460,22 +462,29 @@ function HomeSection({
 
       {/* ── Em Destaque 2.0 ── */}
       {highlightItems.length > 0 && (
-        <section aria-label="Itens em destaque" style={{ marginBottom: 32 }}>
-          <div style={{ marginBottom: 16 }}>
-            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.3 }}>
-              {highlightTitle}
-            </h3>
-            {highlightSubtitle && (
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: COLORS.textSecondary, lineHeight: 1.4 }}>
-                {highlightSubtitle}
-              </p>
-            )}
+        <section aria-label="Itens em destaque" style={{ marginBottom: 36 }}>
+          <div style={{ marginBottom: 18, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 4, height: 28, borderRadius: 2,
+              background: `linear-gradient(180deg, ${primaryColor}, ${primaryColor}60)`,
+            }} />
+            <div>
+              <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.4 }}>
+                {highlightTitle}
+              </h3>
+              {highlightSubtitle && (
+                <p style={{ margin: '3px 0 0', fontSize: 13, color: COLORS.textSecondary, lineHeight: 1.4 }}>
+                  {highlightSubtitle}
+                </p>
+              )}
+            </div>
           </div>
           <div
             ref={highlightScrollRef}
+            className="highlight-scroll"
             style={{
               display: 'flex',
-              gap: 14,
+              gap: 16,
               overflowX: 'auto',
               paddingBottom: 4,
               scrollSnapType: 'x mandatory',
@@ -492,17 +501,17 @@ function HomeSection({
                   onClick={() => onNavigate(isProduct ? 'shop' : 'services')}
                   aria-label={`${isProduct ? 'Ver produto' : 'Agendar'}: ${item.name} - ${formatPrice(item.priceCents)}`}
                   style={{
-                    minWidth: highlightItems.length === 1 ? '100%' : 200,
-                    maxWidth: highlightItems.length === 1 ? '100%' : 220,
+                    minWidth: highlightItems.length === 1 ? '100%' : 240,
+                    maxWidth: highlightItems.length === 1 ? '100%' : 260,
                     scrollSnapAlign: 'start',
                     background: '#fff',
-                    borderRadius: 18,
-                    border: '1px solid #f0f1f3',
+                    borderRadius: 20,
+                    border: 'none',
                     overflow: 'hidden',
                     cursor: 'pointer',
                     transition: 'transform 0.15s ease, box-shadow 0.2s ease',
                     flexShrink: 0,
-                    boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+                    boxShadow: '0 4px 24px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06)',
                     padding: 0,
                     textAlign: 'left',
                     WebkitTapHighlightColor: 'transparent',
@@ -518,8 +527,8 @@ function HomeSection({
                     width: '100%',
                     aspectRatio: '16/10',
                     background: item.imageUrl
-                      ? undefined
-                      : `linear-gradient(135deg, ${primaryColor}12, ${primaryColor}06)`,
+                      ? '#f3f4f6'
+                      : `linear-gradient(135deg, ${primaryColor}18, ${primaryColor}08)`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -536,12 +545,13 @@ function HomeSection({
                       />
                     ) : (
                       <div style={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
                       }}>
                         <div style={{
-                          width: 48, height: 48, borderRadius: 14,
-                          background: `${primaryColor}10`,
+                          width: 56, height: 56, borderRadius: 16,
+                          background: `${primaryColor}15`,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          boxShadow: `0 4px 16px ${primaryColor}12`,
                         }}>
                           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={`${primaryColor}60`} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                             {isProduct ? (
@@ -556,40 +566,50 @@ function HomeSection({
                         </span>
                       </div>
                     )}
+                    {/* Gradient overlay for text readability */}
+                    {item.imageUrl && (
+                      <div style={{
+                        position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%',
+                        background: 'linear-gradient(transparent, rgba(0,0,0,0.15))',
+                        pointerEvents: 'none',
+                      }} />
+                    )}
                     {/* Badge */}
                     <span style={{
                       position: 'absolute', top: 10, left: 10,
                       fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-                      letterSpacing: 0.5, padding: '4px 10px', borderRadius: 8,
+                      letterSpacing: 0.5, padding: '5px 12px', borderRadius: 20,
                       background: isProduct ? 'rgba(16,185,129,0.92)' : `${primaryColor}E8`,
                       color: '#fff',
-                      backdropFilter: 'blur(4px)',
+                      backdropFilter: 'blur(8px)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                     }}>
                       {isProduct ? '🛍 Produto' : '⭐ Destaque'}
                     </span>
                   </div>
                   {/* Info */}
-                  <div style={{ padding: '12px 14px 16px' }}>
-                    <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: COLORS.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ padding: '14px 16px 18px' }}>
+                    <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: COLORS.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {item.name}
                     </p>
                     {!isProduct && item.durationMinutes && (
-                      <p style={{ margin: '3px 0 0', fontSize: 12, color: COLORS.textSecondary, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                      <p style={{ margin: '4px 0 0', fontSize: 13, color: COLORS.textSecondary, display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                         {item.durationMinutes} min
                       </p>
                     )}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-                      <span style={{ fontSize: 17, fontWeight: 800, color: isProduct ? '#059669' : primaryColor }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+                      <span style={{ fontSize: 19, fontWeight: 800, color: isProduct ? '#059669' : primaryColor }}>
                         {formatPrice(item.priceCents)}
                       </span>
                       <span style={{
-                        fontSize: 11, fontWeight: 700, color: '#fff',
-                        padding: '6px 12px', borderRadius: 10,
+                        fontSize: 12, fontWeight: 700, color: '#fff',
+                        padding: '8px 16px', borderRadius: 12,
                         background: isProduct
                           ? 'linear-gradient(135deg, #10b981, #059669)'
                           : `linear-gradient(135deg, ${primaryColor}, ${primaryColor}CC)`,
-                        boxShadow: isProduct ? '0 2px 8px rgba(16,185,129,0.25)' : `0 2px 8px ${primaryColor}25`,
+                        boxShadow: isProduct ? '0 3px 12px rgba(16,185,129,0.3)' : `0 3px 12px ${primaryColor}30`,
+                        letterSpacing: 0.3,
                       }}>
                         {isProduct ? 'Ver' : 'Agendar'} →
                       </span>
@@ -605,11 +625,17 @@ function HomeSection({
 
       {/* ── Serviços populares — fallback ── */}
       {highlightItems.length === 0 && popularServices.length > 0 && (
-        <section aria-label="Serviços populares" style={{ marginBottom: 32 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
-            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.3 }}>
-              Serviços em destaque
-            </h3>
+        <section aria-label="Serviços populares" style={{ marginBottom: 36 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                width: 4, height: 28, borderRadius: 2,
+                background: `linear-gradient(180deg, ${primaryColor}, ${primaryColor}60)`,
+              }} />
+              <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.4 }}>
+                Serviços em destaque
+              </h3>
+            </div>
             <button
               onClick={() => onNavigate('services')}
               aria-label="Ver todos os serviços"
@@ -626,10 +652,11 @@ function HomeSection({
                 aria-label={`Agendar ${service.name} - ${formatPrice(service.priceCents)}`}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 14,
-                  padding: '14px 16px', background: '#fff', borderRadius: 14,
-                  border: '1px solid #f0f1f3', cursor: 'pointer',
+                  padding: '16px 18px', background: '#fff', borderRadius: 16,
+                  border: 'none', cursor: 'pointer',
                   transition: 'transform 0.12s ease, box-shadow 0.2s ease',
                   textAlign: 'left', WebkitTapHighlightColor: 'transparent',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
                 }}
                 onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.98)')}
                 onMouseUp={e => (e.currentTarget.style.transform = 'scale(1)')}
@@ -674,11 +701,17 @@ function HomeSection({
 
       {/* ── Produtos ── */}
       {shopEnabled && featuredProducts.length > 0 && (
-        <section aria-label="Produtos em destaque" style={{ marginBottom: 32 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
-            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.3 }}>
-              Produtos
-            </h3>
+        <section aria-label="Produtos em destaque" style={{ marginBottom: 36 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{
+                width: 4, height: 28, borderRadius: 2,
+                background: 'linear-gradient(180deg, #10b981, #10b98160)',
+              }} />
+              <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.4 }}>
+                Produtos
+              </h3>
+            </div>
             <button
               onClick={() => onNavigate('shop')}
               aria-label="Ver todos os produtos"
@@ -694,10 +727,11 @@ function HomeSection({
                 onClick={() => onNavigate('shop')}
                 aria-label={`Ver produto ${product.name} - ${formatPrice(product.priceCents)}`}
                 style={{
-                  background: '#fff', borderRadius: 16, border: '1px solid #f0f1f3',
+                  background: '#fff', borderRadius: 18, border: 'none',
                   overflow: 'hidden', cursor: 'pointer',
                   transition: 'transform 0.12s ease, box-shadow 0.2s ease',
                   textAlign: 'left', padding: 0, WebkitTapHighlightColor: 'transparent',
+                  boxShadow: '0 3px 16px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04)',
                 }}
                 onMouseDown={e => (e.currentTarget.style.transform = 'scale(0.97)')}
                 onMouseUp={e => (e.currentTarget.style.transform = 'scale(1)')}
@@ -737,19 +771,19 @@ function HomeSection({
       {/* ── Sobre — Premium ── */}
       {aboutText && (
         <section aria-label="Sobre o estabelecimento" style={{
-          marginBottom: 24,
-          padding: '22px 22px 24px',
+          marginBottom: 28,
+          padding: '24px 22px 26px',
           background: '#fff',
-          borderRadius: 20,
-          border: '1px solid #f0f1f3',
-          boxShadow: '0 1px 6px rgba(0,0,0,0.03)',
+          borderRadius: 22,
+          border: 'none',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
           position: 'relative',
           overflow: 'hidden',
         }}>
           {/* Accent bar */}
           <div style={{
-            position: 'absolute', top: 0, left: 0, right: 0, height: 3,
-            background: `linear-gradient(90deg, ${primaryColor}, ${primaryColor}80)`,
+            position: 'absolute', top: 0, left: 0, right: 0, height: 4,
+            background: `linear-gradient(90deg, ${primaryColor}, ${primaryColor}60)`,
           }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
             <div style={{
@@ -789,10 +823,12 @@ function HomeSection({
 
       {/* ── Trust Badges Premium ── */}
       <div style={{
-        display: 'flex', justifyContent: 'center', gap: 6,
-        flexWrap: 'wrap', padding: '16px 12px',
-        background: `${primaryColor}04`, borderRadius: 16,
-        border: `1px solid ${primaryColor}08`,
+        display: 'flex', justifyContent: 'center', gap: 8,
+        flexWrap: 'wrap', padding: '18px 14px',
+        background: `linear-gradient(135deg, ${primaryColor}08 0%, ${primaryColor}03 100%)`,
+        borderRadius: 20,
+        border: `1px solid ${primaryColor}12`,
+        boxShadow: `0 2px 12px ${primaryColor}06`,
       }}>
         {[
           { icon: (
@@ -814,10 +850,11 @@ function HomeSection({
           ), text: 'Cancelamento fácil' },
         ].map((badge, i) => (
           <span key={i} style={{
-            fontSize: 11, fontWeight: 600, color: COLORS.textSecondary,
-            display: 'flex', alignItems: 'center', gap: 5,
-            padding: '6px 10px', background: '#fff', borderRadius: 10,
-            border: '1px solid #f0f1f3', whiteSpace: 'nowrap',
+            fontSize: 12, fontWeight: 600, color: COLORS.textSecondary,
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '8px 14px', background: '#fff', borderRadius: 12,
+            border: 'none', whiteSpace: 'nowrap',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
           }}>
             {badge.icon}
             {badge.text}
@@ -2069,6 +2106,10 @@ export default function BookingPage() {
     button { font-family: inherit; }
     input { font-family: inherit; }
     input:focus { outline: none; }
+
+    /* Hide scrollbar for highlight carousel */
+    .highlight-scroll::-webkit-scrollbar { display: none; }
+    .highlight-scroll { -ms-overflow-style: none; scrollbar-width: none; }
     
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
