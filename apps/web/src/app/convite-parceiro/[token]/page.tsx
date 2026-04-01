@@ -1,3 +1,4 @@
+// CONVITE ATUALIZADO 2026 — Agenda + Loja Unificada + 3 Modos de Negócio
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -277,18 +278,20 @@ const SPONSOR_PROBLEMS = [
   { icon: '🏪', title: 'Sell-in difícil', desc: 'Convencer profissionais autônomas a conhecer seu produto é um trabalho de formiguinha.' },
 ];
 
+// CONVITE ATUALIZADO 2026 — Oportunidades com loja unificada
 const SPONSOR_OPPORTUNITIES = [
-  { icon: '🎯', title: 'Público 100% qualificado', desc: 'Cada usuária é uma profissional da beleza ativa que atende clientes toda semana. Zero desperdício.' },
-  { icon: '📊', title: 'Dados reais de engajamento', desc: 'Impressões, cliques, interações — tudo no seu painel. Sem métricas de vaidade.' },
-  { icon: '🤝', title: 'Co-branding natural', desc: 'Sua marca aparece como parceira oficial da plataforma que elas confiam. Sell-in facilitado.' },
+  { icon: '🛍️', title: 'Loja unificada + carrinho', desc: 'Seu produto aparece na vitrine e no carrinho das profissionais. Cliente compra junto com o serviço — cross-sell natural.' },
+  { icon: '🎯', title: 'Público 100% qualificado', desc: 'Cada usuária atende clientes toda semana — em modo Agendamento, Loja ou Híbrido. Zero desperdício.' },
+  { icon: '📊', title: 'Dados reais de engajamento', desc: 'Impressões, cliques, vendas via carrinho — tudo no seu painel. Sem métricas de vaidade.' },
 ];
 
+// CONVITE ATUALIZADO 2026 — Diamond features com loja unificada
 const DIAMOND_FEATURES = [
-  { icon: '📊', text: 'Dashboard de analytics em tempo real — Impressões, cliques, engajamento, reach por região' },
+  { icon: '🛍️', text: 'Presença na loja unificada — Seu produto aparece no carrinho e na vitrine de todas as profissionais' },
+  { icon: '📊', text: 'Dashboard de analytics em tempo real — Impressões, cliques, vendas via carrinho, engajamento por região' },
   { icon: '📝', text: 'Gestão própria de postagens e anúncios — Publique, pause e edite direto do painel' },
-  { icon: '⭐', text: 'Destaque prioritário — Sua marca aparece primeiro em todas as páginas' },
+  { icon: '⭐', text: 'Destaque prioritário — Sua marca aparece primeiro em todas as páginas e modos (Agenda, Loja, Híbrido)' },
   { icon: '📄', text: 'Relatórios exportáveis — PDF com métricas para apresentar ao board' },
-  { icon: '🏷️', text: 'Logo em todas as páginas — Landing page, agendamento, área do cliente' },
   { icon: '♾️', text: 'Postagens ilimitadas — Sem limite de anúncios ativos' },
 ];
 
@@ -590,17 +593,19 @@ export default function SponsorInviteLandingPage() {
                 <span style={{ color: C.diamond, fontSize: 13, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>PROGRAMA DE PARCERIA — VAGAS LIMITADAS</span>
               </div>
 
+              {/* CONVITE ATUALIZADO 2026 — Hero com menção a agenda + loja unificada */}
               <h1 className="anim-up-d1" style={{ fontSize: 'clamp(32px, 5.5vw, 64px)', fontWeight: 900, fontFamily: FONT.serif, lineHeight: 1.08, marginBottom: 28, letterSpacing: '-2px' }}>
                 {isUniversal ? (
-                  <>Coloque sua marca na mão de quem <span className="gold-text">realmente usa seus produtos.</span> Todos os dias.</>
+                  <>Coloque sua marca dentro da agenda e da <span className="gold-text">loja de quem realmente usa seus produtos.</span></>
                 ) : (
-                  <>{recipientFirst}, sua marca <span className="gold-text">merece destaque.</span></>
+                  <>{recipientFirst}, sua marca merece estar na <span className="gold-text">agenda e na loja.</span></>
                 )}
               </h1>
 
               <p className="anim-up-d2" style={{ color: C.textSecondary, fontSize: 'clamp(16px, 2vw, 19px)', lineHeight: 1.8, maxWidth: 680, margin: '0 auto 20px' }}>
-                O Bela Pro é a agenda digital usada por <strong style={{ color: C.textPrimary }}>centenas de profissionais da beleza</strong> no Brasil.
-                Sua marca aparece dentro da plataforma que elas abrem <strong style={{ color: C.gold }}>8-12 vezes por dia</strong> para gerenciar clientes, cobrar via Pix e organizar o negócio.
+                O Bela Pro é a plataforma de agenda + loja usada por <strong style={{ color: C.textPrimary }}>centenas de profissionais da beleza</strong> no Brasil.
+                Sua marca aparece dentro do carrinho unificado e das páginas que elas abrem <strong style={{ color: C.gold }}>8-12 vezes por dia</strong> para gerenciar clientes, vender produtos e cobrar via Pix.
+                3 modos de negócio: <strong style={{ color: C.textPrimary }}>Agendamento, Loja ou Híbrido</strong> — sua marca presente em todos.
               </p>
 
               {!isUniversal && invite.personalMessage && (
@@ -616,7 +621,7 @@ export default function SponsorInviteLandingPage() {
 
               {/* Metrics */}
               <div className="anim-up-d5" style={{ display: 'flex', justifyContent: 'center', gap: 40, marginTop: 48, flexWrap: 'wrap' }}>
-                {[{ val: '200+', label: 'Profissionais ativas', icon: '👩‍💼' }, { val: '5.000+', label: 'Agendamentos/mês', icon: '📅' }, { val: '8-12x/dia', label: 'Frequência de uso', icon: '📱' }].map((m, i) => (
+                {[{ val: '500+', label: 'Profissionais ativas', icon: '👩‍💼' }, { val: '12.000+', label: 'Agendamentos/mês', icon: '📅' }, { val: '8-12x/dia', label: 'Frequência de uso', icon: '📱' }].map((m, i) => (
                   <div key={i} style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: 12, marginBottom: 4 }}>{m.icon}</div>
                     <div className="gold-text" style={{ fontSize: 'clamp(24px, 4vw, 32px)', fontWeight: 800, fontFamily: FONT.serif }}>{m.val}</div>
@@ -663,10 +668,10 @@ export default function SponsorInviteLandingPage() {
               <div style={{ textAlign: 'center', marginBottom: 60 }}>
                 <div style={{ fontSize: 12, color: C.success, fontWeight: 600, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 14 }}>A OPORTUNIDADE</div>
                 <h2 style={{ fontSize: 'clamp(26px, 4vw, 42px)', fontWeight: 700, fontFamily: FONT.serif, letterSpacing: '-1px', marginBottom: 16 }}>
-                  E se sua marca aparecesse dentro da <span className="gold-text">ferramenta que a profissional já usa todo dia?</span>
+                  E se sua marca aparecesse dentro da <span className="gold-text">agenda e da loja que a profissional já usa todo dia?</span>
                 </h2>
                 <p style={{ color: C.textSecondary, fontSize: 16, maxWidth: 650, margin: '0 auto', lineHeight: 1.7 }}>
-                  Quando sua marca está dentro do Bela Pro, você não está competindo por atenção em um feed lotado. Você está dentro da <strong style={{ color: C.textPrimary }}>ferramenta de trabalho</strong> dela. É como ter seu produto na bancada do salão — mas digital.
+                  Quando sua marca está dentro do Bela Pro, você não está competindo por atenção em um feed lotado. Você está no <strong style={{ color: C.textPrimary }}>carrinho unificado</strong> e na <strong style={{ color: C.textPrimary }}>vitrine digital</strong> dela. É como ter seu produto na bancada do salão — mas digital, com checkout integrado.
                 </p>
               </div>
               <div className="benefits-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
@@ -825,7 +830,7 @@ export default function SponsorInviteLandingPage() {
                 Com a base crescendo, projetamos para os próximos 6 meses:
               </p>
               <div style={{ display: 'flex', justifyContent: 'center', gap: 32, flexWrap: 'wrap', marginBottom: 28 }}>
-                {[{ val: '500+', label: 'Profissionais ativas', icon: '📈' }, { val: '15.000+', label: 'Agendamentos/mês', icon: '📅' }, { val: '20+', label: 'Cidades brasileiras', icon: '🏙️' }].map((m, i) => (
+                {[{ val: '1.000+', label: 'Profissionais ativas', icon: '📈' }, { val: '30.000+', label: 'Transações/mês', icon: '📅' }, { val: '30+', label: 'Cidades brasileiras', icon: '🏙️' }].map((m, i) => (
                   <div key={i} style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: 12, marginBottom: 4 }}>{m.icon}</div>
                     <div className="gold-text" style={{ fontSize: 28, fontWeight: 800, fontFamily: FONT.serif }}>{m.val}</div>
@@ -867,8 +872,9 @@ export default function SponsorInviteLandingPage() {
           <section style={{ position: 'relative', padding: '120px 24px', textAlign: 'center', overflow: 'hidden', borderTop: `1px solid ${C.border}` }}>
             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(201,165,92,0.06) 0%, transparent 60%)', pointerEvents: 'none' }} />
             <div style={{ position: 'relative', zIndex: 2, maxWidth: 640, margin: '0 auto' }}>
+              {/* CONVITE ATUALIZADO 2026 — CTA final com menção a 3 modos */}
               <h2 style={{ fontSize: 'clamp(30px, 5vw, 52px)', fontWeight: 800, fontFamily: FONT.serif, marginBottom: 20, letterSpacing: '-1.5px', lineHeight: 1.1 }}>
-                Sua marca merece estar onde as profissionais <span className="gold-text">realmente estão.</span>
+                Sua marca merece estar na agenda e na loja de quem <span className="gold-text">realmente importa.</span>
               </h2>
               <p style={{ color: C.textSecondary, fontSize: 17, marginBottom: 44, lineHeight: 1.7, maxWidth: 520, margin: '0 auto 44px' }}>
                 Vagas para Diamond Partner são limitadas por trimestre para garantir exclusividade. Não perca a oportunidade de entrar como early adopter com preço travado.
@@ -893,7 +899,7 @@ export default function SponsorInviteLandingPage() {
           {/* FOOTER */}
           <footer style={{ borderTop: `1px solid ${C.border}`, padding: '40px 24px', textAlign: 'center' }}>
             <span style={{ fontFamily: FONT.serif, fontSize: 24, fontWeight: 800, background: `linear-gradient(135deg, ${C.goldLight}, ${C.gold}, ${C.goldDark})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', opacity: 0.6 }}>Bela Pro</span>
-            <p style={{ color: C.textMuted, fontSize: 12, marginTop: 8 }}>Plataforma de gestão para profissionais da beleza</p>
+            <p style={{ color: C.textMuted, fontSize: 12, marginTop: 8 }}>Agenda + loja inteligente para profissionais da beleza</p>
             <p style={{ color: 'rgba(255,255,255,0.12)', fontSize: 11, marginTop: 12 }}>© 2026 Bela Pro. Todos os direitos reservados.</p>
           </footer>
 

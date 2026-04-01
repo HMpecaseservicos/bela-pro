@@ -1,3 +1,4 @@
+// CONVITE ATUALIZADO 2026 — Agenda + Loja Unificada + 3 Modos de Negócio
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
@@ -217,6 +218,7 @@ const GLOBAL_CSS = `
     .hero-grid { grid-template-columns: 1fr !important; text-align: center; }
     .hero-grid > div:first-child { align-items: center; }
     .features-grid { grid-template-columns: 1fr !important; }
+    .modes-grid { grid-template-columns: 1fr !important; }
     .stats-grid { grid-template-columns: 1fr 1fr 1fr !important; gap: 16px !important; }
     .testimonials-grid { grid-template-columns: 1fr !important; }
     .loss-grid { grid-template-columns: 1fr !important; }
@@ -333,8 +335,33 @@ function DashboardMockup() {
 }
 
 // =============================================================================
-// DATA
+// DATA — CONVITE ATUALIZADO 2026
 // =============================================================================
+
+const BUSINESS_MODES = [
+  {
+    icon: '📅',
+    title: 'Apenas Agendamento',
+    desc: 'Para quem vive de serviços: agenda inteligente, confirmação por WhatsApp, Pix automático e controle financeiro.',
+    color: '#c9a55c',
+    highlights: ['Agenda completa', 'Link na bio', 'Pix automático', 'WhatsApp integrado'],
+  },
+  {
+    icon: '🛍️',
+    title: 'Apenas Loja',
+    desc: 'Para quem vende produtos: vitrine digital, carrinho unificado, pagamento Pix e gestão de pedidos.',
+    color: '#6b8dde',
+    highlights: ['Vitrine premium', 'Carrinho unificado', 'Pix na hora', 'Gestão de pedidos'],
+  },
+  {
+    icon: '✨',
+    title: 'Agendamento + Loja',
+    desc: 'O melhor dos dois mundos: agende serviços e venda produtos no mesmo lugar, com um único checkout.',
+    color: '#a78bfa',
+    highlights: ['Tudo incluso', 'Checkout híbrido', 'Cross-sell automático', 'Máxima receita'],
+    featured: true,
+  },
+];
 
 const FEATURES = [
   {
@@ -342,6 +369,12 @@ const FEATURES = [
     title: 'Agenda Inteligente',
     desc: 'Veja seu dia, semana e mês numa tela só. Arrastar horário, confirmar, bloquear — tudo em 1 toque.',
     details: ['Arrastar e reorganizar', 'Confirmação automática', 'Bloqueio de horários'],
+  },
+  {
+    icon: '🛍️',
+    title: 'Loja + Vitrine Digital',
+    desc: 'Venda seus produtos com vitrine premium e carrinho unificado. Cliente agenda e compra no mesmo lugar.',
+    details: ['Catálogo com fotos', 'Carrinho + checkout', 'Destaques de parceiros'],
   },
   {
     icon: '🔗',
@@ -360,12 +393,6 @@ const FEATURES = [
     title: 'Robô no WhatsApp',
     desc: 'Confirma horários, lembra clientes e responde dúvidas 24h. Funciona até quando a cliente agenda às 23h.',
     details: ['Lembretes automáticos', 'Respostas inteligentes', 'Zero trabalho manual'],
-  },
-  {
-    icon: '👥',
-    title: 'Gestão de Clientes',
-    desc: 'Histórico completo: quando veio, o que fez, quanto pagou. Descubra quem é VIP e quem sumiu.',
-    details: ['Histórico completo', 'Notas por cliente', 'Classificação automática'],
   },
   {
     icon: '💰',
@@ -397,14 +424,15 @@ const COMPARE = [
   { bad: 'Agenda no caderno ou no WhatsApp', good: 'Agenda digital completa no celular' },
   { bad: 'Cliente esquece o horário e não vem', good: 'Lembrete automático por WhatsApp' },
   { bad: '"Quanto custa?" 50x por dia no direct', good: 'Link de agendamento com preços online' },
+  { bad: 'Vende produto sem controle nenhum', good: 'Loja com vitrine, carrinho e Pix integrado' },
   { bad: 'Cobra por Pix "quando lembra"', good: 'Pix automático com QR Code' },
   { bad: 'Não sabe quanto ganhou no mês', good: 'Relatório financeiro em tempo real' },
   { bad: 'Perde cliente e nem percebe', good: 'Alerta de cliente sumido' },
 ];
 
 const STATS = [
-  { value: '200+', label: 'Profissionais já usam', icon: '👩‍💼' },
-  { value: '5.000+', label: 'Agendamentos realizados', icon: '📅' },
+  { value: '500+', label: 'Profissionais já usam', icon: '👩‍💼' },
+  { value: '12.000+', label: 'Agendamentos realizados', icon: '📅' },
   { value: '4.9★', label: 'Avaliação média', icon: '⭐' },
 ];
 
@@ -622,13 +650,13 @@ export default function BusinessInviteLandingPage() {
               </div>
             )}
 
-            {/* Headline — pain-focused */}
+            {/* Headline — CONVITE ATUALIZADO 2026 — pain-focused + loja unificada */}
             <h1 className="anim-up-d1" style={{
               fontSize: 'clamp(32px, 5vw, 56px)', fontWeight: 800, fontFamily: FONT.serif,
               lineHeight: 1.1, marginBottom: 24, letterSpacing: '-1.5px',
             }}>
-              Chega de perder cliente por causa de{' '}
-              <span className="gold-text">agenda bagunçada no WhatsApp.</span>
+              Sua agenda e sua loja,{' '}
+              <span className="gold-text">tudo em um só lugar.</span>
             </h1>
 
             {/* Sub — solution */}
@@ -636,7 +664,7 @@ export default function BusinessInviteLandingPage() {
               fontSize: 'clamp(16px, 1.8vw, 19px)', color: C.textSecondary,
               lineHeight: 1.7, marginBottom: 36, maxWidth: 520,
             }}>
-              O Bela Pro organiza seus agendamentos, cobra via Pix automático e confirma horários por WhatsApp — tudo sozinho. Para que você foque no que sabe fazer: <strong style={{ color: C.textPrimary }}>atender bem.</strong>
+              O Bela Pro organiza seus agendamentos, vende seus produtos com carrinho unificado, cobra via Pix automático e confirma horários por WhatsApp — tudo sozinho. Escolha o modo que combina com você: <strong style={{ color: C.textPrimary }}>Agendamento, Loja ou os dois juntos.</strong>
             </p>
 
             {/* Personal message */}
@@ -673,7 +701,7 @@ export default function BusinessInviteLandingPage() {
             </div>
 
             <div className="anim-up-d5" style={{ marginTop: 16 }}>
-              <span style={{ color: C.textMuted, fontSize: 12 }}>Já usado por profissionais em SP, RJ, BH e mais 12 cidades</span>
+              <span style={{ color: C.textMuted, fontSize: 12 }}>+500 profissionais em SP, RJ, BH e mais 12 cidades — agenda, loja ou os dois</span>
             </div>
           </div>
 
@@ -739,7 +767,68 @@ export default function BusinessInviteLandingPage() {
         </div>
       </section>
 
-      {/* ===== SECTION: FUNCIONALIDADES ===== */}
+      {/* ===== SECTION: 3 MODOS DE NEGÓCIO — CONVITE ATUALIZADO 2026 ===== */}
+      <section style={{ padding: '100px 24px', background: C.sectionAlt }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 64 }}>
+            <div style={{ fontSize: 12, color: C.gold, fontWeight: 600, letterSpacing: 3, textTransform: 'uppercase', marginBottom: 14 }}>
+              ESCOLHA SEU MODO
+            </div>
+            <h2 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 700, fontFamily: FONT.serif, marginBottom: 16, letterSpacing: '-1px' }}>
+              3 modos. <span className="gold-text">1 plataforma.</span>
+            </h2>
+            <p style={{ color: C.textSecondary, fontSize: 16, maxWidth: 580, margin: '0 auto', lineHeight: 1.7 }}>
+              Você decide como usar o Bela Pro: só agendamento, só loja ou os dois juntos. Mude quando quiser, sem custo extra.
+            </p>
+          </div>
+
+          <div className="features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+            {BUSINESS_MODES.map((mode, i) => (
+              <div key={i} className="feature-card" style={{
+                position: 'relative',
+                padding: '36px 28px',
+                borderColor: mode.featured ? 'rgba(167,139,250,0.25)' : undefined,
+                background: mode.featured ? 'rgba(167,139,250,0.04)' : undefined,
+              }}>
+                {mode.featured && (
+                  <div style={{
+                    position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
+                    padding: '5px 16px', borderRadius: 20,
+                    background: 'linear-gradient(135deg, #a78bfa, #7c3aed)',
+                    color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: '0.5px', whiteSpace: 'nowrap',
+                  }}>
+                    MAIS POPULAR
+                  </div>
+                )}
+                <div style={{
+                  width: 56, height: 56, borderRadius: 14,
+                  background: `${mode.color}15`, border: `1px solid ${mode.color}30`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, marginBottom: 20,
+                }}>{mode.icon}</div>
+                <h3 style={{ fontSize: 19, fontWeight: 700, fontFamily: FONT.serif, marginBottom: 10, color: mode.color }}>{mode.title}</h3>
+                <p style={{ color: C.textSecondary, lineHeight: 1.65, marginBottom: 20, fontSize: 14 }}>{mode.desc}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {mode.highlights.map((h, j) => (
+                    <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={mode.color} strokeWidth="2.5" style={{ flexShrink: 0 }}><polyline points="20 6 9 17 4 12" /></svg>
+                      <span style={{ color: C.textMuted, fontSize: 12 }}>{h}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ textAlign: 'center', marginTop: 48 }}>
+            <Link href={`/cadastro?ref=${token}`} onClick={handleCtaClick} className="cta-btn">
+              Começar grátis por {trialDays} dias →
+            </Link>
+            <p style={{ color: C.textMuted, fontSize: 12, marginTop: 12 }}>Sem cartão de crédito • Troque de modo a qualquer momento</p>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== SECTION: FUNCIONALIDADES — CONVITE ATUALIZADO 2026 ===== */}
       <section style={{ padding: '100px 24px', background: C.sectionAlt }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 64 }}>
@@ -747,11 +836,11 @@ export default function BusinessInviteLandingPage() {
               FUNCIONALIDADES
             </div>
             <h2 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 700, fontFamily: FONT.serif, marginBottom: 16, letterSpacing: '-1px' }}>
-              Tudo que você precisa.{' '}
-              <span className="gold-text">Nada que não precisa.</span>
+              Agenda, loja e financeiro.{' '}
+              <span className="gold-text">Tudo em um app.</span>
             </h2>
             <p style={{ color: C.textSecondary, fontSize: 16, maxWidth: 540, margin: '0 auto', lineHeight: 1.7 }}>
-              Ferramentas pensadas para o dia a dia de quem atende cliente. Simples de usar, poderosas no resultado.
+              Ferramentas pensadas para o dia a dia de quem atende cliente e vende produto. Simples de usar, poderosas no resultado.
             </p>
           </div>
 
@@ -877,7 +966,7 @@ export default function BusinessInviteLandingPage() {
               <span style={{ color: C.textMuted, fontSize: 15 }}>/mês</span>
             </div>
             <p style={{ color: C.textMuted, fontSize: 13, maxWidth: 480, margin: '0 auto' }}>
-              Menos que o preço de 1 atendimento. Com agenda + Pix automático + WhatsApp + controle financeiro + tudo incluso.
+              Menos que o preço de 1 atendimento. Com agenda + loja + Pix automático + WhatsApp + controle financeiro + tudo incluso.
             </p>
           </div>
 
@@ -978,12 +1067,13 @@ export default function BusinessInviteLandingPage() {
         }} />
 
         <div style={{ position: 'relative', zIndex: 2, maxWidth: 640, margin: '0 auto' }}>
+        {/* ===== CTA FINAL — CONVITE ATUALIZADO 2026 ===== */}
           <h2 style={{
             fontSize: 'clamp(30px, 5vw, 52px)', fontWeight: 800, fontFamily: FONT.serif,
             marginBottom: 20, letterSpacing: '-1.5px', lineHeight: 1.1,
           }}>
-            Pronta pra parar de{' '}
-            <span className="gold-text">perder cliente?</span>
+            Pronta pra ter sua{' '}
+            <span className="gold-text">agenda e loja profissional?</span>
           </h2>
           <p style={{ color: C.textSecondary, fontSize: 17, marginBottom: 44, lineHeight: 1.7, maxWidth: 520, margin: '0 auto 44px' }}>
             {recipientName
@@ -994,7 +1084,7 @@ export default function BusinessInviteLandingPage() {
 
           <div className="final-cta-row" style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
             <Link href={`/cadastro?ref=${token}`} onClick={handleCtaClick} className="cta-btn" style={{ fontSize: 17, padding: '22px 48px' }}>
-              Criar minha conta grátis →
+              Começar grátis por {trialDays} dias →
             </Link>
           </div>
 
@@ -1049,14 +1139,14 @@ export default function BusinessInviteLandingPage() {
           background: `linear-gradient(135deg, ${C.goldLight} 0%, ${C.gold} 50%, ${C.goldDark} 100%)`,
           WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', opacity: 0.6,
         }}>Bela Pro</span>
-        <p style={{ color: C.textMuted, fontSize: 12, marginTop: 8 }}>A agenda inteligente para profissionais da beleza</p>
+        <p style={{ color: C.textMuted, fontSize: 12, marginTop: 8 }}>Agenda + loja inteligente para profissionais da beleza</p>
         <p style={{ color: 'rgba(255,255,255,0.12)', fontSize: 11, marginTop: 12 }}>© 2026 Bela Pro. Todos os direitos reservados.</p>
       </footer>
 
-      {/* ===== MOBILE CTA BAR ===== */}
+      {/* ===== MOBILE CTA BAR — CONVITE ATUALIZADO 2026 ===== */}
       <div className="mobile-cta-bar">
         <Link href={`/cadastro?ref=${token}`} onClick={handleCtaClick} className="cta-btn" style={{ width: '100%', justifyContent: 'center', padding: '16px 24px', fontSize: 15, animation: 'none' }}>
-          Criar minha conta grátis →
+          Começar grátis por {trialDays} dias →
         </Link>
       </div>
     </div>
