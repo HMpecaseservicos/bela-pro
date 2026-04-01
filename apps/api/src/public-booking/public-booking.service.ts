@@ -2,6 +2,11 @@ import { Injectable, BadRequestException, ConflictException, Logger } from '@nes
 import { PrismaService } from '../prisma/prisma.service';
 import { PaymentsService } from '../payments/payments.service';
 import { normalizePhoneE164 } from '../utils/phone.util';
+import {
+  generatePixCode,
+  generatePixQrCode,
+  generatePixTxId,
+} from '../common/pix.utils';
 import { z } from 'zod';
 
 const createPublicBookingSchema = z.object({
@@ -175,6 +180,74 @@ export class PublicBookingService {
       ...appointment,
       paymentInfo,
       requiresPayment,
+    };
+  }
+
+  /**
+   * Gera PIX diretamente no Order (para pedidos somente-produto sem appointment)
+   */
+  private async generatePixForOrder(
+    order: any,
+    workspaceId: string,
+    workspace: any,
+  ) {
+    if (!workspace.pixKey || !workspace.pixKeyType || !workspace.pixHolderName) {
+      return null;
+    }
+
+    const partialFixedCents = workspace.partialFixedAmount
+      ? Math.round(Number(workspace.partialFixedAmount) * 100)
+      : null;
+
+    const amountCents = this.paymentsService.calculatePaymentAmount(
+      order.totalCents,
+      workspace.paymentType,
+      workspace.partialPercent,
+      partialFixedCents,
+    );
+
+    if (amountCents <= 0) return null;
+
+    const pixTxId = generatePixTxId();
+    const pixCode = generatePixCode(
+      {
+        key: workspace.pixKey,
+        keyType: workspace.pixKeyType,
+        holderName: workspace.pixHolderName,
+        city: workspace.pixCity || 'Brasil',
+      },
+      amountCents,
+      pixTxId,
+      'Pedido BELA PRO',
+    );
+    const pixQrBase64 = await generatePixQrCode(pixCode);
+
+    const expiresAt = new Date();
+    expiresAt.setMinutes(
+      expiresAt.getMinutes() + (workspace.paymentExpiryMinutes || 30),
+    );
+
+    // Atualizar Order com dados PIX
+    await this.prisma.order.update({
+      where: { id: order.id },
+      data: {
+        pixCode,
+        pixQrBase64,
+        pixTxId,
+        paymentStatus: 'PENDING',
+        status: 'PENDING_PAYMENT',
+        expiresAt,
+      },
+    });
+
+    return {
+      paymentId: order.id,
+      orderId: order.id,
+      amountCents,
+      pixCode,
+      pixRecipientName: workspace.pixHolderName || '',
+      pixKeyMasked: this.maskPixKey(workspace.pixKey, workspace.pixKeyType),
+      expiresAt: expiresAt.toISOString(),
     };
   }
 
@@ -664,7 +737,9 @@ export class PublicBookingService {
     // Criar pagamento PIX se necessário (para valor total combinado)
     const requiresPayment =
       workspace.requirePayment && workspace.paymentType !== 'NONE';
+
     if (requiresPayment && result.appointment) {
+      // Caso 1: Tem appointment (com ou sem produtos) → Payment record vinculado ao appointment
       const totalCombined =
         (result.appointment.totalPriceCents || 0) +
         (result.order?.totalProductsCents || 0);
@@ -690,10 +765,14 @@ export class PublicBookingService {
           expiresAt: payment.expiresAt.toISOString(),
         };
       }
+    } else if (requiresPayment && !result.appointment && result.order) {
+      // Caso 2: Somente produtos → gerar PIX direto no Order (sem Payment record)
+      paymentInfo = await this.generatePixForOrder(
+        result.order,
+        data.workspaceId,
+        workspace,
+      );
     }
-
-    // Para pedidos somente-produto sem appointment, Payment não é gerado
-    // (Payment requer appointmentId). O pedido fica como PENDING e o dono confirma pelo painel.
 
     this.logger.log(
       `✅ [${data.workspaceId}] Checkout unificado: ` +
