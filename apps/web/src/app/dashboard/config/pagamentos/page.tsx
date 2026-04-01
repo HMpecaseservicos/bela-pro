@@ -228,7 +228,7 @@ export default function PagamentosPage() {
           💳 Pagamentos
         </h1>
         <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: isMobile ? 13 : 15 }}>
-          Configure o pagamento PIX para confirmação de agendamentos
+          Configure o pagamento PIX para confirmação de agendamentos e pedidos
         </p>
       </div>
 
@@ -265,7 +265,7 @@ export default function PagamentosPage() {
               Exigir Pagamento para Confirmar
             </div>
             <div style={{ fontSize: 13, color: '#64748b' }}>
-              Quando ativado, o cliente precisa pagar via PIX para confirmar o agendamento
+              Quando ativado, o cliente precisa pagar via PIX para confirmar o agendamento ou pedido
             </div>
           </div>
           <button
@@ -309,7 +309,7 @@ export default function PagamentosPage() {
             marginBottom: isMobile ? 16 : 24,
           }}>
             <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 600, color: '#1e293b' }}>
-              Tipo de Pagamento
+              Tipo de Pagamento (Agendamentos)
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -338,9 +338,9 @@ export default function PagamentosPage() {
                   <div>
                     <div style={{ fontWeight: 500, color: '#1e293b' }}>{paymentTypeLabels[type]}</div>
                     <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>
-                      {type === 'FULL' && 'Cliente paga o valor total do serviço'}
-                      {type === 'PARTIAL_PERCENT' && 'Cliente paga uma porcentagem do valor total'}
-                      {type === 'PARTIAL_FIXED' && 'Cliente paga um valor fixo independente do serviço'}
+                      {type === 'FULL' && 'Cliente paga o valor total do serviço para confirmar o agendamento'}
+                      {type === 'PARTIAL_PERCENT' && 'Cliente paga uma porcentagem do valor do serviço como sinal'}
+                      {type === 'PARTIAL_FIXED' && 'Cliente paga um valor fixo como sinal de confirmação'}
                     </div>
                   </div>
                 </label>
@@ -363,7 +363,8 @@ export default function PagamentosPage() {
                   style={inputStyle}
                 />
                 <p style={{ margin: '8px 0 0', fontSize: 12, color: '#64748b' }}>
-                  Ex: Se o serviço custa R$ 100 e a porcentagem é 30%, o cliente paga R$ 30
+                Ex: Se o serviço custa R$ 100 e a porcentagem é 30%, o cliente paga R$ 30 como sinal.
+                  Produtos da loja são sempre cobrados pelo valor total.
                 </p>
               </div>
             )}
@@ -381,7 +382,8 @@ export default function PagamentosPage() {
                   style={inputStyle}
                 />
                 <p style={{ margin: '8px 0 0', fontSize: 12, color: '#64748b' }}>
-                  Este valor será cobrado independente do preço do serviço
+                  Este valor será cobrado como sinal de confirmação do agendamento.
+                  Produtos da loja são sempre cobrados pelo valor total.
                 </p>
               </div>
             )}
@@ -496,6 +498,8 @@ export default function PagamentosPage() {
             </div>
             <ul style={{ margin: 0, paddingLeft: 20, color: '#1e40af', fontSize: 14, lineHeight: 1.6 }}>
               <li>Quando o cliente faz um agendamento, ele receberá as instruções PIX na tela</li>
+              <li>O tipo de pagamento (total, porcentagem ou fixo) aplica-se apenas ao valor dos <strong>serviços/agendamentos</strong></li>
+              <li><strong>Produtos da loja são sempre cobrados pelo valor total</strong>, independente do tipo configurado</li>
               <li>O agendamento ficará com status "Aguardando Pagamento" até você confirmar</li>
               <li>Você verá os agendamentos pendentes na agenda com destaque</li>
               <li>Ao receber o pagamento, você confirma manualmente na agenda</li>

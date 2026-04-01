@@ -167,7 +167,8 @@ export class PaymentsService {
   async createPaymentForAppointment(
     appointmentId: string,
     workspaceId: string,
-    serviceTotalCents: number
+    serviceTotalCents: number,
+    productTotalCents: number = 0,
   ) {
     // Buscar configurações do workspace
     const workspace = await this.prisma.workspace.findUnique({
@@ -194,12 +195,15 @@ export class PaymentsService {
       ? Math.round(Number(workspace.partialFixedAmount) * 100) 
       : null;
     
-    const amountCents = this.calculatePaymentAmount(
+    // Parcial (sinal) se aplica SOMENTE ao valor dos serviços/agendamento.
+    // Produtos são sempre cobrados pelo valor total.
+    const serviceAmountCents = this.calculatePaymentAmount(
       serviceTotalCents,
       workspace.paymentType,
       workspace.partialPercent,
       partialFixedCents
     );
+    const amountCents = serviceAmountCents + productTotalCents;
 
     if (amountCents <= 0) {
       return null;

@@ -195,16 +195,8 @@ export class PublicBookingService {
       return null;
     }
 
-    const partialFixedCents = workspace.partialFixedAmount
-      ? Math.round(Number(workspace.partialFixedAmount) * 100)
-      : null;
-
-    const amountCents = this.paymentsService.calculatePaymentAmount(
-      order.totalCents,
-      workspace.paymentType,
-      workspace.partialPercent,
-      partialFixedCents,
-    );
+    // Produtos sempre cobrados pelo valor TOTAL (parcial é apenas para sinal de agendamento)
+    const amountCents = order.totalCents;
 
     if (amountCents <= 0) return null;
 
@@ -740,14 +732,16 @@ export class PublicBookingService {
 
     if (requiresPayment && result.appointment) {
       // Caso 1: Tem appointment (com ou sem produtos) → Payment record vinculado ao appointment
-      const totalCombined =
-        (result.appointment.totalPriceCents || 0) +
-        (result.order?.totalProductsCents || 0);
+      // Parcial (sinal) aplica-se SOMENTE ao valor dos serviços;
+      // produtos são sempre cobrados pelo valor total.
+      const serviceCents = result.appointment.totalPriceCents || 0;
+      const productCents = result.order?.totalProductsCents || 0;
 
       const payment = await this.paymentsService.createPaymentForAppointment(
         result.appointment.id,
         data.workspaceId,
-        totalCombined,
+        serviceCents,
+        productCents,
       );
 
       if (payment) {
