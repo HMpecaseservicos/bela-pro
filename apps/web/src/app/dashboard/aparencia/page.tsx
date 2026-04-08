@@ -80,6 +80,7 @@ export default function AparenciaPage() {
   const [uploadingCover, setUploadingCover] = useState(false);
   const [uploadingGallery, setUploadingGallery] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [businessMode, setBusinessMode] = useState<'BOOKING' | 'SHOP' | 'HYBRID'>('BOOKING');
 
   const logoInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -128,6 +129,7 @@ export default function AparenciaPage() {
       if (!res.ok) throw new Error('Erro ao carregar');
 
       const data: WorkspaceConfig = await res.json();
+      if ((data as any).businessMode) setBusinessMode((data as any).businessMode);
       setConfig({
         brandName: data.brandName || data.name || '',
         slug: data.slug || '',
@@ -365,7 +367,7 @@ export default function AparenciaPage() {
       {/* Header */}
       <div style={{ marginBottom: isMobile ? 20 : 32 }}>
         <h1 style={{ margin: 0, fontSize: isMobile ? 22 : 28, fontWeight: 700, color: '#1a1a2e' }}>Aparência</h1>
-        <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: isMobile ? 13 : 15 }}>Personalize a experiência de agendamento</p>
+        <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: isMobile ? 13 : 15 }}>{businessMode === 'SHOP' ? 'Personalize a experiência da sua loja' : 'Personalize a experiência de agendamento'}</p>
       </div>
 
       {error && (
@@ -894,7 +896,7 @@ export default function AparenciaPage() {
         <input
           value={config.ctaText}
           onChange={e => setConfig({ ...config, ctaText: e.target.value })}
-          placeholder="Agendar agora (padrão)"
+          placeholder={businessMode === 'SHOP' ? 'Comprar agora (padrão)' : 'Agendar agora (padrão)'}
           maxLength={50}
           style={inputStyle}
         />

@@ -322,7 +322,7 @@ export default function ConfigPage() {
                   Pagamentos
                 </div>
                 <div style={{ fontSize: 14, color: '#64748b' }}>
-                  Configure pagamento PIX para confirmação de agendamentos
+                  Configure pagamento PIX para confirmação de {config.businessMode === 'SHOP' ? 'pedidos' : config.businessMode === 'HYBRID' ? 'agendamentos e pedidos' : 'agendamentos'}
                 </div>
               </div>
             </div>
@@ -385,7 +385,7 @@ export default function ConfigPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             <span style={{ fontSize: isMobile ? 20 : 24 }}>🔗</span>
             <div>
-              <div style={{ fontWeight: 600, fontSize: 16 }}>Link Público de Agendamento</div>
+              <div style={{ fontWeight: 600, fontSize: 16 }}>{config.businessMode === 'SHOP' ? 'Link Público da Loja' : 'Link Público de Agendamento'}</div>
               <div style={{ fontSize: 13, opacity: 0.9 }}>Compartilhe este link com seus clientes</div>
             </div>
           </div>
@@ -520,6 +520,7 @@ export default function ConfigPage() {
       </div>
 
       {/* Booking Settings */}
+      {config.businessMode !== 'SHOP' && (
       <div style={{
         background: 'white',
         borderRadius: isMobile ? 12 : 16,
@@ -605,6 +606,7 @@ export default function ConfigPage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* LOJA UNIFICADA: Toggle */}
       <div style={{

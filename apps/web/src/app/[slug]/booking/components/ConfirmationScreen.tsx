@@ -335,7 +335,7 @@ export function ConfirmationScreen({
               display: 'block',
             }}
           >
-            Precisa remarcar? Gerenciar agendamento
+            {hasServices ? 'Precisa remarcar? Gerenciar agendamento' : 'Acompanhar pedido'}
           </a>
           )}
 
@@ -356,7 +356,7 @@ export function ConfirmationScreen({
               boxShadow: `0 4px 15px ${primaryColor}44`,
             }}
           >
-            Fazer novo agendamento
+            {hasServices ? 'Fazer novo agendamento' : 'Fazer novo pedido'}
           </button>
         </div>
 

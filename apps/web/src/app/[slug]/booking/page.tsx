@@ -107,7 +107,7 @@ function BottomNav({
 
   const tabs: { id: string; label: string; show: boolean; isGallery?: boolean }[] = [
     { id: 'home', label: 'Início', show: true },
-    { id: 'services', label: 'Agendar', show: showServices },
+    { id: 'services', label: businessMode === 'HYBRID' ? 'Agendar' : 'Serviços', show: showServices },
     { id: 'gallery', label: 'Galeria', show: !!hasGallery, isGallery: true },
     { id: 'shop', label: 'Loja', show: showShop },
     { id: 'account', label: 'Conta', show: true },
@@ -611,8 +611,8 @@ function HomeSection({
               </svg>
             </div>
             <div>
-              <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: COLORS.textPrimary, letterSpacing: -0.2 }}>Agendar</p>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.3 }}>Escolha serviço e horário</p>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: COLORS.textPrimary, letterSpacing: -0.2 }}>{businessMode === 'HYBRID' ? 'Agendar' : 'Serviços'}</p>
+              <p style={{ margin: '2px 0 0', fontSize: 12, color: COLORS.textSecondary, lineHeight: 1.3 }}>{businessMode === 'HYBRID' ? 'Serviços e horários' : 'Escolha serviço e horário'}</p>
             </div>
           </button>
           )}
@@ -821,12 +821,12 @@ function HomeSection({
                 background: `linear-gradient(180deg, ${primaryColor}, ${primaryColor}60)`,
               }} />
               <h3 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: COLORS.textPrimary, letterSpacing: -0.4 }}>
-                Serviços em destaque
+                {businessMode === 'SHOP' ? 'Produtos em destaque' : 'Serviços em destaque'}
               </h3>
             </div>
             <button
               onClick={() => onNavigate('services')}
-              aria-label="Ver todos os serviços"
+              aria-label={businessMode === 'SHOP' ? 'Ver todos os produtos' : 'Ver todos os serviços'}
               style={{ background: 'none', border: 'none', color: primaryColor, fontSize: 13, fontWeight: 600, cursor: 'pointer', WebkitTapHighlightColor: 'transparent' }}
             >
               Ver todos →
@@ -837,7 +837,7 @@ function HomeSection({
               <button
                 key={service.id}
                 onClick={() => onNavigate('services')}
-                aria-label={`Agendar ${service.name} - ${formatPrice(service.priceCents)}`}
+                aria-label={`${businessMode === 'SHOP' ? 'Ver' : 'Agendar'} ${service.name} - ${formatPrice(service.priceCents)}`}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 14,
                   padding: '16px 18px', background: '#fff', borderRadius: 16,
@@ -1498,12 +1498,14 @@ function AccountSection({
   clientSession,
   onLogout,
   onLogin,
+  businessMode,
 }: {
   slug: string;
   primaryColor: string;
   clientSession?: { name: string; phone: string } | null;
   onLogout?: () => void;
   onLogin?: (data: { name: string; phone: string }) => void;
+  businessMode?: 'BOOKING' | 'SHOP' | 'HYBRID';
 }) {
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
@@ -1890,9 +1892,9 @@ function AccountSection({
               }}>
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
               </div>
-              <p style={{ fontSize: 15, fontWeight: 700, color: COLORS.textPrimary, margin: '0 0 6px' }}>Nenhum agendamento</p>
+              <p style={{ fontSize: 15, fontWeight: 700, color: COLORS.textPrimary, margin: '0 0 6px' }}>{businessMode === 'SHOP' ? 'Nenhum pedido' : 'Nenhum agendamento'}</p>
               <p style={{ fontSize: 13, color: COLORS.textSecondary, margin: 0, lineHeight: 1.5 }}>
-                Quando você agendar um serviço,<br />ele aparecerá aqui.
+                {businessMode === 'SHOP' ? 'Quando você fizer um pedido,' : 'Quando você agendar um serviço,'}<br />ele aparecerá aqui.
               </p>
             </div>
           ) : (
@@ -2919,6 +2921,7 @@ export default function BookingPage() {
               slug={slug}
               primaryColor={booking.primaryColor}
               clientSession={clientSession}
+              businessMode={booking.businessMode}
               onLogin={handleLogin}
               onLogout={() => {
                 setClientSession(null);

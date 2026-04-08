@@ -54,6 +54,7 @@ export default function ServicosPage() {
   const [form, setForm] = useState(defaultForm);
   const [uploading, setUploading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [businessMode, setBusinessMode] = useState<'BOOKING' | 'SHOP' | 'HYBRID'>('BOOKING');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
@@ -68,6 +69,14 @@ export default function ServicosPage() {
   useEffect(() => {
     fetchServices();
     fetchCategories();
+    // Fetch businessMode
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetch(`${API_URL}/workspace/me`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : null)
+        .then(ws => { if (ws?.businessMode) setBusinessMode(ws.businessMode); })
+        .catch(() => {});
+    }
   }, []);
 
   async function fetchCategories() {
@@ -226,10 +235,10 @@ export default function ServicosPage() {
       >
         <div>
           <h1 className="font-display" style={{ margin: 0, fontSize: isMobile ? 29 : 38, color: THEME.textPrimary, fontWeight: 600 }}>
-            Servicos
+            {businessMode === 'SHOP' ? 'Produtos' : businessMode === 'HYBRID' ? 'Serviços & Produtos' : 'Servicos'}
           </h1>
           <p style={{ margin: '10px 0 0', color: THEME.textSecondary, fontSize: isMobile ? 13 : 14 }}>
-            Catalogo e posicionamento dos seus servicos premium.
+            {businessMode === 'SHOP' ? 'Catálogo e posicionamento dos seus produtos.' : 'Catalogo e posicionamento dos seus servicos premium.'}
           </p>
         </div>
 
@@ -247,14 +256,14 @@ export default function ServicosPage() {
             cursor: 'pointer',
           }}
         >
-          Adicionar Servico
+          {businessMode === 'SHOP' ? 'Adicionar Produto' : 'Adicionar Servico'}
         </button>
       </section>
 
       {services.length === 0 ? (
         <div style={{ background: THEME.surface, border: `1px solid ${THEME.border}`, borderRadius: 16, padding: 42, textAlign: 'center' }}>
-          <h3 className="font-display" style={{ margin: 0, color: THEME.textPrimary, fontSize: 26, fontWeight: 600 }}>Nenhum servico cadastrado</h3>
-          <p style={{ margin: '10px 0 0', color: THEME.textMuted }}>Crie seu primeiro servico para abrir agenda e precificacao.</p>
+          <h3 className="font-display" style={{ margin: 0, color: THEME.textPrimary, fontSize: 26, fontWeight: 600 }}>{businessMode === 'SHOP' ? 'Nenhum produto cadastrado' : 'Nenhum servico cadastrado'}</h3>
+          <p style={{ margin: '10px 0 0', color: THEME.textMuted }}>{businessMode === 'SHOP' ? 'Crie seu primeiro produto para começar a vender.' : 'Crie seu primeiro servico para abrir agenda e precificacao.'}</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 }}>

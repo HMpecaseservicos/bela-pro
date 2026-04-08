@@ -161,7 +161,7 @@ export function PixPaymentScreen({
           }}
         >
           {expired
-            ? 'O tempo para pagamento expirou. Faça um novo agendamento.'
+            ? hasServices ? 'O tempo para pagamento expirou. Faça um novo agendamento.' : 'O tempo para pagamento expirou. Faça um novo pedido.'
             : hasServices
               ? 'Para confirmar seu agendamento, realize o pagamento PIX abaixo'
               : 'Para confirmar seu pedido, realize o pagamento PIX abaixo'}
@@ -385,7 +385,7 @@ export function PixPaymentScreen({
                 textAlign: 'center',
               }}
             >
-              Após o pagamento, seu agendamento será confirmado assim que verificarmos o comprovante.
+              Após o pagamento, {hasServices ? 'seu agendamento será confirmado' : 'seu pedido será confirmado'} assim que verificarmos o comprovante.
               Você receberá uma confirmação via WhatsApp.
             </p>
           </>
@@ -406,7 +406,7 @@ export function PixPaymentScreen({
               cursor: 'pointer',
             }}
           >
-            Fazer Novo Agendamento
+            {hasServices ? 'Fazer Novo Agendamento' : 'Fazer Novo Pedido'}
           </button>
         )}
       </div>

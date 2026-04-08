@@ -12,6 +12,7 @@ interface WorkspaceData {
   logoUrl?: string;
   coverImageUrl?: string;
   primaryColorHex?: string;
+  businessMode?: 'BOOKING' | 'SHOP' | 'HYBRID';
   profile?: { displayName?: string; addressLine?: string };
 }
 
@@ -43,10 +44,13 @@ export async function generateMetadata({
   }
 
   const name = ws.brandName || ws.name;
-  const title = `Agendar com ${name} — BELA PRO`;
+  const isShop = ws.businessMode === 'SHOP';
+  const title = isShop ? `Loja de ${name} — BELA PRO` : `Agendar com ${name} — BELA PRO`;
   const description =
     ws.description ||
-    `Agende seu horário online com ${name}. Escolha o serviço, data e horário em poucos cliques.`;
+    (isShop
+      ? `Conheça os produtos de ${name}. Faça seu pedido online em poucos cliques.`
+      : `Agende seu horário online com ${name}. Escolha o serviço, data e horário em poucos cliques.`);
 
   return {
     title,

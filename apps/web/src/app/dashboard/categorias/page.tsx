@@ -42,6 +42,7 @@ export default function CategoriasPage() {
   const [saving, setSaving] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [businessMode, setBusinessMode] = useState<'BOOKING' | 'SHOP' | 'HYBRID'>('BOOKING');
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
@@ -54,6 +55,14 @@ export default function CategoriasPage() {
 
   useEffect(() => {
     fetchCategories();
+    // Fetch businessMode
+    const token = localStorage.getItem('token');
+    if (token) {
+      fetch(`${API_URL}/workspace/me`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : null)
+        .then(ws => { if (ws?.businessMode) setBusinessMode(ws.businessMode); })
+        .catch(() => {});
+    }
   }, []);
 
   async function fetchCategories() {
@@ -193,10 +202,10 @@ export default function CategoriasPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: isMobile ? 20 : 24, color: THEME.textPrimary, fontWeight: 600 }}>
-            Categorias de Serviços
+            {businessMode === 'SHOP' ? 'Categorias de Produtos' : 'Categorias de Serviços'}
           </h1>
           <p style={{ margin: '4px 0 0', color: THEME.textSecondary, fontSize: 14 }}>
-            Organize seus serviços em categorias
+            {businessMode === 'SHOP' ? 'Organize seus produtos em categorias' : 'Organize seus serviços em categorias'}
           </p>
         </div>
         <button
@@ -236,7 +245,7 @@ export default function CategoriasPage() {
           <p style={{ color: THEME.textSecondary, margin: 0 }}>
             Nenhuma categoria criada ainda.
             <br />
-            Crie categorias para organizar seus serviços!
+            Crie categorias para organizar seus {businessMode === 'SHOP' ? 'produtos' : 'serviços'}!
           </p>
         </div>
       )}
@@ -322,7 +331,7 @@ export default function CategoriasPage() {
                   {cat.name}
                 </div>
                 <div style={{ color: THEME.textMuted, fontSize: 13 }}>
-                  {cat._count.services} {cat._count.services === 1 ? 'serviço' : 'serviços'}
+                  {cat._count.services} {cat._count.services === 1 ? (businessMode === 'SHOP' ? 'produto' : 'serviço') : (businessMode === 'SHOP' ? 'produtos' : 'serviços')}
                 </div>
               </div>
 

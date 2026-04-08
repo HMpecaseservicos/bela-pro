@@ -262,7 +262,7 @@ export default function DashboardPage() {
       </section>
 
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
-        <MetricCard label="Atendimentos Hoje" value={stats.todayCount} note="agenda" />
+        <MetricCard label={businessMode === 'SHOP' ? 'Pedidos Hoje' : 'Atendimentos Hoje'} value={stats.todayCount} note={businessMode === 'SHOP' ? 'pedidos' : 'agenda'} />
         <MetricCard label="Pendencias" value={stats.pending} note="aguardando" />
         <MetricCard label="Confirmados" value={stats.confirmed} note="preparados" />
         <MetricCard label="Receita do Dia" value={formatPrice(stats.todayRevenue)} note="faturamento" />
@@ -554,8 +554,8 @@ export default function DashboardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.15fr 0.85fr', gap: 16 }}>
         <section style={{ background: THEME.surface, border: `1px solid ${THEME.border}`, borderRadius: 16, overflow: 'hidden', boxShadow: '0 6px 20px rgba(72, 52, 26, 0.08)' }}>
           <header style={{ padding: '16px 18px', borderBottom: `1px solid ${THEME.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 className="font-display" style={{ margin: 0, fontSize: 24, color: THEME.textPrimary, fontWeight: 600 }}>Agenda de Hoje</h2>
-            <a href="/dashboard/agenda" style={{ fontSize: 13, color: THEME.gold, textDecoration: 'none', fontWeight: 600 }}>Abrir agenda</a>
+            <h2 className="font-display" style={{ margin: 0, fontSize: 24, color: THEME.textPrimary, fontWeight: 600 }}>{businessMode === 'SHOP' ? 'Pedidos de Hoje' : 'Agenda de Hoje'}</h2>
+            <a href={businessMode === 'SHOP' ? '/dashboard/pedidos' : '/dashboard/agenda'} style={{ fontSize: 13, color: THEME.gold, textDecoration: 'none', fontWeight: 600 }}>{businessMode === 'SHOP' ? 'Ver pedidos' : 'Abrir agenda'}</a>
           </header>
 
           <div style={{ padding: todayAppointments.length ? 0 : 26 }}>
@@ -611,12 +611,11 @@ export default function DashboardPage() {
       </div>
 
       <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: 10 }}>
-        <QuickAction href="/dashboard/agenda" label="Abrir Agenda" />
-        <QuickAction href="/dashboard/servicos" label="Gerenciar Servicos" />
-        <QuickAction href="/dashboard/horarios" label="Configurar Horarios" />
+        {businessMode !== 'SHOP' && <QuickAction href="/dashboard/agenda" label="Abrir Agenda" />}
+        <QuickAction href="/dashboard/servicos" label={businessMode === 'SHOP' ? 'Gerenciar Produtos' : 'Gerenciar Servicos'} />
+        {businessMode !== 'SHOP' && <QuickAction href="/dashboard/horarios" label="Configurar Horarios" />}
         <QuickAction href="/dashboard/clientes" label="Base de Clientes" />
         {businessMode !== 'BOOKING' && <QuickAction href="/dashboard/pedidos" label="Ver Pedidos" />}
-        {businessMode !== 'BOOKING' && <QuickAction href="/dashboard/produtos" label="Gerenciar Produtos" />}
       </div>
     </div>
   );
