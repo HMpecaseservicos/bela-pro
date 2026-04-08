@@ -54,16 +54,31 @@ const menuItems = [
   { href: '/dashboard/config', label: 'Configuracoes', icon: Settings },
 ];
 
-// Itens principais para o bottom nav (5 máximo - padrão de apps)
-const bottomNavItems = [
-  { href: '/dashboard', label: 'Início', icon: LayoutDashboard, exact: true },
-  { href: '/dashboard/agenda', label: 'Agenda', icon: CalendarDays },
-  { href: '/dashboard/clientes', label: 'Clientes', icon: Users },
-  { href: '/dashboard/financeiro', label: 'Financeiro', icon: CircleDollarSign },
-];
+// Bottom nav dinâmico por modo de negócio (4 itens + botão "Mais")
+const bottomNavByMode: Record<'BOOKING' | 'SHOP' | 'HYBRID', typeof menuItems> = {
+  BOOKING: [
+    { href: '/dashboard', label: 'Início', icon: LayoutDashboard, exact: true },
+    { href: '/dashboard/agenda', label: 'Agenda', icon: CalendarDays },
+    { href: '/dashboard/financeiro', label: 'Financeiro', icon: CircleDollarSign },
+    { href: '/dashboard/servicos', label: 'Serviços', icon: Scissors },
+  ],
+  SHOP: [
+    { href: '/dashboard', label: 'Início', icon: LayoutDashboard, exact: true },
+    { href: '/dashboard/produtos', label: 'Loja', icon: ShoppingBag },
+    { href: '/dashboard/pedidos', label: 'Pedidos', icon: ClipboardList },
+    { href: '/dashboard/financeiro', label: 'Financeiro', icon: CircleDollarSign },
+  ],
+  HYBRID: [
+    { href: '/dashboard', label: 'Início', icon: LayoutDashboard, exact: true },
+    { href: '/dashboard/agenda', label: 'Agenda', icon: CalendarDays },
+    { href: '/dashboard/pedidos', label: 'Pedidos', icon: ClipboardList },
+    { href: '/dashboard/financeiro', label: 'Financeiro', icon: CircleDollarSign },
+  ],
+};
 
-// Itens do menu "Mais"
+// Itens do menu "Mais" (Clientes sempre aqui)
 const moreMenuItems = [
+  { href: '/dashboard/clientes', label: 'Clientes', icon: Users },
   { href: '/dashboard/servicos', label: 'Serviços', icon: Scissors },
   { href: '/dashboard/produtos', label: 'Produtos', icon: ShoppingBag },
   { href: '/dashboard/pedidos', label: 'Pedidos', icon: ClipboardList },
@@ -159,7 +174,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       : [];
 
   const filteredMenuItems = menuItems.filter(i => !hiddenPaths.includes(i.href));
-  const filteredMoreMenuItems = moreMenuItems.filter(i => !hiddenPaths.includes(i.href));
+
+  // Bottom nav dinâmico: itens mudam conforme o modo
+  const activeBottomNavItems = bottomNavByMode[businessMode];
+  const bottomNavHrefs = activeBottomNavItems.map(i => i.href);
+  // Menu "Mais": exclui itens já no bottom nav + itens ocultos pelo modo
+  const filteredMoreMenuItems = moreMenuItems.filter(
+    i => !hiddenPaths.includes(i.href) && !bottomNavHrefs.includes(i.href)
+  );
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: THEME.page }}>
@@ -498,7 +520,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               boxShadow: '0 -2px 12px rgba(0,0,0,0.06)',
             }}
           >
-            {bottomNavItems.map((item) => {
+            {activeBottomNavItems.map((item) => {
               const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
               const Icon = item.icon as LucideIcon;
               return (
