@@ -546,46 +546,75 @@ export class PaymentsService {
    * @param webhookPayload Payload completo do webhook para auditoria
    */
   async confirmByWebhook(pixTxId: string, webhookPayload: string) {
+    // 1. Tentar encontrar no model Payment (agendamentos)
     const payment = await this.findByPixTxId(pixTxId);
 
-    if (!payment) {
-      throw new NotFoundException(`Pagamento não encontrado para txId: ${pixTxId}`);
+    if (payment) {
+      if (payment.status !== 'PENDING') {
+        return { success: true, alreadyProcessed: true, paymentId: payment.id };
+      }
+
+      if (new Date() > payment.expiresAt) {
+        throw new BadRequestException('Pagamento expirado');
+      }
+
+      await this.prisma.$transaction([
+        this.prisma.payment.update({
+          where: { id: payment.id },
+          data: {
+            status: 'PAID',
+            paidAt: new Date(),
+            confirmedBy: 'WEBHOOK_PIX',
+            webhookReceivedAt: new Date(),
+            webhookPayload,
+            notes: 'Confirmado automaticamente via webhook PIX',
+          },
+        }),
+        this.prisma.appointment.update({
+          where: { id: payment.appointmentId },
+          data: { status: 'CONFIRMED' },
+        }),
+      ]);
+
+      return { 
+        success: true, 
+        alreadyProcessed: false, 
+        paymentId: payment.id,
+        appointmentId: payment.appointmentId,
+      };
     }
 
-    if (payment.status !== 'PENDING') {
-      // Já foi processado (pode ser idempotente)
-      return { success: true, alreadyProcessed: true, paymentId: payment.id };
-    }
+    // 2. Tentar encontrar no model Order (pedidos somente-produto)
+    const order = await this.prisma.order.findUnique({
+      where: { pixTxId },
+    });
 
-    // Verificar se não expirou
-    if (new Date() > payment.expiresAt) {
-      throw new BadRequestException('Pagamento expirado');
-    }
+    if (order) {
+      if (order.paymentStatus === 'PAID') {
+        return { success: true, alreadyProcessed: true, orderId: order.id };
+      }
 
-    // Atualizar pagamento e agendamento em transação
-    await this.prisma.$transaction([
-      this.prisma.payment.update({
-        where: { id: payment.id },
+      if (order.expiresAt && new Date() > order.expiresAt) {
+        throw new BadRequestException('Pagamento do pedido expirado');
+      }
+
+      await this.prisma.order.update({
+        where: { id: order.id },
         data: {
-          status: 'PAID',
+          paymentStatus: 'PAID',
+          status: 'CONFIRMED',
           paidAt: new Date(),
           confirmedBy: 'WEBHOOK_PIX',
-          webhookReceivedAt: new Date(),
-          webhookPayload,
-          notes: 'Confirmado automaticamente via webhook PIX',
         },
-      }),
-      this.prisma.appointment.update({
-        where: { id: payment.appointmentId },
-        data: { status: 'CONFIRMED' },
-      }),
-    ]);
+      });
 
-    return { 
-      success: true, 
-      alreadyProcessed: false, 
-      paymentId: payment.id,
-      appointmentId: payment.appointmentId,
-    };
+      return {
+        success: true,
+        alreadyProcessed: false,
+        orderId: order.id,
+      };
+    }
+
+    throw new NotFoundException(`Pagamento não encontrado para txId: ${pixTxId}`);
   }
 }

@@ -32,6 +32,7 @@ const THEME = {
 
 const STATUS_MAP: Record<string, { label: string; bg: string; color: string }> = {
   PENDING: { label: 'Pendente', bg: '#fffbeb', color: '#f59e0b' },
+  PENDING_PAYMENT: { label: 'Aguardando Pagamento', bg: '#fef3c7', color: '#d97706' },
   CONFIRMED: { label: 'Confirmado', bg: '#eff6ff', color: '#3b82f6' },
   PREPARING: { label: 'Preparando', bg: '#fef3c7', color: '#d97706' },
   READY: { label: 'Pronto', bg: '#ecfdf5', color: '#10b981' },
@@ -291,6 +292,7 @@ export default function PedidosPage() {
 function getNextStatuses(current: string): string[] {
   switch (current) {
     case 'PENDING': return ['CONFIRMED', 'CANCELLED'];
+    case 'PENDING_PAYMENT': return ['CONFIRMED', 'CANCELLED'];
     case 'CONFIRMED': return ['PREPARING', 'CANCELLED'];
     case 'PREPARING': return ['READY', 'CANCELLED'];
     case 'READY': return ['DELIVERED'];
