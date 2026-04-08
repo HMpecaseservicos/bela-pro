@@ -73,7 +73,11 @@ export class PaymentsService {
    * Atualiza configurações de pagamento do workspace
    */
   async updatePaymentSettings(workspaceId: string, input: unknown) {
-    const data = paymentSettingsSchema.parse(input);
+    const result = paymentSettingsSchema.safeParse(input);
+    if (!result.success) {
+      throw new BadRequestException(result.error.errors.map(e => e.message).join(', '));
+    }
+    const data = result.data;
 
     // Validações de negócio
     if (data.requirePayment) {
