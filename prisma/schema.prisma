@@ -570,6 +570,9 @@ model Order {
   // Origem
   bookedVia String @default("public") // admin | public | whatsapp
 
+  // Método de entrega
+  deliveryMethod String? // PICKUP | DELIVERY
+
   // Pagamento PIX (reutiliza lógica existente)
   pixCode     String?       @db.Text
   pixQrBase64 String?       @db.Text

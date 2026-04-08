@@ -2860,6 +2860,8 @@ export default function BookingPage() {
                     onSubmit={booking.confirmBooking}
                     cart={booking.cart}
                     totalCombinedPrice={booking.totalCombinedPrice}
+                    deliveryMethod={booking.deliveryMethod}
+                    onDeliveryMethodChange={booking.setDeliveryMethod}
                   />
                 </>
               )}

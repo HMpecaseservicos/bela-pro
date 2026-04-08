@@ -21,6 +21,9 @@ interface ClientFormProps {
   // LOJA UNIFICADA
   cart?: CartItem[];
   totalCombinedPrice?: number;
+  // Entrega
+  deliveryMethod?: 'PICKUP' | 'DELIVERY' | null;
+  onDeliveryMethodChange?: (method: 'PICKUP' | 'DELIVERY') => void;
 }
 
 export function ClientForm({
@@ -38,6 +41,9 @@ export function ClientForm({
   // LOJA UNIFICADA
   cart = [],
   totalCombinedPrice,
+  // Entrega
+  deliveryMethod,
+  onDeliveryMethodChange,
 }: ClientFormProps) {
   const [nameTouched, setNameTouched] = useState(false);
   const [phoneTouched, setPhoneTouched] = useState(false);
@@ -59,7 +65,8 @@ export function ClientForm({
 
   const isNameValid = clientName.trim().length >= 3;
   const isPhoneValid = clientPhone.replace(/\D/g, '').length >= 10;
-  const canSubmit = isNameValid && isPhoneValid && !loading;
+  const isDeliveryValid = !hasProducts || !!deliveryMethod;
+  const canSubmit = isNameValid && isPhoneValid && isDeliveryValid && !loading;
 
   // Formatar telefone enquanto digita
   const handlePhoneChange = (value: string) => {
@@ -309,6 +316,62 @@ export function ClientForm({
           </p>
         )}
       </div>
+
+      {/* Método de Entrega (só aparece quando tem produtos) */}
+      {hasProducts && onDeliveryMethodChange && (
+        <div style={{ marginBottom: 24 }}>
+          <label
+            style={{
+              display: 'block',
+              fontSize: 14,
+              fontWeight: 600,
+              marginBottom: 12,
+              color: COLORS.textPrimary,
+            }}
+          >
+            Como deseja receber?
+          </label>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {([
+              { value: 'PICKUP' as const, label: 'Retirar no local', icon: '🏪' },
+              { value: 'DELIVERY' as const, label: 'Entrega', icon: '🚚' },
+            ]).map(option => {
+              const selected = deliveryMethod === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => onDeliveryMethodChange(option.value)}
+                  style={{
+                    flex: 1,
+                    padding: '14px 12px',
+                    border: `2px solid ${selected ? primaryColor : COLORS.border}`,
+                    borderRadius: RADIUS.md,
+                    background: selected ? `${primaryColor}10` : '#fff',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 6,
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <span style={{ fontSize: 24 }}>{option.icon}</span>
+                  <span
+                    style={{
+                      fontSize: 13,
+                      fontWeight: selected ? 700 : 500,
+                      color: selected ? primaryColor : COLORS.textSecondary,
+                    }}
+                  >
+                    {option.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Botão Submit */}
       <button

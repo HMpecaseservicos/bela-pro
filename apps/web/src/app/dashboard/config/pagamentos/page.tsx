@@ -51,6 +51,7 @@ export default function PagamentosPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [businessMode, setBusinessMode] = useState<'BOOKING' | 'SHOP' | 'HYBRID'>('BOOKING');
 
   // For input field (R$)
   const [partialFixedReais, setPartialFixedReais] = useState('');
@@ -73,6 +74,14 @@ export default function PagamentosPage() {
         router.push('/login');
         return;
       }
+
+      // Carregar businessMode
+      fetch(`${API_URL}/workspace/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(ws => { if (ws?.businessMode) setBusinessMode(ws.businessMode); })
+        .catch(() => {});
 
       const res = await fetch(`${API_URL}/payments/settings`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -228,7 +237,7 @@ export default function PagamentosPage() {
           💳 Pagamentos
         </h1>
         <p style={{ margin: '8px 0 0', color: '#64748b', fontSize: isMobile ? 13 : 15 }}>
-          Configure o pagamento PIX para confirmação de agendamentos e pedidos
+          Configure o pagamento PIX para confirmação de {businessMode === 'SHOP' ? 'pedidos' : businessMode === 'HYBRID' ? 'agendamentos e pedidos' : 'agendamentos'}
         </p>
       </div>
 
@@ -265,7 +274,7 @@ export default function PagamentosPage() {
               Exigir Pagamento para Confirmar
             </div>
             <div style={{ fontSize: 13, color: '#64748b' }}>
-              Quando ativado, o cliente precisa pagar via PIX para confirmar o agendamento ou pedido
+              Quando ativado, o cliente precisa pagar via PIX para confirmar {businessMode === 'SHOP' ? 'o pedido' : businessMode === 'HYBRID' ? 'o agendamento ou pedido' : 'o agendamento'}
             </div>
           </div>
           <button
@@ -309,7 +318,7 @@ export default function PagamentosPage() {
             marginBottom: isMobile ? 16 : 24,
           }}>
             <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 600, color: '#1e293b' }}>
-              Tipo de Pagamento (Agendamentos)
+              Tipo de Pagamento {businessMode === 'SHOP' ? '(Pedidos)' : '(Agendamentos)'}
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -338,8 +347,8 @@ export default function PagamentosPage() {
                   <div>
                     <div style={{ fontWeight: 500, color: '#1e293b' }}>{paymentTypeLabels[type]}</div>
                     <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>
-                      {type === 'FULL' && 'Cliente paga o valor total do serviço para confirmar o agendamento'}
-                      {type === 'PARTIAL_PERCENT' && 'Cliente paga uma porcentagem do valor do serviço como sinal'}
+                      {type === 'FULL' && (businessMode === 'SHOP' ? 'Cliente paga o valor total do pedido' : 'Cliente paga o valor total do serviço para confirmar o agendamento')}
+                      {type === 'PARTIAL_PERCENT' && (businessMode === 'SHOP' ? 'Cliente paga uma porcentagem do valor do pedido como sinal' : 'Cliente paga uma porcentagem do valor do serviço como sinal')}
                       {type === 'PARTIAL_FIXED' && 'Cliente paga um valor fixo como sinal de confirmação'}
                     </div>
                   </div>
@@ -478,7 +487,7 @@ export default function PagamentosPage() {
                   style={inputStyle}
                 />
                 <p style={{ margin: '8px 0 0', fontSize: 12, color: '#64748b' }}>
-                  Após este tempo sem pagamento, o agendamento será cancelado automaticamente.
+                  Após este tempo sem pagamento, o {businessMode === 'SHOP' ? 'pedido' : 'agendamento'} será cancelado automaticamente.
                   Mínimo: 10 minutos. Recomendado: 30-60 minutos.
                 </p>
               </div>
@@ -497,11 +506,17 @@ export default function PagamentosPage() {
               ℹ️ Como funciona o pagamento PIX
             </div>
             <ul style={{ margin: 0, paddingLeft: 20, color: '#1e40af', fontSize: 14, lineHeight: 1.6 }}>
-              <li>Quando o cliente faz um agendamento, ele receberá as instruções PIX na tela</li>
-              <li>O tipo de pagamento (total, porcentagem ou fixo) aplica-se apenas ao valor dos <strong>serviços/agendamentos</strong></li>
-              <li><strong>Produtos da loja são sempre cobrados pelo valor total</strong>, independente do tipo configurado</li>
-              <li>O agendamento ficará com status "Aguardando Pagamento" até você confirmar</li>
-              <li>Você verá os agendamentos pendentes na agenda com destaque</li>
+              <li>Quando o cliente faz um {businessMode === 'SHOP' ? 'pedido' : 'agendamento'}, ele receberá as instruções PIX na tela</li>
+              {businessMode !== 'SHOP' && (
+                <li>O tipo de pagamento (total, porcentagem ou fixo) aplica-se apenas ao valor dos <strong>serviços/agendamentos</strong></li>
+              )}
+              {businessMode !== 'SHOP' && (
+                <li><strong>Produtos da loja são sempre cobrados pelo valor total</strong>, independente do tipo configurado</li>
+              )}
+              <li>O {businessMode === 'SHOP' ? 'pedido' : 'agendamento'} ficará com status "Aguardando Pagamento" até você confirmar</li>
+              {businessMode !== 'SHOP' && (
+                <li>Você verá os agendamentos pendentes na agenda com destaque</li>
+              )}
               <li>Ao receber o pagamento, você confirma manualmente na agenda</li>
               <li>Se o cliente não pagar no prazo, o horário é liberado automaticamente</li>
             </ul>

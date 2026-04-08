@@ -58,6 +58,9 @@ export interface BookingState {
   // Cliente
   clientName: string;
   clientPhone: string;
+
+  // Método de entrega (para pedidos com produtos)
+  deliveryMethod: 'PICKUP' | 'DELIVERY' | null;
   
   // UI State
   step: BookingStep;

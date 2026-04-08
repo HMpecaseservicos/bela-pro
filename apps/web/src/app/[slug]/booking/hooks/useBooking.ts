@@ -18,6 +18,7 @@ interface UseBookingReturn extends BookingState {
   selectSlot: (slot: string) => void;
   setClientName: (name: string) => void;
   setClientPhone: (phone: string) => void;
+  setDeliveryMethod: (method: 'PICKUP' | 'DELIVERY') => void;
   confirmBooking: () => Promise<void>;
   goBack: () => void;
   goToStep: (step: BookingStep) => void;
@@ -59,6 +60,7 @@ const initialState: BookingState = {
   cart: [], // LOJA UNIFICADA
   clientName: '',
   clientPhone: '',
+  deliveryMethod: null, // ENTREGA
   step: 1,
   loading: true,
   error: null,
@@ -264,6 +266,11 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
     setState(prev => ({ ...prev, clientPhone: phone }));
   }, []);
 
+  // Set delivery method
+  const setDeliveryMethod = useCallback((method: 'PICKUP' | 'DELIVERY') => {
+    setState(prev => ({ ...prev, deliveryMethod: method }));
+  }, []);
+
   // Confirmar agendamento
   const confirmBooking = useCallback(async () => {
     if (!state.workspace) return;
@@ -301,6 +308,7 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
               serviceId: item.service.id,
               quantity: item.quantity,
             })),
+            deliveryMethod: state.deliveryMethod || undefined,
           }),
         });
         
@@ -370,7 +378,7 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
         error: error.message || DEFAULT_COPY.genericError,
       }));
     }
-  }, [state.workspace, state.selectedServices, state.selectedSlot, state.clientName, state.clientPhone, state.cart]);
+  }, [state.workspace, state.selectedServices, state.selectedSlot, state.clientName, state.clientPhone, state.cart, state.deliveryMethod]);
 
   // LOJA UNIFICADA: Adicionar produto ao carrinho
   const addToCart = useCallback((service: Service) => {
@@ -492,6 +500,7 @@ export function useBooking({ slug }: UseBookingProps): UseBookingReturn {
     selectSlot,
     setClientName,
     setClientPhone,
+    setDeliveryMethod,
     confirmBooking,
     goBack,
     goToStep,

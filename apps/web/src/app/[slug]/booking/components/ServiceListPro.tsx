@@ -170,7 +170,7 @@ export function ServiceListPro({
       >
         <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
         <p style={{ fontSize: 15, margin: 0 }}>
-          Nenhum serviço disponível no momento.
+          Nenhum item disponível no momento.
         </p>
       </div>
     );
@@ -203,8 +203,8 @@ export function ServiceListPro({
           }}
         >
           {totalFiltered === 0
-            ? 'Nenhum serviço encontrado'
-            : `${totalFiltered} serviço${totalFiltered > 1 ? 's' : ''} encontrado${totalFiltered > 1 ? 's' : ''}`}
+            ? 'Nenhum item encontrado'
+            : `${totalFiltered} item${totalFiltered > 1 ? 's' : ''} encontrado${totalFiltered > 1 ? 's' : ''}`}
         </div>
       )}
 
@@ -244,7 +244,13 @@ export function ServiceListPro({
                   marginLeft: 'auto',
                 }}
               >
-                {group.services.length} serviço{group.services.length > 1 ? 's' : ''}
+                {group.services.length} {(() => {
+                  const isProduct = group.category?.categoryType === 'PRODUCT' ||
+                    group.services.every(s => (s as any).itemType === 'PRODUCT');
+                  return isProduct
+                    ? `produto${group.services.length > 1 ? 's' : ''}`
+                    : `serviço${group.services.length > 1 ? 's' : ''}`;
+                })()}
               </span>
             </div>
           )}

@@ -485,6 +485,8 @@ export class PublicBookingService {
       )
       .max(50)
       .default([]),
+    // Método de entrega (para pedidos com produtos)
+    deliveryMethod: z.enum(['PICKUP', 'DELIVERY']).optional(),
   });
 
   /**
@@ -685,6 +687,7 @@ export class PublicBookingService {
             totalCents:
               totalProductsCents + (appointment?.totalPriceCents || 0),
             bookedVia: 'public',
+            deliveryMethod: data.deliveryMethod || null,
             items: {
               create: products.map((p) => {
                 const qty = quantityMap.get(p.id) || 1;

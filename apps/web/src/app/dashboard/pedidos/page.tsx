@@ -14,6 +14,7 @@ interface Order {
   status: string;
   totalCents: number;
   createdAt: string;
+  deliveryMethod?: string | null;
   client: { id: string; name: string; phoneE164: string };
   items: OrderItem[];
   linkedAppointment?: { id: string; startAt: string; status: string } | null;
@@ -237,6 +238,11 @@ export default function PedidosPage() {
                     <p style={{ margin: '4px 0 0', fontSize: 13, color: THEME.textMuted }}>
                       📞 {order.client.phoneE164} • {formatDate(order.createdAt)} às {formatTime(order.createdAt)}
                     </p>
+                    {order.deliveryMethod && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6, padding: '3px 10px', borderRadius: 999, background: order.deliveryMethod === 'DELIVERY' ? '#eff6ff' : '#f0fdf4', color: order.deliveryMethod === 'DELIVERY' ? '#3b82f6' : '#10b981', fontSize: 11, fontWeight: 700 }}>
+                        {order.deliveryMethod === 'DELIVERY' ? '🚚 Entrega' : '🏪 Retirada'}
+                      </span>
+                    )}
                   </div>
                   <span style={{ fontSize: 20, fontWeight: 700, color: THEME.gold }}>
                     {formatPrice(order.totalCents)}
