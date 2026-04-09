@@ -146,6 +146,7 @@ export class WorkspaceService {
             iconEmoji: true,
             color: true,
             sortOrder: true,
+            categoryType: true,
           },
         },
       },
@@ -172,6 +173,7 @@ export class WorkspaceService {
         iconEmoji: true,
         color: true,
         sortOrder: true,
+        categoryType: true,
       },
       orderBy: [
         { sortOrder: 'asc' },

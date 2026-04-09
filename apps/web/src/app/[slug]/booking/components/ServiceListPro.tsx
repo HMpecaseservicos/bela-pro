@@ -25,6 +25,7 @@ interface ServiceListProProps {
   onAddToCart?: (service: Service) => void;
   onRemoveFromCart?: (serviceId: string) => void;
   onUpdateCartQuantity?: (serviceId: string, quantity: number) => void;
+  businessMode?: 'BOOKING' | 'SHOP' | 'HYBRID';
 }
 
 export function ServiceListPro({
@@ -44,6 +45,7 @@ export function ServiceListPro({
   onAddToCart,
   onRemoveFromCart,
   onUpdateCartQuantity,
+  businessMode,
 }: ServiceListProProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -182,6 +184,7 @@ export function ServiceListPro({
       <ServiceSearchInput
         value={searchQuery}
         onChange={setSearchQuery}
+        placeholder={businessMode === 'SHOP' ? 'Buscar produto...' : 'Buscar serviço...'}
         theme={theme}
       />
 
@@ -246,7 +249,8 @@ export function ServiceListPro({
               >
                 {group.services.length} {(() => {
                   const isProduct = group.category?.categoryType === 'PRODUCT' ||
-                    group.services.every(s => (s as any).itemType === 'PRODUCT');
+                    group.services.every(s => (s as any).itemType === 'PRODUCT') ||
+                    businessMode === 'SHOP';
                   return isProduct
                     ? `produto${group.services.length > 1 ? 's' : ''}`
                     : `serviço${group.services.length > 1 ? 's' : ''}`;
@@ -482,7 +486,7 @@ export function ServiceListPro({
         >
           <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
           <p style={{ margin: 0, fontSize: 14 }}>
-            Nenhum serviço corresponde à sua busca.
+            {businessMode === 'SHOP' ? 'Nenhum produto corresponde à sua busca.' : 'Nenhum serviço corresponde à sua busca.'}
           </p>
           <button
             onClick={() => {

@@ -9,6 +9,7 @@ interface ServiceCategory {
   color: string | null;
   sortOrder: number;
   isActive: boolean;
+  categoryType?: 'SERVICE' | 'PRODUCT';
   _count: { services: number };
 }
 
@@ -16,6 +17,7 @@ const defaultForm = {
   name: '',
   iconEmoji: '',
   color: '',
+  categoryType: '' as '' | 'SERVICE' | 'PRODUCT',
 };
 
 const THEME = {
@@ -96,6 +98,7 @@ export default function CategoriasPage() {
           name: form.name,
           iconEmoji: form.iconEmoji || null,
           color: form.color || null,
+          categoryType: form.categoryType || (businessMode === 'SHOP' ? 'PRODUCT' : 'SERVICE'),
         }),
       });
       if (!res.ok) {
@@ -145,6 +148,7 @@ export default function CategoriasPage() {
       name: cat.name,
       iconEmoji: cat.iconEmoji || '',
       color: cat.color || '',
+      categoryType: cat.categoryType || 'SERVICE',
     });
     setShowForm(true);
   }
@@ -327,11 +331,20 @@ export default function CategoriasPage() {
 
               {/* Name + count */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 500, color: THEME.textPrimary, fontSize: 15 }}>
-                  {cat.name}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontWeight: 500, color: THEME.textPrimary, fontSize: 15 }}>
+                    {cat.name}
+                  </span>
+                  {businessMode === 'HYBRID' && (
+                    <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: cat.categoryType === 'PRODUCT' ? '#ecfdf5' : '#eff6ff', color: cat.categoryType === 'PRODUCT' ? '#10b981' : '#3b82f6', fontWeight: 600 }}>
+                      {cat.categoryType === 'PRODUCT' ? 'Produto' : 'Serviço'}
+                    </span>
+                  )}
                 </div>
                 <div style={{ color: THEME.textMuted, fontSize: 13 }}>
-                  {cat._count.services} {cat._count.services === 1 ? (businessMode === 'SHOP' ? 'produto' : 'serviço') : (businessMode === 'SHOP' ? 'produtos' : 'serviços')}
+                  {cat._count.services} {cat._count.services === 1
+                    ? (cat.categoryType === 'PRODUCT' || businessMode === 'SHOP' ? 'produto' : 'serviço')
+                    : (cat.categoryType === 'PRODUCT' || businessMode === 'SHOP' ? 'produtos' : 'serviços')}
                 </div>
               </div>
 
@@ -461,7 +474,7 @@ export default function CategoriasPage() {
               </label>
               <input
                 type="text"
-                placeholder="Ex: Cabelo, Unhas, Sobrancelha..."
+                placeholder={businessMode === 'SHOP' ? 'Ex: Perfumes, Cosméticos...' : 'Ex: Cabelo, Unhas, Sobrancelha...'}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 style={{
@@ -474,6 +487,37 @@ export default function CategoriasPage() {
                 }}
               />
             </div>
+
+            {/* Category Type (only for HYBRID mode) */}
+            {businessMode === 'HYBRID' && (
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: 'block', marginBottom: 8, color: THEME.textSecondary, fontSize: 14 }}>
+                  Tipo de Categoria *
+                </label>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  {([['SERVICE', '📋 Serviços'], ['PRODUCT', '🛍️ Produtos']] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setForm({ ...form, categoryType: value })}
+                      style={{
+                        flex: 1,
+                        padding: '12px 16px',
+                        borderRadius: 10,
+                        border: (form.categoryType || 'SERVICE') === value ? `2px solid ${THEME.gold}` : `1px solid ${THEME.border}`,
+                        background: (form.categoryType || 'SERVICE') === value ? `${THEME.gold}10` : THEME.page,
+                        cursor: 'pointer',
+                        fontSize: 14,
+                        fontWeight: (form.categoryType || 'SERVICE') === value ? 600 : 400,
+                        color: THEME.textPrimary,
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Color selector */}
             <div style={{ marginBottom: 24 }}>

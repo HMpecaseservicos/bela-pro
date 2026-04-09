@@ -2736,6 +2736,7 @@ export default function BookingPage() {
                     onSelect={booking.toggleService}
                     theme={booking.theme}
                     shopEnabled={booking.shopEnabled}
+                    businessMode={booking.businessMode}
                     itemFilter="service"
                     onItemFilterChange={() => {}}
                     cart={booking.cart}
@@ -2905,6 +2906,7 @@ export default function BookingPage() {
                 onSelect={() => {}}
                 theme={booking.theme}
                 shopEnabled={booking.shopEnabled}
+                businessMode={booking.businessMode}
                 itemFilter="product"
                 onItemFilterChange={() => {}}
                 cart={booking.cart}

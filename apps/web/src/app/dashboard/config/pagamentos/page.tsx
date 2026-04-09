@@ -76,12 +76,15 @@ export default function PagamentosPage() {
       }
 
       // Carregar businessMode
-      fetch(`${API_URL}/workspace/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then(r => r.ok ? r.json() : null)
-        .then(ws => { if (ws?.businessMode) setBusinessMode(ws.businessMode); })
-        .catch(() => {});
+      try {
+        const wsRes = await fetch(`${API_URL}/workspace/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (wsRes.ok) {
+          const ws = await wsRes.json();
+          if (ws?.businessMode) setBusinessMode(ws.businessMode);
+        }
+      } catch {}
 
       const res = await fetch(`${API_URL}/payments/settings`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -372,8 +375,8 @@ export default function PagamentosPage() {
                   style={inputStyle}
                 />
                 <p style={{ margin: '8px 0 0', fontSize: 12, color: '#64748b' }}>
-                Ex: Se o serviço custa R$ 100 e a porcentagem é 30%, o cliente paga R$ 30 como sinal.
-                  Produtos da loja são sempre cobrados pelo valor total.
+                Ex: Se {businessMode === 'SHOP' ? 'o produto' : 'o serviço'} custa R$ 100 e a porcentagem é 30%, o cliente paga R$ 30 como sinal.
+                  {businessMode !== 'SHOP' && 'Produtos da loja são sempre cobrados pelo valor total.'}
                 </p>
               </div>
             )}
@@ -391,8 +394,8 @@ export default function PagamentosPage() {
                   style={inputStyle}
                 />
                 <p style={{ margin: '8px 0 0', fontSize: 12, color: '#64748b' }}>
-                  Este valor será cobrado como sinal de confirmação do agendamento.
-                  Produtos da loja são sempre cobrados pelo valor total.
+                  Este valor será cobrado como sinal de confirmação do {businessMode === 'SHOP' ? 'pedido' : 'agendamento'}.
+                  {businessMode !== 'SHOP' && 'Produtos da loja são sempre cobrados pelo valor total.'}
                 </p>
               </div>
             )}
@@ -517,7 +520,7 @@ export default function PagamentosPage() {
               {businessMode !== 'SHOP' && (
                 <li>Você verá os agendamentos pendentes na agenda com destaque</li>
               )}
-              <li>Ao receber o pagamento, você confirma manualmente na agenda</li>
+              <li>Ao receber o pagamento, você confirma manualmente {businessMode === 'SHOP' ? 'nos pedidos' : 'na agenda'}</li>
               <li>Se o cliente não pagar no prazo, o horário é liberado automaticamente</li>
             </ul>
           </div>
