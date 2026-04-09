@@ -2703,7 +2703,15 @@ export default function BookingPage() {
               {/* Voltar */}
               {booking.step > 1 && (
                 <button
-                  onClick={booking.goBack}
+                  onClick={() => {
+                    // Se só tem produtos e está no step 4, voltar para tab da loja
+                    if (booking.step === 4 && booking.selectedServices.length === 0 && booking.cart.length > 0) {
+                      booking.goBack();
+                      setActiveTab('shop');
+                      return;
+                    }
+                    booking.goBack();
+                  }}
                   style={{
                     background: 'none',
                     border: 'none',
@@ -3145,9 +3153,9 @@ export default function BookingPage() {
       )}
 
       {/* ============================================ */}
-      {/* FLOATING CART BAR (global — visível em todas as tabs) */}
+      {/* FLOATING CART BAR (global — visível em todas as tabs, oculto durante checkout) */}
       {/* ============================================ */}
-      {booking.cart.length > 0 && !showCartPanel && (
+      {booking.cart.length > 0 && !showCartPanel && !(activeTab === 'services' && booking.step > 1) && (
         <div style={{
           position: 'fixed',
           bottom: BOTTOM_NAV_HEIGHT + SAFE_AREA_BOTTOM + 8,
@@ -3221,7 +3229,7 @@ export default function BookingPage() {
       {/* ============================================ */}
       {/* BOTTOM NAVIGATION */}
       {/* ============================================ */}
-      {!showCartPanel && (
+      {!showCartPanel && !(activeTab === 'services' && booking.step > 1) && (
         <BottomNav
           activeTab={activeTab}
           onTabChange={handleTabChange}
